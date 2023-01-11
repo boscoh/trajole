@@ -1,0 +1,18 @@
+CudaCompiler: /usr/local/cuda/bin/nvcc
+CudaHostCompiler: ''
+DeterministicForces: 'false'
+DeviceIndex: '0'
+DeviceName: Quadro RTX 4000
+DisablePmeStream: 'false'
+OpenMM Version: 7.6.0.dev-ad113a0
+Platform: CUDA
+Precision: single
+TempDirectory: /tmp
+UseBlockingSync: 'true'
+UseCpuPme: 'false'
+machine: x86_64
+node: batch-0-to-6-injzxzqbjiyumky-3885468735
+processor: x86_64
+release: 5.13.0-40-generic
+system: Linux
+version: '#45~20.04.1-Ubuntu SMP Mon Apr 4 09:38:31 UTC 2022'

@@ -1,0 +1,17 @@
+command: rseed run aldock.yaml
+container_image: redesignscience/rseed
+gpus: 1
+outputs:
+- energy.h5
+- sim.yaml
+- system.yaml
+- replicas.yaml
+- pmf.yaml
+- ligand-trajectory.h5
+- pmf_tanh.yaml
+- pmf_upper_tanh.yaml
+- pmf_upper_percentile.yaml
+prefix: aldock-j1-complex
+source_inputs:
+- aldock.yaml
+- j1-complex.parmed
