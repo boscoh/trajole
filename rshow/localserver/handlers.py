@@ -1,10 +1,8 @@
-import logging
 import os
 
 import psutil
 from rshow import mode
 
-logger = logging.getLogger(__name__)
 
 traj_stream = None
 
