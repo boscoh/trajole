@@ -14,7 +14,7 @@ from addict import Dict
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from rseed.rshow import handlers
+from rshow.localserver import handlers
 from starlette.responses import FileResponse
 
 logger = logging.getLogger(__name__)

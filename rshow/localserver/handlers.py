@@ -2,7 +2,7 @@ import logging
 import os
 
 import psutil
-from rseed.rshow import mode
+from rshow import mode
 
 logger = logging.getLogger(__name__)
 
