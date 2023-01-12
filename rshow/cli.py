@@ -2,7 +2,7 @@
 import click
 from addict import Dict
 
-from rshow.localserver.serve import run_from_config
+from rshow.server.local.serve import run_from_config
 
 config = Dict()
 

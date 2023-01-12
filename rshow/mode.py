@@ -131,9 +131,9 @@ class TrajStream(RshowMixin):
     def get_frame(self, i_frame_traj=None):
         if i_frame_traj and i_frame_traj != self.i_frame_traj:
             new_frame = self.traj_manager.get_frame_traj(i_frame_traj)
-            if self.frame is not None:
-                new_frame.xyz = np.copy(new_frame.xyz)
-                new_frame.superpose(self.frame)
+            # if self.frame is not None:
+            #     new_frame.xyz = np.copy(new_frame.xyz)
+            #     new_frame.superpose(self.frame)
             self.frame = new_frame
             self.i_frame_traj = i_frame_traj
         return self.frame

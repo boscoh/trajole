@@ -2,8 +2,8 @@
   "name": "fes",
   "version": "0.0.1",
   "scripts": {
-    "format": "prettier-standard vue/src/*js",
-    "dev": "vite",
+    "format": "prettier-standard src/**js",
+    "dev": "cd ../config; cp local.config.dev.json local.config.json; cd ../client; vite",
     "build": "vite build"
   },
   "dependencies": {
