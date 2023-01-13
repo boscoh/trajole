@@ -1,13 +1,13 @@
 import csv
 import logging
 from abc import ABC, abstractmethod
+import os
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 import mdtraj
-import numpy as np
 import parmed
 import pydash as py_
 from addict import Dict
@@ -200,6 +200,7 @@ class MatrixStream(TrajStream):
         self.config.title = "Matrix"
         if not self.config.mode:
             self.config.mode = "matrix-strip"
+        os.chdir(parent_dir)
         self.traj_manager = TrajectoryManager(
             data.trajectories, atom_mask=self.get_atom_mask()
         )

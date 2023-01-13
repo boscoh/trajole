@@ -1,9 +1,11 @@
 import _ from 'lodash'
-import config from '../../../config/local.config.json'
+import config from '../../../config/config.json'
 
 const defaultRemoteUrl = `${location.protocol}//${location.host}/rpc-run`
 const remoteUrl = config.apiUrl
-console.log(`rpc-run init ${config.apiUrl} ${defaultRemoteUrl} ${defaultRemoteUrl===config.aipUrl}`)
+console.log(`config.apiUrl = ${config.apiUrl}`)
+console.log(`defaultRemoteUrl = ${defaultRemoteUrl}`)
+console.log(`rpc-run remoteUrl = ${remoteUrl}`)
 
 /**
  * RPC interface to talk to a function on a server.
@@ -18,7 +20,7 @@ console.log(`rpc-run init ${config.apiUrl} ${defaultRemoteUrl} ${defaultRemoteUr
  * to the server, then wait for the results
  *
  * The results from the server are then returned asyncronously to
- * the caller using the JSON-RPC formats
+ * the caller using the JSON-RPC format
  *
  * @returns {Promise} - which wraps:
  *   1. on success:
@@ -58,7 +60,10 @@ async function rpc (method, ...params) {
       if (_.has(response, 'result')) {
         console.log(`rpc-run ${method} result:`, _.cloneDeep(response.result))
       } else {
-        console.log(`rpc-run ${method} server-error:`, _.cloneDeep(response.error))
+        console.log(
+          `rpc-run ${method} server-error:`,
+          _.cloneDeep(response.error)
+        )
       }
     }
   } catch (e) {

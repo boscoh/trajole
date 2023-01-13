@@ -1,31 +1,28 @@
-import json
 import inspect
+import json
 import logging
+import shutil
 import threading
 import time
 import traceback
 import webbrowser
 from pathlib import Path
 from urllib.request import urlopen
-import shutil
-
-from addict import Dict
-from docopt import docopt
-from fastapi import FastAPI
-from fastapi import Request
-from fastapi.staticfiles import StaticFiles
-from starlette.responses import FileResponse
-from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
 import handlers
-
+import uvicorn
+from addict import Dict
+from docopt import docopt
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from starlette.responses import FileResponse
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 app_dir = Path(__file__).resolve().parent.parent.parent.parent
-client_dir = app_dir / "client2" / "dist"
+client_dir = Path(__file__).resolve().parent / "client"
 
 app = FastAPI()
 
@@ -104,7 +101,7 @@ def run_from_config(in_config):
         config_json = app_dir / "config" / "lounge.config.dev.json"
     else:
         config_json = app_dir / "config" / "lounge.config.prod.json"
-    client_config_json = app_dir / "config" / "lounge.config.json"
+    client_config_json = app_dir / "config" / "config.json"
     if client_config_json.exists():
         client_config_json.unlink()
     shutil.copy(config_json, client_config_json)
@@ -118,7 +115,6 @@ def run_from_config(in_config):
 
     handlers.config = config
     uvicorn.run(app, port=config.port, host=config.host, log_level="critical")
-
 
 
 __doc__ = """
@@ -135,14 +131,13 @@ Options:
 """
 
 
-
 if __name__ == "__main__":
     args = docopt(__doc__)
     config = Dict()
     config.is_dev = args.get("-c")
     config.is_solvent = args.get("-s")
     config.is_hydrogen = args.get("-d")
-    config.background = '#CCC'
+    config.background = "#CCC"
     config.port = 9023
     config.command = "FoamTrajStream"
     config.foam_id = 15
@@ -151,4 +146,3 @@ if __name__ == "__main__":
     else:
         filename = ""
     run_from_config(config)
-

@@ -1,10 +1,10 @@
-import os
-from collections import OrderedDict
-import psutil
-from rshow import mode as stream
-from addict import Dict
 import logging
+from collections import OrderedDict
 from pathlib import Path
+
+from addict import Dict
+
+from rshow import mode as stream
 
 logger = logging.getLogger(__name__)
 
@@ -14,26 +14,25 @@ traj_stream_by_foam_id = OrderedDict()
 data_dir = Path(__file__).parent / "data"
 data_dir.mkdir(exist_ok=True)
 
+
 def select_new_key(foam_id, key):
-    selectable_classes = [
-        "ParallelStreamingTrajectory",
-        "ParallelDockingStreamingTrajectory"
-    ]
+    selectable_classes = ["ParallelStream", "ParallelDockStream"]
     traj_stream = traj_stream_by_foam_id[foam_id]
     if not traj_stream or traj_stream.__class__.__name__ not in selectable_classes:
         return
-
-    global config
     logger.info(f"select_new_key {key}")
+    global config
     config = Dict(config)
     config.key = key
     init_traj_stream_from_config(config)
 
 
 def get_tags(foam_id):
+    import os
+
     from foamdb.client import PostgresClient
     from foamdb.config import Config
-    import os
+
     result = {}
     try:
         home = os.environ.get("HOME")
@@ -67,9 +66,9 @@ def reset_foam_traj(foam_id):
     init_traj_stream_from_config(new_config)
     tags = get_tags(foam_id)
     tags["foam_id"] = foam_id
-    pieces = [f"{k}={v}" for k,v in tags.items()]
+    pieces = [f"{k}={v}" for k, v in tags.items()]
     title = " ".join(pieces)
-    return { 'title': title }
+    return {"title": title}
 
 
 def init_traj_stream_from_config(in_config):
@@ -97,6 +96,10 @@ def init_traj_stream_from_config(in_config):
     config = Dict(traj_stream.config)
 
     return True
+
+
+def kill():
+    pass
 
 
 def get_config(foam_id, key):

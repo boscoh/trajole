@@ -30,7 +30,8 @@ setuptools.setup(
     python_requires=">=3.6",
     package_data={
         "rshow": [
-            "client/**",
+            "rshow/server/local/client/**",
+            "rshow/server/lounge/client/**",
         ]
     },
     include_package_data=True,

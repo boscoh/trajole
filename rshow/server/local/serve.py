@@ -14,14 +14,15 @@ from addict import Dict
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from rshow.server.local import handlers
 from starlette.responses import FileResponse
+
+from rshow.server.local import handlers
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 app_dir = Path(__file__).resolve().parent.parent.parent.parent
-client_dir = app_dir / "client" / "dist"
+client_dir = Path(__file__).resolve().parent / "client"
 
 app = FastAPI()
 
@@ -100,7 +101,7 @@ def run_from_config(in_config):
         config_json = app_dir / "config" / "local.config.dev.json"
     else:
         config_json = app_dir / "config" / "local.config.prod.json"
-    client_config_json = app_dir / "config" / "local.config.json"
+    client_config_json = app_dir / "config" / "config.json"
     if client_config_json.exists():
         client_config_json.unlink()
     shutil.copy(config_json, client_config_json)
@@ -114,5 +115,5 @@ def run_from_config(in_config):
         logger.info(f"Couldn't parse {config}")
         return
     if not config.is_dev:
-        open_url_in_background(f"http://{config.host}:{config.port}")
+        open_url_in_background(f"http://{config.host}:{config.port}/#/foamtraj/0")
     uvicorn.run(app, port=config.port, host=config.host, log_level="critical")

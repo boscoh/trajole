@@ -3,9 +3,9 @@
 
 This viewer allows specialized views of MD trajectories:
 
+- directly use .h5 to optimize scrolling through trajectory
 - an integrated view of the Free Energy Surface of 2 collective-variables
   and the associated conformations in a trajectory
-- fast view of trajectory.h5 file
 - integrated table of multiple ligands sampled against a single pdb file
 - energy decomposition matrices of a run of temperature baths in
   a set of parallel tempering trajectories 

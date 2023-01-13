@@ -1,12 +1,9 @@
-<template language="pug">
+<template>
   <div id="app">
-    <jolecule></jolecule>
+    <router-view></router-view>
   </div>
 </template>
 
 <script>
-import Jolecule from './components/Jolecule.vue'
-export default {
-  components: { Jolecule }
-}
+export default {}
 </script>

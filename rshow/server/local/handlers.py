@@ -1,13 +1,13 @@
 import os
 
 import psutil
-from rshow import mode
 
+from rshow import mode
 
 traj_stream = None
 
 
-def select_new_key(key):
+def select_new_key(foam_id, key):
     selectable_classes = ["ParallelStream", "ParallelDockStream"]
     if traj_stream and traj_stream.__class__.__name__ in selectable_classes:
         config = traj_stream.config
@@ -30,7 +30,11 @@ def init_traj_stream_from_config(in_config):
     return False
 
 
-def get_config(k):
+def reset_foam_traj(foam_id):
+    return {"title": traj_stream.get_config('command')}
+
+
+def get_config(foam_id, k):
     return traj_stream.get_config(k)
 
 
@@ -39,9 +43,9 @@ def kill():
         psutil.Process(os.getpid()).kill()
 
 
-def get_pdb_lines(i_frame_traj):
+def get_pdb_lines(foam_id, i_frame_traj):
     return traj_stream.get_pdb_lines(i_frame_traj)
 
 
-def get_pdb_lines_with_alphaspace(i_frame_traj):
+def get_pdb_lines_with_alphaspace(foam_id, i_frame_traj):
     return traj_stream.get_pdb_lines_with_alphaspace(i_frame_traj)
