@@ -98,7 +98,7 @@ def run_from_config(in_config):
       is_hydrogen: bool - hydrogen
     """
     if in_config.is_dev:
-        config_json = app_dir / "config" / "local.config.dev.json"
+        config_json = app_dir / "config" / "config.dev.json"
     else:
         config_json = app_dir / "config" / "local.config.prod.json"
     client_config_json = app_dir / "config" / "config.json"

@@ -1,1 +1,1 @@
-{"apiUrl": "https://lounge.redesignscience.com/rpc-run", "host": "127.0.0.1", "port": 9023}
+{"apiUrl": "http://localhost:9023/rpc-run", "host": "127.0.0.1", "port": 9023}
