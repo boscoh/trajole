@@ -1,0 +1,48 @@
+command: temper
+granary: final.parmed
+move:
+  n_md_step: 250
+output:
+  basename: trajectory
+  i_trajectories:
+  - 0
+  - -1
+  save_all_trajectories: true
+  save_energy_components: true
+  work_dir: .
+re:
+  insert_max_replicas: 41
+  insert_threshold: 0.4
+  is_insert_replica: false
+  max_temperature_k: 600
+  min_temperature_k: 300
+  n_mixing_attempt: 200
+  n_mixing_cycle: 20
+  n_replica: 20
+  n_step_during_propagation: 1
+  neighbour_swapping_cutoff: 5
+  target_temperature_k: 300
+  temperatures_k:
+  - 300.0000000000001
+  - 311.14651333385757
+  - 322.7071758660549
+  - 334.6973753284631
+  - 347.13307118481583
+  - 360.03081587343104
+  - 373.407776839207
+  - 387.2817593842217
+  - 401.67123036734165
+  - 416.5953427843967
+  - 432.0739612616278
+  - 448.1276884963456
+  - 464.77789267999646
+  - 482.04673594012945
+  - 499.9572038391265
+  - 518.5331359689634
+  - 537.7992576827133
+  - 557.7812130050434
+  - 578.505598765497
+  - 599.9999999999997
+runner: ParallelTempering
+sim: Sim
+version: '0.1'

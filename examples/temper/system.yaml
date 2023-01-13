@@ -1,0 +1,15 @@
+DeviceIndex: '1'
+DeviceName: Apple M1
+DisablePmeStream: 'false'
+OpenCLPlatformIndex: '0'
+OpenCLPlatformName: Apple
+OpenMM Version: 7.6.0.dev-ad113a0
+Platform: OpenCL
+Precision: single
+UseCpuPme: 'false'
+machine: x86_64
+node: Boscos-MacBook-Air.local
+processor: i386
+release: 20.4.0
+system: Darwin
+version: 'Darwin Kernel Version 20.4.0: Thu Apr 22 21:46:41 PDT 2021; root:xnu-7195.101.2~1/RELEASE_ARM64_T8101'

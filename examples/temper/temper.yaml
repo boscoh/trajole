@@ -1,0 +1,22 @@
+command: temper
+granary: final.parmed
+move:
+  n_md_step: 250
+output:
+  basename: trajectory
+  save_all_trajectories: true
+  save_energy_components: true
+  work_dir: .
+re:
+  target_temperature_k: 300
+  insert_max_replicas: 41
+  insert_threshold: 0.4
+  is_insert_replica: false
+  max_temperature_k: 600
+  min_temperature_k: 300
+  n_mixing_attempt: 200
+  n_mixing_cycle: 20
+  n_replica: 20
+  n_step_during_propagation: 1
+  neighbour_swapping_cutoff: 5
+sim: Sim
