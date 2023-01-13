@@ -9,14 +9,14 @@ import webbrowser
 from pathlib import Path
 from urllib.request import urlopen
 
-import handlers
 import uvicorn
 from addict import Dict
-from docopt import docopt
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
+
+from rshow.server.lounge import handlers
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -105,15 +105,15 @@ def run_from_config(in_config):
     if client_config_json.exists():
         client_config_json.unlink()
     shutil.copy(config_json, client_config_json)
-
     config = Dict(json.load(open(config_json)))
     config.update(in_config)
+
     logger.info(f"start h5 server {json.dumps(config, indent=2)}")
+    handlers.config = config
 
     if not config.is_dev:
         open_url_in_background(f"http://{config.host}:{config.port}")
 
-    handlers.config = config
     uvicorn.run(app, port=config.port, host=config.host, log_level="critical")
 
 
@@ -132,6 +132,8 @@ Options:
 
 
 if __name__ == "__main__":
+    from docopt import docopt
+
     args = docopt(__doc__)
     config = Dict()
     config.is_dev = args.get("-c")

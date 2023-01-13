@@ -107,13 +107,14 @@ def run_from_config(in_config):
     shutil.copy(config_json, client_config_json)
     config = Dict(json.load(open(config_json)))
     config.update(in_config)
-    logger.info(
-        f"start h5 server is_dev={config.is_dev} solvent={config.is_solvent} hydrgoen={config.is_hydrogen}"
-    )
+
+    logger.info(f"start h5 server {json.dumps(config, indent=2)}")
     success = handlers.init_traj_stream_from_config(config)
     if not success:
         logger.info(f"Couldn't parse {config}")
         return
+
     if not config.is_dev:
         open_url_in_background(f"http://{config.host}:{config.port}/#/foamtraj/0")
+
     uvicorn.run(app, port=config.port, host=config.host, log_level="critical")

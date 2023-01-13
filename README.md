@@ -173,7 +173,7 @@ mkdir /var/log/lounge
 Create `/etc/supervisor/conf.d/fastapi.conf`:
 ```
 [program:fastapi_app]
-directory=/home/bosco/lounge/server
+directory=/home/bosco/rshow/rshow/server/lounge
 environment=PYTHONPATH=/home/bosco/miniconda3/envs/rs/lib/python3.8/site-packages
 command=/home/bosco/miniconda3/envs/rs/bin/python serve.py
 autostart=true
