@@ -1,1 +1,1 @@
-python rshow/server/lounge/serve.py -c
+python rshow/serve.py

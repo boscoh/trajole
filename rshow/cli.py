@@ -1,10 +1,29 @@
 #!/usr/bin/env python
 import click
 from addict import Dict
+from pathlib import Path
+import json
 
-from rshow.server.local.serve import run_from_config
+from rshow import serve
+from rshow.server.local import handlers
+
 
 config = Dict()
+
+
+def run_from_config():
+    client_dir = Path(__file__).resolve().parent / "server/local/client"
+
+    if not config.get("port"):
+        port_json = Path(__file__).resolve().parent.parent / "config" / "config.port.json"
+        port = json.load(open(port_json)).get("port")
+    else:
+        port = config.port
+
+    if not config.is_dev:
+        serve.open_url_in_background(f"http://localhost:{config.port}/#/foamtraj/0")
+
+    serve.start_fastapi_server(config, handlers, client_dir, port)
 
 
 @click.group()
@@ -36,7 +55,7 @@ def traj(h5):
     """
     config.command = "TrajStream"
     config.trajectories = [h5]
-    run_from_config(config)
+    run_from_config()
 
 
 @cli.command()
@@ -50,7 +69,7 @@ def fes(metad_dir, n_bin):
     config.metad_dir = metad_dir
     if n_bin:
         config.n_bin = n_bin
-    run_from_config(config)
+    run_from_config()
 
 
 @cli.command()
@@ -61,7 +80,7 @@ def traj_foam(foam_id):
     """
     config.command = "FoamTrajStream"
     config.trajectories = [foam_id]
-    run_from_config(config)
+    run_from_config()
 
 
 @cli.command()
@@ -74,7 +93,7 @@ def matrix(matrix_dir, mode):
     config.command = "MatrixStream"
     config.matrix_dir = matrix_dir
     config.mode = mode
-    run_from_config(config)
+    run_from_config()
 
 
 @cli.command()
@@ -87,7 +106,7 @@ def re(re_dir, key):
     config.command = "ParallelStream"
     config.re_dir = re_dir
     config.key = key
-    run_from_config(config)
+    run_from_config()
 
 
 @cli.command()
@@ -100,7 +119,7 @@ def re_dock(re_dir, key):
     config.command = "ParallelDockStream"
     config.re_dir = re_dir
     config.key = key
-    run_from_config(config)
+    run_from_config()
 
 
 @cli.command()
@@ -115,7 +134,7 @@ def ligands(pdb, sdf, csv):
     config.pdb = pdb
     config.ligands = sdf
     config.csv = csv
-    run_from_config(config)
+    run_from_config()
 
 
 @cli.command()
@@ -126,4 +145,4 @@ def frame(pdb):
     """
     config.command = "FrameStream"
     config.pdb_or_parmed = pdb
-    run_from_config(config)
+    run_from_config()

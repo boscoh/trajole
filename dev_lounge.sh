@@ -5,6 +5,6 @@ psword -k npm
 psword -k rseed
 psword -k serve.py
 ttab "cd client; npm run dev "
-ttab "cd server; python rshow/server/lounge/serve.py -c"
+ttab "cd server; python rshow/serve.py"
 sleep 0.5
 open http://localhost:3333

@@ -95,7 +95,6 @@ def init_traj_stream_from_config(in_config):
 
     config = Dict(traj_stream.config)
 
-    return True
 
 
 def kill():
@@ -112,3 +111,10 @@ def get_pdb_lines(foam_id, i_frame_traj):
 
 def get_pdb_lines_with_alphaspace(foam_id, i_frame):
     return traj_stream_by_foam_id[foam_id].get_pdb_lines_with_alphaspace(i_frame)
+
+
+def init(in_config):
+    global config
+    config = in_config
+
+

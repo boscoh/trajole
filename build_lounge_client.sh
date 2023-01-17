@@ -1,5 +1,5 @@
 cd config
-cp lounge.config.prod.json config.json
+cp lounge.config.json config.json
 cd ../client
 npm run build
 rm -rf ../rshow/server/lounge/client

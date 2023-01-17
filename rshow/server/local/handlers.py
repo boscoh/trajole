@@ -22,16 +22,15 @@ def init_traj_stream_from_config(in_config):
 
     :return bool: False on failure
     """
-    if hasattr(mode, in_config.command):
-        StreamingTrajectoryClass = getattr(mode, in_config.command)
-        global traj_stream
-        traj_stream = StreamingTrajectoryClass(in_config)
-        return True
-    return False
+    if not hasattr(mode, in_config.command):
+        raise ValueError(f"Couldn't find command {in_config.command}")
+    StreamingTrajectoryClass = getattr(mode, in_config.command)
+    global traj_stream
+    traj_stream = StreamingTrajectoryClass(in_config)
 
 
 def reset_foam_traj(foam_id):
-    return {"title": traj_stream.get_config('command')}
+    return {"title": traj_stream.get_title()}
 
 
 def get_config(foam_id, k):
@@ -49,3 +48,9 @@ def get_pdb_lines(foam_id, i_frame_traj):
 
 def get_pdb_lines_with_alphaspace(foam_id, i_frame_traj):
     return traj_stream.get_pdb_lines_with_alphaspace(i_frame_traj)
+
+
+def init(config):
+    init_traj_stream_from_config(config)
+
+

@@ -1,5 +1,5 @@
 cd config
-cp local.config.prod.json config.json
+cp config.dev.json config.json
 cd ../client
 npm run build
 rm -rf ../rshow/server/local/client
