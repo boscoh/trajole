@@ -15,7 +15,7 @@ def run_from_config():
     client_dir = Path(__file__).resolve().parent / "server/local/client"
 
     if not config.get("port"):
-        port_json = Path(__file__).resolve().parent.parent / "config" / "config.port.json"
+        port_json = Path(__file__).resolve().parent.parent / "config" / "port.json"
         port = json.load(open(port_json)).get("port")
     else:
         port = config.port

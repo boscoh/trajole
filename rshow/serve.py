@@ -95,7 +95,7 @@ if __name__ == "__main__":
 
     client_dir = Path(__file__).resolve().parent / "server/lounge/client"
 
-    port_json = Path(__file__).resolve().parent.parent / "config" / "config.port.json"
+    port_json = Path(__file__).resolve().parent.parent / "config" / "port.json"
     port = json.load(open(port_json)).get("port")
 
     start_fastapi_server(config, handlers, client_dir, port)
