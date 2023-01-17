@@ -58,7 +58,6 @@ def reset_foam_traj(foam_id):
     logger.info(f"reset_foam_traj {foam_id}")
     new_config.is_solvent = config.is_solvent
     new_config.is_hydrogen = config.is_hydrogen
-    new_config.background = config.background
     new_config.is_dev = config.is_dev
     new_config.command = "FoamTrajStream"
     new_config.trajectories = [foam_id]

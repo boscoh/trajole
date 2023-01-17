@@ -32,23 +32,19 @@ def run_from_config():
 
 
 @click.group()
-@click.option(
-    "--dev", is_flag=True, help="Run server in dev mode (no break/no open browser)"
-)
+@click.option("--dev", is_flag=True, help="Run continuous server")
 @click.option("--solvent", is_flag=True, help="Keep solvent")
 @click.option("--hydrogen", is_flag=True, help="Keep hydrogens")
-@click.option("--background", default="#DDD", help="Background color to jolecule")
 @click.option("--port", default=9023, help="port number")
-def cli(dev, solvent, hydrogen, background, port):
+def cli(dev, solvent, hydrogen, port):
     """
-    rshow: : integrated analysis/protein viewer
+    rshow: mdtraj h5 viewer
 
     (C) 2021 Redesign Science
     """
     config.is_dev = dev
     config.is_solvent = solvent
     config.is_hydrogen = hydrogen
-    config.background = background
     config.port = port
 
 
@@ -56,7 +52,7 @@ def cli(dev, solvent, hydrogen, background, port):
 @click.argument("h5")
 def traj(h5):
     """
-    Trajectory of an MD simulation
+    MD Trajectory
     """
     config.command = "TrajStream"
     config.trajectories = [h5]
@@ -68,7 +64,7 @@ def traj(h5):
 @click.option("--n-bin", type=int)
 def fes(metad_dir, n_bin):
     """
-    Free-Energy Surface of Collective Variables
+    Integrated MD traj w/Free-Energy Surface of CV
     """
     config.command = "FesStream"
     config.metad_dir = metad_dir
@@ -81,7 +77,7 @@ def fes(metad_dir, n_bin):
 @click.argument("foam_id")
 def traj_foam(foam_id):
     """
-    Trajectory of a MD simulation loaded from FoamDB
+    MD trajectory stored on FoamDB
     """
     config.command = "FoamTrajStream"
     config.trajectories = [foam_id]
@@ -93,7 +89,7 @@ def traj_foam(foam_id):
 @click.option("--mode", default="matrix-strip", required=False)
 def matrix(matrix_dir, mode):
     """
-    Generic 2D surface linked to a set of trajectories
+    Generic 2D surface linked to a set of MD trajs
     """
     config.command = "MatrixStream"
     config.matrix_dir = matrix_dir
@@ -106,7 +102,7 @@ def matrix(matrix_dir, mode):
 @click.option("--key", default="u")
 def re(re_dir, key):
     """
-    Replicas in a replica-exchange simulation
+    Multiple replicas in a replica-exchange
     """
     config.command = "ParallelStream"
     config.re_dir = re_dir
@@ -119,7 +115,7 @@ def re(re_dir, key):
 @click.option("--key", default="u")
 def re_dock(re_dir, key):
     """
-    Replicas in a replica-exchange simulation
+    Multiple replicas in a replica-exchange w/fixed receptor
     """
     config.command = "ParallelDockStream"
     config.re_dir = re_dir
@@ -133,7 +129,7 @@ def re_dock(re_dir, key):
 @click.argument("csv", required=False)
 def ligands(pdb, sdf, csv):
     """
-    Ligand browser
+    Multiple ligands in single receptor
     """
     config.command = "LigandsStream"
     config.pdb = pdb
@@ -146,7 +142,7 @@ def ligands(pdb, sdf, csv):
 @click.argument("pdb")
 def frame(pdb):
     """
-    Ligand browser
+    Single frame of PDB or PARMED file
     """
     config.command = "FrameStream"
     config.pdb_or_parmed = pdb
