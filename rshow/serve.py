@@ -13,7 +13,6 @@ from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG)
 
 
 def open_url_in_background(url, sleep_in_s=1):
@@ -40,14 +39,12 @@ def open_url_in_background(url, sleep_in_s=1):
     threading.Thread(target=inner).start()
 
 
-def start_fastapi_server(config, handlers, client_dir, port):
+def start_fastapi_server(handlers, client_dir, port):
     app = FastAPI()
 
     app.add_middleware(
         CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
     )
-
-    handlers.init(config)
 
     @app.post("/rpc-run")
     async def rpc_run(data: dict):
@@ -82,6 +79,7 @@ def start_fastapi_server(config, handlers, client_dir, port):
         app.mount("/", StaticFiles(directory=client_dir), name="dist")
 
     logger.info(f"start rshow server on port {port}")
+
     uvicorn.run(app, port=port, log_level="critical")
 
 
@@ -91,6 +89,8 @@ if __name__ == "__main__":
     from server.lounge import handlers
     from addict import Dict
 
+    logging.basicConfig(level=logging.INFO)
+
     config = Dict(is_solvent=False, is_hydrogen=False)
 
     client_dir = Path(__file__).resolve().parent / "server/lounge/client"
@@ -98,8 +98,6 @@ if __name__ == "__main__":
     port_json = Path(__file__).resolve().parent.parent / "config" / "port.json"
     port = json.load(open(port_json)).get("port")
 
-    start_fastapi_server(config, handlers, client_dir, port)
+    handlers.init(config)
 
-
-
-
+    start_fastapi_server(handlers, client_dir, port)

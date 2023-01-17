@@ -3,6 +3,7 @@ import click
 from addict import Dict
 from pathlib import Path
 import json
+import logging
 
 from rshow import serve
 from rshow.server.local import handlers
@@ -14,6 +15,8 @@ config = Dict()
 def run_from_config():
     client_dir = Path(__file__).resolve().parent / "server/local/client"
 
+    logging.basicConfig(level=logging.INFO)
+
     if not config.get("port"):
         port_json = Path(__file__).resolve().parent.parent / "config" / "port.json"
         port = json.load(open(port_json)).get("port")
@@ -23,7 +26,9 @@ def run_from_config():
     if not config.is_dev:
         serve.open_url_in_background(f"http://localhost:{config.port}/#/foamtraj/0")
 
-    serve.start_fastapi_server(config, handlers, client_dir, port)
+    handlers.init(config)
+
+    serve.start_fastapi_server(handlers, client_dir, port)
 
 
 @click.group()
