@@ -29,7 +29,7 @@ def init_traj_stream_from_config(in_config):
     traj_stream = StreamingTrajectoryClass(in_config)
 
 
-def reset_foam_traj(foam_id):
+def reset_foam_id(foam_id):
     return {"title": traj_stream.get_title()}
 
 
@@ -50,7 +50,5 @@ def get_pdb_lines_with_alphaspace(foam_id, i_frame_traj):
     return traj_stream.get_pdb_lines_with_alphaspace(i_frame_traj)
 
 
-def init(config):
-    init_traj_stream_from_config(config)
 
 

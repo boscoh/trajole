@@ -1,5 +1,5 @@
 <template lang="pug">
-.w-100
+.w-100(:key="$route.params.id")
 
   #fail-modal.modal.fade
     .modal-dialog
@@ -47,7 +47,7 @@
       #matrix-widget.h-100(:style="matrixStyle" :key="forceFesKey")
 
       // Traj Strip
-      #strip-widget.h-100(:style="stripStyle")
+      #strip-widget.h-100(:style="stripStyle" :key="forceStripKey")
 
       // Table of Ligands
       #table.p-2.overflow-scroll(:style="tableStyle")
@@ -373,6 +373,7 @@ export default {
       foamId: '',
       mode: '',
       forceFesKey: 1,
+      forceStripKey: -1,
       title: '',
       key: '',
       opt_keys: [],
@@ -387,6 +388,8 @@ export default {
   watch: {
     $route (to, from) {
       console.log(this.$route.params.foamId)
+      this.forceFesKey = Math.random()
+      this.forceStripKey = Math.random()
       this.loadFoamId(this.$route.params.foamId)
     }
   },
@@ -511,12 +514,12 @@ export default {
         this.stripWidget.draw()
       }
 
-      let response = await rpc.remote.reset_foam_traj(this.foamId)
+      let response = await rpc.remote.reset_foam_id(this.foamId)
       if (response.error) {
         let myModal = new bootstrap.Modal(document.getElementById('fail-modal'))
         myModal.show()
         this.errorMsg = JSON.stringify(response.error, null, 2)
-        this.title = `Error loading FoamDB Trajectory ID=${this.foamId}`
+        this.title = `Error loading FoamId=${this.foamId}`
       } else {
         this.title = response.result.title
       }
@@ -872,6 +875,7 @@ export default {
       console.log('selectOptKey', key, iFrameTraj)
       await rpc.remote.select_new_key(this.foamId, key)
       this.forceFesKey = Math.random()
+      this.forceStripKey = Math.random()
       await this.loadMatrix(iFrameTraj)
     },
 

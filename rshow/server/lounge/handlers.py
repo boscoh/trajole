@@ -8,9 +8,11 @@ from rshow import mode as stream
 
 logger = logging.getLogger(__name__)
 
-config = {}
+config = Dict(is_solvent=False, is_hydrogen=False)
+
 traj_stream = None
 traj_stream_by_foam_id = OrderedDict()
+
 data_dir = Path(__file__).parent / "data"
 data_dir.mkdir(exist_ok=True)
 
@@ -53,9 +55,9 @@ def get_tags(foam_id):
     return result
 
 
-def reset_foam_traj(foam_id):
+def reset_foam_id(foam_id):
     new_config = Dict()
-    logger.info(f"reset_foam_traj {foam_id}")
+    logger.info(f"reset_foam_id {foam_id}")
     new_config.is_solvent = config.is_solvent
     new_config.is_hydrogen = config.is_hydrogen
     new_config.is_dev = config.is_dev
@@ -112,8 +114,5 @@ def get_pdb_lines_with_alphaspace(foam_id, i_frame):
     return traj_stream_by_foam_id[foam_id].get_pdb_lines_with_alphaspace(i_frame)
 
 
-def init(in_config):
-    global config
-    config = in_config
 
 

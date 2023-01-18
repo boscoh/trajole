@@ -91,13 +91,9 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO)
 
-    config = Dict(is_solvent=False, is_hydrogen=False)
-
     client_dir = Path(__file__).resolve().parent / "server/lounge/client"
 
     port_json = Path(__file__).resolve().parent.parent / "config" / "port.json"
     port = json.load(open(port_json)).get("port")
-
-    handlers.init(config)
 
     start_fastapi_server(handlers, client_dir, port)

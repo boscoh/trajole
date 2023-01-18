@@ -12,10 +12,14 @@ from rshow.server.local import handlers
 config = Dict()
 
 
-def run_from_config():
-    client_dir = Path(__file__).resolve().parent / "server/local/client"
+def run():
+    global config
 
     logging.basicConfig(level=logging.INFO)
+
+    handlers.init_traj_stream_from_config(config)
+
+    client_dir = Path(__file__).resolve().parent / "server/local/client"
 
     if not config.get("port"):
         port_json = Path(__file__).resolve().parent.parent / "config" / "port.json"
@@ -25,8 +29,6 @@ def run_from_config():
 
     if not config.is_dev:
         serve.open_url_in_background(f"http://localhost:{config.port}/#/foamtraj/0")
-
-    handlers.init(config)
 
     serve.start_fastapi_server(handlers, client_dir, port)
 
@@ -56,7 +58,7 @@ def traj(h5):
     """
     config.command = "TrajStream"
     config.trajectories = [h5]
-    run_from_config()
+    run()
 
 
 @cli.command()
@@ -70,7 +72,7 @@ def fes(metad_dir, n_bin):
     config.metad_dir = metad_dir
     if n_bin:
         config.n_bin = n_bin
-    run_from_config()
+    run()
 
 
 @cli.command()
@@ -81,7 +83,7 @@ def traj_foam(foam_id):
     """
     config.command = "FoamTrajStream"
     config.trajectories = [foam_id]
-    run_from_config()
+    run()
 
 
 @cli.command()
@@ -94,7 +96,7 @@ def matrix(matrix_dir, mode):
     config.command = "MatrixStream"
     config.matrix_dir = matrix_dir
     config.mode = mode
-    run_from_config()
+    run()
 
 
 @cli.command()
@@ -107,7 +109,7 @@ def re(re_dir, key):
     config.command = "ParallelStream"
     config.re_dir = re_dir
     config.key = key
-    run_from_config()
+    run()
 
 
 @cli.command()
@@ -120,7 +122,7 @@ def re_dock(re_dir, key):
     config.command = "ParallelDockStream"
     config.re_dir = re_dir
     config.key = key
-    run_from_config()
+    run()
 
 
 @cli.command()
@@ -135,7 +137,7 @@ def ligands(pdb, sdf, csv):
     config.pdb = pdb
     config.ligands = sdf
     config.csv = csv
-    run_from_config()
+    run()
 
 
 @cli.command()
@@ -146,4 +148,4 @@ def frame(pdb):
     """
     config.command = "FrameStream"
     config.pdb_or_parmed = pdb
-    run_from_config()
+    run()
