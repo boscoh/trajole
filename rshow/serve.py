@@ -87,7 +87,6 @@ if __name__ == "__main__":
     from pathlib import Path
     import json
     from server.lounge import handlers
-    from addict import Dict
 
     logging.basicConfig(level=logging.INFO)
 
