@@ -16,14 +16,16 @@
     // Top bar
     .w-100.d-flex.flex-row.justify-content-between.mx-2(style="height: 50px")
 
-        .d-flex.flex-row.flex-nowrap.align-items-center.text-nowrap.align-middle
+        .d-flex.flex-grow-1.flex-row.flex-nowrap.align-items-center.text-nowrap.align-middle
           router-link.btn.btn-sm.btn-secondary.me-2(to="/" tag="button")
             i.fas.fa-home
           .text-center(style="width: 35px; height: 35px; background-color: #BBB")
             .spinner-grow.spinner-grow.text-primary(style="width: 35px; height: 35px" v-if="isLoading")
             span(style="height: 35px" v-if="!isLoading") &nbsp;
           // Title
-          .m-0.ms-2 {{ title }}
+          .flex-grow-1.m-0.ms-2.overflow-hidden(style="height: 2em")
+            .overflow-wrap.text-wrap(style="width: 100%; font-size: 0.75rem; font-style: fixed")
+              | {{ title }}
 
           // Dropdown for energy components
           .ms-2(v-if="opt_keys.length")
@@ -495,6 +497,7 @@ export default {
 
     async loadFoamId (foamId) {
       console.log('loadFrameId', foamId)
+      document.title = 'FoamID:' + foamId
       this.foamId = foamId
       this.title = `Connecting ...`
       this.isLoading = true

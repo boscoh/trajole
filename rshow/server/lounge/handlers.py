@@ -13,9 +13,6 @@ config = Dict(is_solvent=False, is_hydrogen=False)
 traj_stream = None
 traj_stream_by_foam_id = OrderedDict()
 
-data_dir = Path(__file__).parent / "data"
-data_dir.mkdir(exist_ok=True)
-
 
 def select_new_key(foam_id, key):
     selectable_classes = ["ParallelStream", "ParallelDockStream"]
@@ -47,8 +44,8 @@ def get_tags(foam_id):
         with PostgresClient(config.get("database")) as client:
             traj = client.get_trajectory(foam_id)
             for k, v in traj["tags"].items():
-                if k in ["work_dir", "command"]:
-                    continue
+                # if k in ["work_dir", "command"]:
+                #     continue
                 result[k] = v
     except:
         pass
