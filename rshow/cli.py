@@ -87,14 +87,14 @@ def traj_foam(foam_id):
 
 
 @cli.command()
-@click.argument("matrix_dir", default=".", required=False)
+@click.argument("matrix_yaml", default="matrix.yaml", required=False)
 @click.option("--mode", default="matrix-strip", required=False)
-def matrix(matrix_dir, mode):
+def matrix(matrix_yaml, mode):
     """
     Generic 2D surface linked to a set of MD trajs
     """
     config.command = "MatrixStream"
-    config.matrix_dir = matrix_dir
+    config.matrix_yaml = matrix_yaml
     config.mode = mode
     run()
 

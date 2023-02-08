@@ -197,9 +197,11 @@ class FesStream(TrajStream):
 
 class MatrixStream(TrajStream):
     def process_config(self):
-        parent_dir = Path(self.config.matrix_dir)
-        fname = get_checked_path(parent_dir / "matrix.yaml")
+        fname = Path(self.config.matrix_yaml)
+        if fname.is_dir():
+            fname = fname / "matrix.yaml"
         data = load_yaml(fname, is_addict=True)
+        parent_dir = Path(fname).parent
         self.config.matrix = data.matrix
         self.config.title = "Matrix"
         if not self.config.mode:
