@@ -1,5 +1,5 @@
 <template lang="pug">
-.w-100(:key="$route.params.id")
+.w-100.overflow-hidden(:key="$route.params.id")
 
   #fail-modal.modal.fade
     .modal-dialog
@@ -14,18 +14,26 @@
   .w-100.d-flex.flex-column.user-select-none(style="background-color: #CCC")
 
     // Top bar
-    .w-100.d-flex.flex-row.justify-content-between.mx-2(style="height: 50px")
+    .w-100.d-flex.flex-row.justify-content-between.mx-2(style="height: 60px")
 
         .d-flex.flex-grow-1.flex-row.flex-nowrap.align-items-center.text-nowrap.align-middle
-          router-link.btn.btn-sm.btn-secondary.me-2(to="/" tag="button")
+          router-link.btn.btn-sm.btn-secondary.me-2(
+             to="/" tag="button" style="font-size: 1.5em; width: 50px; height: 50px;"
+          )
             i.fas.fa-home
-          .text-center(style="width: 35px; height: 35px; background-color: #BBB")
-            .spinner-grow.spinner-grow.text-primary(style="width: 35px; height: 35px" v-if="isLoading")
-            span(style="height: 35px" v-if="!isLoading") &nbsp;
-          // Title
-          .flex-grow-1.m-0.ms-2.overflow-hidden(style="height: 2em")
-            .overflow-wrap.text-wrap(style="width: 100%; font-size: 0.75rem; font-style: fixed")
-              | {{ title }}
+          .text-center(
+              style="width: 50px; height: 50px; background-color: #BBB"
+          )
+            .spinner-grow.spinner-grow.text-primary(style="width: 50px; height: 50px;" v-if="isLoading")
+            div(style="width: 50px; height: 50px" v-if="!isLoading") &nbsp;
+          // Title tags, fits in space in toolbar
+          .flex-grow-1.m-0.ms-2.overflow-hidden(style="height: 50px")
+            .d-flex.flex-wrap.d-inline(
+              style="width: 100%; font-family: monospace; line-height: 1.1em; font-size: 15px;"
+            )
+              template(v-for="(key) in Object.keys(title)")
+                span(style="color: #888") {{key}}:
+                span.ms-1.me-3 {{ title[key] }}
 
           // Dropdown for energy components
           .ms-2(v-if="opt_keys.length")
@@ -43,7 +51,7 @@
             )
             label.form-check-label alphaspace
 
-    .w-100.d-flex.flex-row(style="height: calc(100vh - 50px)")
+    .w-100.d-flex.flex-row(style="height: calc(100vh - 60px)")
 
       // The Free-Energy Surface
       #matrix-widget.h-100(:style="matrixStyle" :key="forceFesKey")
@@ -376,11 +384,12 @@ export default {
       mode: '',
       forceFesKey: 1,
       forceStripKey: -1,
-      title: '',
+      title: {},
       key: '',
       opt_keys: [],
       isAlphaSpace: false,
       isLoading: false,
+      nLoaders: 0,
       iFrameTrajs: [],
       table: [],
       tableHeaders: [],
@@ -396,7 +405,7 @@ export default {
     }
   },
   async mounted () {
-    this.isLoading = true
+    this.pushLoading()
     this.$forceUpdate()
 
     document.oncontextmenu = _.noop
@@ -439,6 +448,7 @@ export default {
     window.addEventListener('resize', this.resize)
 
     this.resize()
+    this.popLoading()
   },
   computed: {
     joleculeStyle () {
@@ -473,8 +483,21 @@ export default {
   },
 
   methods: {
-    async reload () {
+    pushLoading() {
       this.isLoading = true
+      this.nLoaders += 1
+    },
+
+    popLoading() {
+      this.nLoaders -= 1
+      if (this.nLoaders <= 0) {
+        this.nLoaders = 0
+        this.isLoading = false
+      }
+    },
+
+    async reload () {
+      this.pushLoading()
       await this.$forceUpdate()
       this.mode = (await rpc.remote.get_config(this.foamId, 'mode'))?.result
       this.key = (await rpc.remote.get_config(this.foamId, 'key'))?.result
@@ -484,7 +507,9 @@ export default {
       await this.$forceUpdate()
       if (this.mode === 'strip') {
         await this.loadStrip()
-      } else if (this.mode.includes('matrix')) {
+      } else if ((this.mode == 'sparse-matrix') || (this.mode == 'matrix')) {
+        await this.loadMatrix()
+      } else if (this.mode.includes('matrix-strip')) {
         await this.loadStrip()
         await this.loadMatrix()
       } else if (this.mode === 'table') {
@@ -492,15 +517,15 @@ export default {
       } else if (this.mode === 'frame') {
         await this.loadFrameIntoJolecule([0, 0], false)
       }
-      this.isLoading = false
+      this.popLoading()
     },
 
     async loadFoamId (foamId) {
       console.log('loadFrameId', foamId)
-      document.title = 'FoamID:' + foamId
+      document.title = '#' + foamId
       this.foamId = foamId
-      this.title = `Connecting ...`
-      this.isLoading = true
+      this.title = {"Connecting": ""}
+      this.pushLoading()
       await this.$forceUpdate()
 
       this.jolecule.clear()
@@ -522,22 +547,22 @@ export default {
         let myModal = new bootstrap.Modal(document.getElementById('fail-modal'))
         myModal.show()
         this.errorMsg = JSON.stringify(response.error, null, 2)
-        this.title = `Error loading FoamId=${this.foamId}`
+        this.title = {"Error": `loading FoamId=${this.foamId}`}
       } else {
         this.title = response.result.title
       }
-      this.isLoading = false
+      this.popLoading()
 
       await this.reload()
     },
 
     async get_config (key) {
-      this.isLoading = true
+      this.pushLoading()
 
       await this.$forceUpdate()
       let response = await rpc.remote.get_config(this.foamId, 'matrix')
 
-      this.isLoading = false
+      this.popLoading()
 
       if (response.result) {
         return response.result
@@ -557,9 +582,10 @@ export default {
       } else {
         value = { iFrameTraj }
       }
-      console.log(`loadMatrix iFrameTraj=${iFrameTraj}`, matrix, value)
+      console.log(`loadMatrix iFrameTraj=${iFrameTraj}`, value)
       let isSparse = this.mode === 'sparse-matrix'
       this.matrixWidget = new MatrixWidget('#matrix-widget', matrix, isSparse)
+      this.resize()
       this.matrixWidget.selectGridValue = this.selectMatrixGridValue
       this.matrixWidget.deselectGridValue = this.deselectMatrixGridValue
       await this.matrixWidget.clickGridValue(value)
@@ -619,6 +645,7 @@ export default {
       console.log(`loadStrip ${value}`)
 
       this.stripWidget = new MatrixWidget('#strip-widget', strip, false)
+      this.resize()
       this.stripWidget.selectGridValue = this.selectStripGridValue
       this.stripWidget.deselectGridValue = this.deselectStripGridValue
       if (value) {
@@ -671,6 +698,7 @@ export default {
       )
       this.iFrameTraj = _.first(values).iFrameTraj
       await this.selectTableiFrameTraj(this.iFrameTraj)
+      this.resize()
     },
 
     async selectTableiFrameTraj (iFrameTraj, selectOnly) {
@@ -744,13 +772,13 @@ export default {
           console.log(`getPdbLines from cacheAlphaSpaceByiFrameTraj[${key}]`)
           result = this.cacheAlphaSpaceByiFrameTraj[key]
         } else {
-          this.isLoading = true
+          this.pushLoading()
           await this.$forceUpdate()
           let response = await rpc.remote.get_pdb_lines_with_alphaspace(
             this.foamId,
             iFrameTraj
           )
-          this.isLoading = false
+          this.popLoading()
           if (response.result) {
             this.cacheAlphaSpaceByiFrameTraj[key] = response.result
             result = response.result
@@ -761,10 +789,10 @@ export default {
           console.log(`getPdbLines from cacheByiFrameTraj[${key}]`)
           result = this.cacheByiFrameTraj[key]
         } else {
-          this.isLoading = true
+          this.pushLoading()
           await this.$forceUpdate()
           let response = await rpc.remote.get_pdb_lines(this.foamId, iFrameTraj)
-          this.isLoading = false
+          this.popLoading()
           if (response.result) {
             this.cacheByiFrameTraj[key] = response.result
             result = response.result

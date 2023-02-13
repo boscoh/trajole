@@ -15,6 +15,9 @@ config = Dict()
 def run():
     global config
 
+    if "mode" not in config:
+        config.mode = ""
+
     logging.basicConfig(level=logging.INFO)
 
     handlers.init_traj_stream_from_config(config)

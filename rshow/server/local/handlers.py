@@ -2,7 +2,7 @@ import os
 
 import psutil
 
-from rshow import mode
+from rshow import stream
 
 traj_stream = None
 
@@ -22,15 +22,15 @@ def init_traj_stream_from_config(in_config):
 
     :return bool: False on failure
     """
-    if not hasattr(mode, in_config.command):
+    if not hasattr(stream, in_config.command):
         raise ValueError(f"Couldn't find command {in_config.command}")
-    StreamingTrajectoryClass = getattr(mode, in_config.command)
+    StreamingTrajectoryClass = getattr(stream, in_config.command)
     global traj_stream
     traj_stream = StreamingTrajectoryClass(in_config)
 
 
 def reset_foam_id(foam_id):
-    return {"title": traj_stream.get_title()}
+    return {"title": {"title": traj_stream.get_title()}}
 
 
 def get_config(foam_id, k):

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from addict import Dict
 
-from rshow import mode as stream
+from rshow import stream
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ def reset_foam_id(foam_id):
     tags["foam_id"] = foam_id
     pieces = [f"{k}={v}" for k, v in tags.items()]
     title = " ".join(pieces)
-    return {"title": title}
+    return {"title": tags}
 
 
 def init_traj_stream_from_config(in_config):
