@@ -41,16 +41,6 @@
                option(v-for="opt_key in opt_keys" :value="opt_key")
                  | {{opt_key}}
 
-        // Alphaspace check box
-        .d-flex.flex-row-reverse.align-items-center.mx-2.pe-2
-          .form-check.input-group-sm
-            input.form-check-input(
-              type="checkbox"
-              v-model="isAlphaSpace"
-              @change="toggleAlphaSpace()"
-            )
-            label.form-check-label alphaspace
-
     .w-100.d-flex.flex-row(style="height: calc(100vh - 60px)")
 
       // The Free-Energy Surface
@@ -89,6 +79,33 @@
 
       // Jolecule
       #jolecule-container.h-100(:style="joleculeStyle")
+
+      // Traj Strip
+      #view-container.h-100.text-end.m-2(:style="viewStyle" :key="forceViewKey")
+        // Alphaspace check box
+        .mb-1
+          .form-check.input-group-sm
+            input.form-check-input(
+              type="checkbox"
+              v-model="isAlphaSpace"
+              @change="toggleAlphaSpace()"
+            )
+            label.form-check-label alphaspace
+        button.mb-1.btn.btn-sm.w-100.btn-secondary.me-2(@click="savePdb")
+          | Save PDB
+        button.mb-1.btn.btn-sm.w-100.btn-secondary.me-2(@click="saveView")
+          | Save View
+        template(v-for="view in views")
+          .d-flex.flex-row.mb-1.w-100
+            button.btn.btn-sm.btn-secondary(
+                @click="selectView(view)"
+            )
+              | {{ view.id }}
+            button.ms-1.btn.btn-sm.btn-info(
+                @click="deleteView(view)"
+            )
+              | X
+
 
 </template>
 
@@ -138,6 +155,11 @@ function inFrames (iFrameTrajs, iFrameTraj) {
   return _.some(iFrameTrajs, i => isSameVec(i, iFrameTraj))
 }
 
+function getIndexOfFrames (iFrameTrajs, iFrameTraj) {
+  return _.findIndex(iFrameTrajs, i => isSameVec(i, iFrameTraj))
+}
+
+
 function delFromFrames (iFrameTrajs, iFrameTraj) {
   let i = _.findIndex(iFrameTrajs, i => isSameVec(i, iFrameTraj))
   iFrameTrajs.splice(i, 1)
@@ -160,6 +182,7 @@ class MatrixWidget extends widgets.CanvasWidget {
   constructor (selector, grid, isSparse) {
     super(selector)
     this.iFrameTrajs = []
+    this.values = []
     this.isSparse = isSparse
     this.mousePressed = false
     this.borderColor = 'rgb(255, 0, 0, 0.2)'
@@ -202,8 +225,7 @@ class MatrixWidget extends widgets.CanvasWidget {
     return this.grid[i][this.nGridY - j - 1]
   }
 
-  getIFrameTraj (i, j) {
-    let value = this.getValue(i, j)
+  getIFrameTrajFromValue (value) {
     if (_.has(value, 'iFrameTrajs')) {
       if (value.iFrameTrajs.length) {
         return value.iFrameTrajs[0]
@@ -212,6 +234,18 @@ class MatrixWidget extends widgets.CanvasWidget {
       return value.iFrameTraj
     }
     return null
+  }
+
+  getIFrameTraj (i, j) {
+    let value = this.getValue(i, j)
+    return this.getIFrameTrajFromValue(value)
+  }
+
+  async loadValues(values) {
+    await this.clickGridValue(values[0], false)
+    for (let i=1; i<values.length; i+=1) {
+      await this.clickGridValue(values[i], true)
+    }
   }
 
   getXFromI (i) {
@@ -321,13 +355,17 @@ class MatrixWidget extends widgets.CanvasWidget {
       if (inFrames(this.iFrameTrajs, value.iFrameTraj)) {
         delFromFrames(this.iFrameTrajs, value.iFrameTraj)
         await this.deselectGridValue(value)
+        let i = getIndexOfFrames(this.iFrameTrajs, value.iFrameTraj)
+        this.values.splice(i, 1)
       } else {
         await this.selectGridValue(value, false)
         this.iFrameTrajs.push(value.iFrameTraj)
+        this.values.push(value)
       }
     } else {
       await this.selectGridValue(value, true)
       this.iFrameTrajs = [value.iFrameTraj]
+      this.values = [value]
     }
     this.draw()
   }
@@ -380,10 +418,12 @@ export default {
   data () {
     return {
       stripWidth: '70px',
+      viewWidth: '120px',
       foamId: '',
       mode: '',
       forceFesKey: 1,
       forceStripKey: -1,
+      forceViewKey: -2,
       title: {},
       key: '',
       opt_keys: [],
@@ -393,7 +433,8 @@ export default {
       iFrameTrajs: [],
       table: [],
       tableHeaders: [],
-      errorMsg: ''
+      errorMsg: '',
+      views: [],
     }
   },
   watch: {
@@ -472,6 +513,10 @@ export default {
       return 'display: none'
     },
 
+    viewStyle () {
+      return `width: ${this.viewWidth}`
+    },
+
     matrixStyle () {
       if (this.mode === 'matrix-strip') {
         return `width: calc(50% - ${this.stripWidth})`
@@ -528,6 +573,11 @@ export default {
       this.pushLoading()
       await this.$forceUpdate()
 
+      let response = await rpc.remote.get_views(this.foamId)
+      if (response.result) {
+        this.views = response.result
+      }
+
       this.jolecule.clear()
       this.cacheByiFrameTraj = {}
       this.cacheAlphaSpaceByiFrameTraj = {}
@@ -542,7 +592,7 @@ export default {
         this.stripWidget.draw()
       }
 
-      let response = await rpc.remote.reset_foam_id(this.foamId)
+      response = await rpc.remote.reset_foam_id(this.foamId)
       if (response.error) {
         let myModal = new bootstrap.Modal(document.getElementById('fail-modal'))
         myModal.show()
