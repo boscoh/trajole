@@ -897,6 +897,108 @@ export default {
       this.nStructuresInFrame.splice(i, 1)
     },
 
+    savePdb() {
+      let lines = []
+      let soup = this.jolecule.soup
+      let nStructure = soup.structureIds.length
+      let iStructure = null
+      let atom = soup.getAtomProxy()
+      let residue = soup.getResidueProxy()
+      let isMultiple = nStructure > 1
+      for (let iAtom of _.range(soup.getAtomCount())) {
+        atom.iAtom = iAtom
+        residue.iRes = atom.iRes
+
+        if (iStructure !== residue.iStructure) {
+          iStructure = residue.iStructure
+          if (isMultiple) {
+            if (iStructure > 0) {
+              lines.push('ENDMDL')
+            }
+            lines.push('MODEL    ' + (iStructure+1).toString())
+          }
+          lines.push(`REMARK   6     Foamid:${this.foamId} ${residue.structureId}`)
+        }
+
+        let line = "ATOM  "
+        line += (atom.iAtom + 1).toString().padStart(5)
+        line += " "
+        line += atom.atomType.padStart(4)
+        line += " "
+        line += residue.resType.padEnd(4)
+        line += residue.chain
+        line += residue.resNum.toString().padStart(4)
+        line += "    "
+        line += atom.pos.x.toFixed(3).padStart(8)
+        line += atom.pos.y.toFixed(3).padStart(8)
+        line += atom.pos.z.toFixed(3).padStart(8)
+        line += atom.bfactor.toFixed(2).padStart(6)
+        line += "1.00".padStart(6)
+        line += "          "
+        line += atom.elem.padStart(2)
+        lines.push(line)
+      }
+
+      if (isMultiple) {
+        lines.push('ENDMDL')
+      }
+
+      let text = lines.join("\n")
+      let filename = 'out.pdb';
+
+      let element = document.createElement('a');
+      element.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(text));
+      element.setAttribute('download', filename);
+
+      element.style.display = 'none';
+      document.body.appendChild(element);
+
+      element.click();
+      document.body.removeChild(element);
+    },
+
+    async saveView() {
+      let viewDict = this.jolecule.soupView.getCurrentView().getDict()
+      let nFrameTraj = this.iFrameTrajs
+      let view = {
+        id: viewDict.view_id.replace("view:", ""),
+        viewDict: viewDict,
+      }
+      if (this.matrixWidget) {
+        view.matrixWidgetValues = this.matrixWidget.values
+      }
+      if (this.stripWidget) {
+        view.stripWidgetValues = this.stripWidget.values
+      }
+      console.log(`saveView`, _.cloneDeep(view))
+      this.views.push(view)
+      await rpc.remote.add_view(this.foamId, view)
+    },
+
+    async selectView(view) {
+      console.log(`selectView`, _.cloneDeep(view))
+      if (_.has(view, "matrixWidgetValues")) {
+        this.matrixWidget.loadValues(view.matrixWidgetValues)
+      }
+      if (_.has(view, "stripWidgetValues")) {
+        this.stripWidget.loadValues(view.stripWidgetValues)
+      }
+      let newView = this.jolecule.soupView.getCurrentView()
+      newView.setFromDict(view.viewDict)
+      // history.pushState(
+      //   {},
+      //   null,
+      //   this.$route.path + '?view=' + view.id
+      // )
+      this.controller.setTargetView(newView)
+    },
+
+    async deleteView(view) {
+      let i = this.views.indexOf(view)
+      this.views.splice(i, 1)
+      await rpc.remote.delete_view(this.foamId, view)
+    },
+
     async toggleAlphaSpace () {
       this.loadFrameIntoJolecule(_.last(this.iFrameTrajs))
     },
