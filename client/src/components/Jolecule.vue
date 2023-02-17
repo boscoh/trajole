@@ -552,7 +552,7 @@ export default {
       await this.$forceUpdate()
       if (this.mode === 'strip') {
         await this.loadStrip()
-      } else if ((this.mode == 'sparse-matrix') || (this.mode == 'matrix')) {
+      } else if ((this.mode === 'sparse-matrix') || (this.mode === 'matrix')) {
         await this.loadMatrix()
       } else if (this.mode.includes('matrix-strip')) {
         await this.loadStrip()
@@ -573,11 +573,6 @@ export default {
       this.pushLoading()
       await this.$forceUpdate()
 
-      let response = await rpc.remote.get_views(this.foamId)
-      if (response.result) {
-        this.views = response.result
-      }
-
       this.jolecule.clear()
       this.cacheByiFrameTraj = {}
       this.cacheAlphaSpaceByiFrameTraj = {}
@@ -592,7 +587,7 @@ export default {
         this.stripWidget.draw()
       }
 
-      response = await rpc.remote.reset_foam_id(this.foamId)
+      let response = await rpc.remote.reset_foam_id(this.foamId)
       if (response.error) {
         let myModal = new bootstrap.Modal(document.getElementById('fail-modal'))
         myModal.show()
@@ -604,6 +599,21 @@ export default {
       this.popLoading()
 
       await this.reload()
+
+      response = await rpc.remote.get_views(this.foamId)
+      if (response.result) {
+        this.views = response.result
+        console.log(`mounted`, _.cloneDeep(this.$route.params), _.cloneDeep(this.$route.query))
+        let view = this.getView(this.$route.query.view)
+        if (view) {
+          this.selectView(view)
+        }
+      }
+
+    },
+
+    getView(viewId) {
+      return _.find(this.views, v => v.id === viewId)
     },
 
     async get_config (key) {
@@ -632,7 +642,6 @@ export default {
       } else {
         value = { iFrameTraj }
       }
-      console.log(`loadMatrix iFrameTraj=${iFrameTraj}`, value)
       let isSparse = this.mode === 'sparse-matrix'
       this.matrixWidget = new MatrixWidget('#matrix-widget', matrix, isSparse)
       this.resize()
@@ -642,7 +651,6 @@ export default {
     },
 
     async selectMatrixGridValue (value, selectOnly = false) {
-      console.log(`selectMatrixGridValue value`, _.cloneDeep(value))
       let iFrameTraj
       if (_.has(value, 'iFrameTrajs')) {
         let label = value.label
@@ -654,7 +662,6 @@ export default {
             iFrameTraj
           }))
         ]
-        console.log(`selectMatrixGridValue`, grid)
         this.stripWidget.loadGrid(grid)
         value = getFirstValue([grid])
         await this.stripWidget.clickGridValue(value)
@@ -673,7 +680,6 @@ export default {
     },
 
     async deselectMatrixGridValue (value) {
-      console.log(`deselectMatrixGridValue value`, _.cloneDeep(value))
       let iFrameTraj
       if (_.has(value, 'iFrameTraj')) {
         iFrameTraj = value.iFrameTraj
@@ -692,7 +698,6 @@ export default {
         strip = [[]]
       }
       let value = getFirstValue(strip)
-      console.log(`loadStrip ${value}`)
 
       this.stripWidget = new MatrixWidget('#strip-widget', strip, false)
       this.resize()
@@ -712,15 +717,11 @@ export default {
         this.hasFramesInJolecule() ||
         !inFrames(this.iFrameTrajs, iFrameTraj)
       ) {
-        console.log(
-          `StripWidget.chooseiFrameTraj iFrameTraj=${_.cloneDeep(iFrameTraj)}`
-        )
         await this.loadFrameIntoJolecule(iFrameTraj, selectOnly)
       }
     },
 
     async deselectStripGridValue (value) {
-      console.log(`deselectStripGridValue`, _.cloneDeep(value))
       let iFrameTraj = value.iFrameTraj
       if (inFrames(this.iFrameTrajs, iFrameTraj)) {
         await this.deleteFrameFromJolecule(iFrameTraj)
@@ -741,7 +742,6 @@ export default {
           status: 'none',
           iCol: i
         }))
-        console.log(_.cloneDeep(this.tableHeaders))
       }
       let values = _.filter(_.flattenDeep(this.table), v =>
         _.has(v, 'iFrameTraj')
@@ -752,13 +752,11 @@ export default {
     },
 
     async selectTableiFrameTraj (iFrameTraj, selectOnly) {
-      console.log(`selectTableEntry iFrameTraj=${_.cloneDeep(iFrameTraj)}`)
       await this.loadFrameIntoJolecule(iFrameTraj, selectOnly)
     },
 
     async downTableEntry (event, row) {
       this.mouseDownInTable = true
-      console.log('downTableEntry', event, row)
       if (event.shiftKey) {
         if (inFrames(this.iFrameTrajs, row.iFrameTraj)) {
           await this.deleteFrameFromJolecule(row.iFrameTraj)
@@ -869,6 +867,7 @@ export default {
         let soup = this.jolecule.soupWidget.soup
 
         let iStructureStart = soup.structureIds.length
+          console.log(`loadFrameIntoJolecule add ${_.last(soup.structureIds)}`)
         await this.jolecule.asyncAddDataServer(
           {
             version: 2,
@@ -890,14 +889,11 @@ export default {
               soup.structureIds.length - 1 - nStructureLoaded
             let structureId = soup.structureIds[iStructureToDelete]
             this.jolecule.controller.deleteStructure(iStructureToDelete)
-            console.log(`loadFrameIntoJolecule deleting`, structureId)
+            console.log(`loadFrameIntoJolecule delete`, structureId)
             nStructuresToDelete -= 1
           }
           this.jolecule.soupView.setHardCurrentView(saveView)
           this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame()
-          console.log(
-            `loadFrameIntoJolecule loaded ${this.jolecule.soupWidget.soup.structureIds}`
-          )
 
           this.nStructuresInFrame = []
           this.iFrameTrajs = []
@@ -928,9 +924,7 @@ export default {
       let nStructureBefore = _.sum(this.nStructuresInFrame.slice(0, i))
       let nStructureToDelete = this.nStructuresInFrame[i]
       let soup = this.jolecule.soupWidget.soup
-      console.log(
-        `deleteFrameFromJolecule before=${this.jolecule.soupWidget.soup.structureIds}`
-      )
+      console.log(`deleteFrameFromJolecule before=${soup.structureIds}`)
       while (nStructureToDelete) {
         let iStructureToDelete = nStructureBefore + nStructureToDelete - 1
         this.jolecule.controller.deleteStructure(iStructureToDelete)
@@ -1035,11 +1029,11 @@ export default {
       }
       let newView = this.jolecule.soupView.getCurrentView()
       newView.setFromDict(view.viewDict)
-      // history.pushState(
-      //   {},
-      //   null,
-      //   this.$route.path + '?view=' + view.id
-      // )
+      history.pushState(
+        {},
+        null,
+        '#' + this.$route.path + '?view=' + view.id
+      )
       this.controller.setTargetView(newView)
     },
 
