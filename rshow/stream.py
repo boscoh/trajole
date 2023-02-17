@@ -23,7 +23,7 @@ from rseed.freeenergy import (
 )
 from rseed.granary import Granary
 from rseed.util.alphaspace import AlphaSpace
-from rseed.util.fs import get_checked_path, get_empty_path_str, load_yaml
+from rseed.util.fs import get_checked_path, get_empty_path_str, load_yaml, dump_yaml
 from rseed.util.ligand import iter_ff_mol_from_file
 from rseed.util.select import select_mask
 from rseed.util.struct import get_parmed_from_traj_frame, get_traj_frame_from_parmed
@@ -72,6 +72,14 @@ class RshowMixin(ABC):
         pdb_lines.extend(alpha_space_pdb_lines)
         return pdb_lines
 
+    def get_views(self):
+        return []
+
+    def add_view(self, view):
+        return {}
+
+    def delete_view(self, view):
+        return {}
 
 class TrajStream(RshowMixin):
     def __init__(self, config={}):
@@ -118,6 +126,7 @@ class TrajStream(RshowMixin):
     def process_config(self):
         self.config.title = self.get_title()
         self.traj_manager = self.get_traj_manager()
+        self.view_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
         self.config.mode = "strip"
         self.config.strip = []
         for i_traj in range(self.traj_manager.get_n_trajectories()):
@@ -138,6 +147,28 @@ class TrajStream(RshowMixin):
             self.frame = new_frame
             self.i_frame_traj = i_frame_traj
         return self.frame
+
+    def get_views(self):
+        if self.view_yaml.exists():
+            result = load_yaml(self.view_yaml)
+            if isinstance(result, list):
+                return result
+        return []
+
+    def add_view(self, view):
+        views = self.get_views()
+        views.append(view)
+        dump_yaml(views, self.view_yaml)
+        return {}
+
+    def delete_view(self, to_delete_view):
+        views = self.get_views()
+        for i, view in enumerate(views):
+            logger.info(f'Test from {to_delete_view["id"]} == {view["id"]} {to_delete_view["id"] == view["id"]}')
+            if to_delete_view["id"] == view["id"]:
+                del views[i]
+                dump_yaml(views, self.view_yaml)
+                break
 
 
 class FoamTrajStream(TrajStream):
@@ -193,6 +224,7 @@ class FesStream(TrajStream):
         self.traj_manager = TrajectoryManager(
             self.config.trajectories, atom_mask=self.get_atom_mask()
         )
+        self.view_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
 
 
 class MatrixStream(TrajStream):
