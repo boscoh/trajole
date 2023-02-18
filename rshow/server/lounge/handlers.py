@@ -94,7 +94,6 @@ def init_traj_stream_from_config(in_config):
     config = Dict(traj_stream.config)
 
 
-
 def kill():
     pass
 
@@ -111,5 +110,13 @@ def get_pdb_lines_with_alphaspace(foam_id, i_frame):
     return traj_stream_by_foam_id[foam_id].get_pdb_lines_with_alphaspace(i_frame)
 
 
+def get_views(foam_id):
+    return traj_stream_by_foam_id[foam_id].get_views()
 
 
+def add_view(foam_id, view):
+    return traj_stream_by_foam_id[foam_id].add_view(view)
+
+
+def delete_view(foam_id, view):
+    return traj_stream_by_foam_id[foam_id].delete_view(view)

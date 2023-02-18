@@ -1,7 +1,7 @@
 import csv
 import logging
-from abc import ABC, abstractmethod
 import os
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +12,7 @@ import numpy as np
 import parmed
 import pydash as py_
 from addict import Dict
-from rseed.formats.easyh5 import EasyTrajH5
+from rseed.formats.easyh5 import EasyFoamTrajH5, EasyTrajH5
 from rseed.formats.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
 from rseed.formats.stream import StreamingTrajectoryManager, TrajectoryManager
 from rseed.freeenergy import (
@@ -23,13 +23,19 @@ from rseed.freeenergy import (
 )
 from rseed.granary import Granary
 from rseed.util.alphaspace import AlphaSpace
-from rseed.util.fs import get_checked_path, get_empty_path_str, load_yaml, dump_yaml
+from rseed.util.fs import (
+    dump_yaml,
+    get_checked_path,
+    get_empty_path_str,
+    get_yaml_str,
+    load_yaml,
+)
 from rseed.util.ligand import iter_ff_mol_from_file
 from rseed.util.select import select_mask
 from rseed.util.struct import get_parmed_from_traj_frame, get_traj_frame_from_parmed
 
 
-class RshowMixin(ABC):
+class RshowStreamMixin(ABC):
     """
     Interface to the webclient in Rshow
     """
@@ -81,7 +87,31 @@ class RshowMixin(ABC):
     def delete_view(self, view):
         return {}
 
-class TrajStream(RshowMixin):
+
+def get_i_view(views, test_view):
+    for i, view in enumerate(views):
+        if view["id"] == test_view["id"]:
+            return i
+    return None
+
+
+def update_view(views, update_view):
+    i = get_i_view(views, update_view)
+    if i is not None:
+        views[i] = update_view
+    else:
+        views.append(update_view)
+    return views
+
+
+def delete_view(views, to_delete_view):
+    i = get_i_view(views, to_delete_view)
+    if i is not None:
+        del views[i]
+    return views
+
+
+class TrajStream(RshowStreamMixin):
     def __init__(self, config={}):
         self.config = Dict(
             mode="strip",  # "strip", "matrix", "sparse-matrix", "matrix-strip", "table"
@@ -126,7 +156,7 @@ class TrajStream(RshowMixin):
     def process_config(self):
         self.config.title = self.get_title()
         self.traj_manager = self.get_traj_manager()
-        self.view_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
+        self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
         self.config.mode = "strip"
         self.config.strip = []
         for i_traj in range(self.traj_manager.get_n_trajectories()):
@@ -149,26 +179,23 @@ class TrajStream(RshowMixin):
         return self.frame
 
     def get_views(self):
-        if self.view_yaml.exists():
-            result = load_yaml(self.view_yaml)
+        if self.views_yaml.exists():
+            result = load_yaml(self.views_yaml)
             if isinstance(result, list):
                 return result
         return []
 
     def add_view(self, view):
         views = self.get_views()
-        views.append(view)
-        dump_yaml(views, self.view_yaml)
+        update_view(views, view)
+        dump_yaml(views, self.views_yaml)
         return {}
 
     def delete_view(self, to_delete_view):
         views = self.get_views()
-        for i, view in enumerate(views):
-            logger.info(f'Test from {to_delete_view["id"]} == {view["id"]} {to_delete_view["id"] == view["id"]}')
-            if to_delete_view["id"] == view["id"]:
-                del views[i]
-                dump_yaml(views, self.view_yaml)
-                break
+        delete_view(views, to_delete_view)
+        logger.info(f"delete_view view:{to_delete_view['id']}")
+        dump_yaml(views, self.views_yaml)
 
 
 class FoamTrajStream(TrajStream):
@@ -183,10 +210,32 @@ class FoamTrajStream(TrajStream):
 
     def process_config(self):
         super().process_config()
-        h5 = self.traj_manager.get_h5(0)
+        from rseed.formats.easyh5 import EasyFoamTrajH5
+
+        h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
         if h5.has_dataset("rshow_matrix"):
             self.config.matrix = h5.get_json_dataset("rshow_matrix")
             self.config.mode = "sparse-matrix"
+
+    def get_views(self):
+        h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
+        if h5.has_dataset("json_views"):
+            return h5.get_json_dataset("json_views")
+        return []
+
+    def save_views(self, views):
+        h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
+        h5.set_json_dataset("json_views", views)
+
+    def add_view(self, view):
+        views = self.get_views()
+        self.save_views(update_view(views, view))
+        return {"success": True}
+
+    def delete_view(self, to_delete_view):
+        views = self.get_views()
+        delete_view(views, to_delete_view)
+        self.save_views(views)
 
 
 class FrameStream(TrajStream):
@@ -224,7 +273,7 @@ class FesStream(TrajStream):
         self.traj_manager = TrajectoryManager(
             self.config.trajectories, atom_mask=self.get_atom_mask()
         )
-        self.view_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
+        self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
 
 
 class MatrixStream(TrajStream):
@@ -243,6 +292,7 @@ class MatrixStream(TrajStream):
         self.traj_manager = TrajectoryManager(
             self.config.trajectories, atom_mask=self.get_atom_mask()
         )
+        self.views_yaml = fname.with_suffix(".views.yaml")
 
 
 class LigandsStream(TrajStream):
@@ -288,6 +338,7 @@ class LigandsStream(TrajStream):
                         break
                     else:
                         self.config.table[i - 1]["vals"].extend(row)
+        self.views_yaml = Path(pdb).with_suffix(".views.yaml")
 
     def get_ligand_pdb_lines(self, i_ligand):
         traj = get_traj_frame_from_parmed(self.ligand_parmeds[i_ligand])
@@ -326,6 +377,7 @@ class ParallelStream(TrajStream):
         self.traj_manager = TrajectoryManager(
             trajectories=self.config.trajectories, atom_mask=self.get_atom_mask()
         )
+        self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
 
         self.config.strip = []
         for i_traj in range(self.traj_manager.get_n_trajectories()):
@@ -362,6 +414,7 @@ class ParallelDockStream(TrajStream):
         self.frame = self.h5.get_frame_traj(0)
         self.i_ligand_atoms = self.h5.get_dataset("i_ligand_atoms")[:]
         self.conformations_nm = self.h5.get_dataset("ligand_conformations")
+        self.views_yaml = fname.with_suffix(".views.yaml")
 
         energy_h5 = parent_dir / "energy.h5"
         sampler = FreeEnergySampler.from_h5(get_checked_path(energy_h5))

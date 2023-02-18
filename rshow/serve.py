@@ -62,10 +62,11 @@ def start_fastapi_server(handlers, client_dir, port):
             logger.debug(f"rpc-run {method}")
             return {"result": result, "jsonrpc": "2.0", "id": job_id}
         except Exception as e:
-            for line in str(traceback.format_exc()).splitlines():
+            error_lines = str(traceback.format_exc()).splitlines()
+            for line in error_lines:
                 logger.debug(line)
             return {
-                "error": {"code": -1, "message": str(e)},
+                "error": {"code": -1, "message": error_lines},
                 "jsonrpc": "2.0",
                 "id": job_id,
             }
@@ -84,8 +85,9 @@ def start_fastapi_server(handlers, client_dir, port):
 
 
 if __name__ == "__main__":
-    from pathlib import Path
     import json
+    from pathlib import Path
+
     from server.lounge import handlers
 
     logging.basicConfig(level=logging.INFO)

@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-import click
-from addict import Dict
-from pathlib import Path
 import json
 import logging
+from pathlib import Path
+
+import click
+from addict import Dict
 
 from rshow import serve
 from rshow.server.local import handlers
-
 
 config = Dict()
 

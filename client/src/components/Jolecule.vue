@@ -10,6 +10,17 @@
         .modal-body
           pre {{ errorMsg }}
 
+  #view-edit-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h5.modal-title Edit Description of View:{{ editViewId }}
+          button.btn-close(data-bs-dismiss="modal" @click="closeViewText")
+        .modal-body
+          textarea.form-control(v-model="editViewText" rows=4)
+        .modal-footer
+          button.btn.btn-secondary(data-bs-dismiss="modal" @click="closeViewText") Close
+          button.btn.btn-primary(data-bs-dismiss="modal" @click="saveViewText") Save
 
   .w-100.d-flex.flex-column.user-select-none(style="background-color: #CCC")
 
@@ -80,31 +91,56 @@
       // Jolecule
       #jolecule-container.h-100(:style="joleculeStyle")
 
-      // Traj Strip
-      #view-container.h-100.text-end.m-2(:style="viewStyle" :key="forceViewKey")
-        // Alphaspace check box
-        .mb-1
-          .form-check.input-group-sm
-            input.form-check-input(
-              type="checkbox"
-              v-model="isAlphaSpace"
-              @change="toggleAlphaSpace()"
-            )
-            label.form-check-label alphaspace
-        button.mb-1.btn.btn-sm.w-100.btn-secondary.me-2(@click="savePdb")
-          | Save PDB
-        button.mb-1.btn.btn-sm.w-100.btn-secondary.me-2(@click="saveView")
+      // Actions Strip
+      #view-container.h-100.mx-2.d-flex.flex-column(:style="viewStyle" :key="forceViewKey")
+        //// Alphaspace check box
+        //.mb-1
+        //  .form-check.input-group-sm
+        //    input.form-check-input(
+        //      type="checkbox"
+        //      v-model="isAlphaSpace"
+        //      @change="reloadLastFrame()"
+        //    )
+        //    label.form-check-label alphaspace
+        button.mb-1.btn.btn-sm.w-100.btn-secondary.me-2(@click="toggleAlphaSpace2()")
+          span(v-if="isAlphaSpace")
+            | Alphaspace&nbsp;
+            i.fas.fa-check
+          template(v-else) Alphaspace
+        button.mb-1.btn.btn-sm.w-100.btn-secondary.me-2(@click="downloadPdb")
+          | Download PDB
+        button.btn.btn-sm.w-100.btn-secondary.me-2(@click="saveView")
           | Save View
-        template(v-for="view in views")
-          .d-flex.flex-row.mb-1.w-100
-            button.btn.btn-sm.btn-secondary(
-                @click="selectView(view)"
-            )
-              | {{ view.id }}
-            button.ms-1.btn.btn-sm.btn-info(
-                @click="deleteView(view)"
-            )
-              | X
+        .flex-grow-1.overflow-scroll
+          .w-100.mt-2(style="background-color: #BBB" v-for="view in views")
+            .d-flex.flex-row.w-100.mb-1.p-2.pb-0.text-start(style="font-size:0.9em")
+              template(v-if="view.text")
+                | {{ view.text }}
+              span.text-secondary(v-else)
+                | Click
+                i.mx-2.fas.fa-edit
+                | to add text
+            .d-flex.flex-row.justify-content-between
+              .flex-start.flex-row
+                button.btn.btn-sm.btn-outline-secondary(
+                    @click="selectView(view)"
+                    style="width: 6.4em"
+                )
+                  .flex-row.text-start
+                    i.fas.fa-arrow-right
+                    | &nbsp;{{ view.id }}
+                button.btn.btn-sm.btn-outline-secondary(
+                    @click="startEditViewModal(view)"
+                )
+                  i.fas.fa-edit
+                button.btn.btn-sm.btn-outline-secondary(
+                    @click="updateView(view)"
+                )
+                  i.fas.fa-sync
+                button.btn.btn-sm.btn-outline-secondary(
+                    @click="deleteView(view)"
+                )
+                  i.fas.fa-trash
 
 
 </template>
@@ -342,7 +378,7 @@ class MatrixWidget extends widgets.CanvasWidget {
   }
 
   // to be overriden
-  async selectGridValue (value, selectOnly) {}
+  async selectGridValue (value, thisFrameOnly) {}
 
   // to be overriden
   async deselectGridValue (value) {}
@@ -418,7 +454,7 @@ export default {
   data () {
     return {
       stripWidth: '70px',
-      viewWidth: '120px',
+      viewWidth: '190px',
       foamId: '',
       mode: '',
       forceFesKey: 1,
@@ -435,6 +471,8 @@ export default {
       tableHeaders: [],
       errorMsg: '',
       views: [],
+      editViewText: '',
+      editViewId: '',
     }
   },
   watch: {
@@ -485,6 +523,7 @@ export default {
 
     await this.loadFoamId(this.$route.params.foamId)
 
+    this.url
     window.addEventListener('beforeunload', e => this.close())
     window.addEventListener('resize', this.resize)
 
@@ -496,12 +535,12 @@ export default {
       if (this.mode === 'strip') {
         return `width: calc(100% - ${this.stripWidth})`
       }
-      return 'width: 50%'
+      return 'width: calc(50vw)'
     },
 
     tableStyle () {
       if (this.mode === 'table') {
-        return 'width: 50%'
+        return `width: calc(50% - ${this.viewWidth})`
       }
       return 'display: none'
     },
@@ -519,9 +558,9 @@ export default {
 
     matrixStyle () {
       if (this.mode === 'matrix-strip') {
-        return `width: calc(50% - ${this.stripWidth})`
+        return `width: calc(50% - ${this.stripWidth} - ${this.viewWidth})`
       } else if (this.mode === 'matrix' || this.mode === 'sparse-matrix') {
-        return 'width: 50%'
+        return `width: calc(50% - ${this.viewWidth})`
       }
       return 'display: none'
     }
@@ -650,7 +689,7 @@ export default {
       await this.matrixWidget.clickGridValue(value)
     },
 
-    async selectMatrixGridValue (value, selectOnly = false) {
+    async selectMatrixGridValue (value, thisFrameOnly = false) {
       let iFrameTraj
       if (_.has(value, 'iFrameTrajs')) {
         let label = value.label
@@ -673,7 +712,7 @@ export default {
             this.hasFramesInJolecule() ||
             !inFrames(this.iFrameTrajs, iFrameTraj)
           ) {
-            await this.loadFrameIntoJolecule(iFrameTraj, selectOnly)
+            await this.loadFrameIntoJolecule(iFrameTraj, thisFrameOnly)
           }
         }
       }
@@ -708,7 +747,7 @@ export default {
       }
     },
 
-    async selectStripGridValue (value, selectOnly) {
+    async selectStripGridValue (value, thisFrameOnly) {
       let iFrameTraj = value.iFrameTraj
       if (_.isNil(iFrameTraj)) {
         return
@@ -717,7 +756,7 @@ export default {
         this.hasFramesInJolecule() ||
         !inFrames(this.iFrameTrajs, iFrameTraj)
       ) {
-        await this.loadFrameIntoJolecule(iFrameTraj, selectOnly)
+        await this.loadFrameIntoJolecule(iFrameTraj, thisFrameOnly)
       }
     },
 
@@ -751,8 +790,8 @@ export default {
       this.resize()
     },
 
-    async selectTableiFrameTraj (iFrameTraj, selectOnly) {
-      await this.loadFrameIntoJolecule(iFrameTraj, selectOnly)
+    async selectTableiFrameTraj (iFrameTraj, thisFrameOnly) {
+      await this.loadFrameIntoJolecule(iFrameTraj, thisFrameOnly)
     },
 
     async downTableEntry (event, row) {
@@ -854,7 +893,7 @@ export default {
       return this.nStructuresInFrame.length
     },
 
-    async loadFrameIntoJolecule (iFrameTraj, selectOnly = false) {
+    async loadFrameIntoJolecule (iFrameTraj, thisFrameOnly = false) {
       if (this.isFetching) {
         return
       }
@@ -867,7 +906,6 @@ export default {
         let soup = this.jolecule.soupWidget.soup
 
         let iStructureStart = soup.structureIds.length
-          console.log(`loadFrameIntoJolecule add ${_.last(soup.structureIds)}`)
         await this.jolecule.asyncAddDataServer(
           {
             version: 2,
@@ -882,7 +920,7 @@ export default {
         )
         let nStructureLoaded = soup.structureIds.length - iStructureStart
 
-        if (selectOnly && this.hasFramesInJolecule()) {
+        if (thisFrameOnly && this.hasFramesInJolecule()) {
           let nStructuresToDelete = _.sum(this.nStructuresInFrame)
           while (nStructuresToDelete) {
             let iStructureToDelete =
@@ -941,7 +979,7 @@ export default {
       this.nStructuresInFrame.splice(i, 1)
     },
 
-    savePdb() {
+    downloadPdb() {
       let lines = []
       let soup = this.jolecule.soup
       let nStructure = soup.structureIds.length
@@ -1003,10 +1041,11 @@ export default {
 
     async saveView() {
       let viewDict = this.jolecule.soupView.getCurrentView().getDict()
-      let nFrameTraj = this.iFrameTrajs
       let view = {
         id: viewDict.view_id.replace("view:", ""),
         viewDict: viewDict,
+        text: '',
+        imgs: '',
       }
       if (this.matrixWidget) {
         view.matrixWidgetValues = this.matrixWidget.values
@@ -1016,7 +1055,18 @@ export default {
       }
       console.log(`saveView`, _.cloneDeep(view))
       this.views.push(view)
+      this.pushLoading()
       await rpc.remote.add_view(this.foamId, view)
+      this.popLoading()
+    },
+
+    async updateView(view) {
+      let viewDict = this.jolecule.soupView.getCurrentView().getDict()
+      let oldView = _.find(this.views, v => v.id === view.id)
+      oldView.viewDict = viewDict
+      this.pushLoading()
+      await rpc.remote.add_view(this.foamId, oldView)
+      this.popLoading()
     },
 
     async selectView(view) {
@@ -1037,14 +1087,52 @@ export default {
       this.controller.setTargetView(newView)
     },
 
+    async startEditViewModal(view) {
+      window.keyboardLock = true
+      console.log(`window.keyboardLock`, window.keyboardLock)
+      console.log(`wi`, _.cloneDeep(view))
+      this.editViewText = view.text
+      this.editViewId = view.id
+      let myModal = new bootstrap.Modal(document.getElementById('view-edit-modal'))
+      myModal.show()
+    },
+    
+    async closeViewText() {
+      window.keyboardLock = false
+    },
+
+    async saveViewText() {
+      let view = _.find(this.views, {id: this.editViewId})
+      view.text = this.editViewText
+      this.$forceUpdate()
+      await rpc.remote.add_view(this.foamId, view)
+      window.keyboardLock = false
+    },
+
     async deleteView(view) {
       let i = this.views.indexOf(view)
       this.views.splice(i, 1)
+      this.pushLoading()
       await rpc.remote.delete_view(this.foamId, view)
+      this.popLoading()
     },
 
-    async toggleAlphaSpace () {
+    async reloadLastFrame () {
       this.loadFrameIntoJolecule(_.last(this.iFrameTrajs))
+    },
+
+    async toggleAlphaSpace2 () {
+      this.isAlphaSpace = !this.isAlphaSpace
+      this.$forceUpdate()
+      if (!this.isAlphaSpace) {
+        let grid = this.jolecule.soupView.soup.grid
+        grid.isElem = {}
+        grid.isChanged = true
+        this.jolecule.soupView.isUpdateColors = true
+        this.jolecule.soupWidget.buildScene()
+      } else {
+        this.loadFrameIntoJolecule(_.last(this.iFrameTrajs))
+      }
     },
 
     async selectOptKey (key) {
@@ -1060,7 +1148,10 @@ export default {
       await rpc.remote.kill()
     },
 
-    onkeydown (e) {
+    onkeydown (event) {
+      if (window.keyboardLock) {
+        return
+      }
       let c = String.fromCharCode(event.keyCode).toUpperCase()
       if (c === 'V') {
         this.createView()

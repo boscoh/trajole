@@ -41,7 +41,10 @@ async function rpc (method, ...params) {
   const id = Math.random()
     .toString(36)
     .slice(-6)
-  let wrap_params = _.map(params, _.cloneDeep)
+  let wrap_params = []
+  for (let p of params) {
+    wrap_params.push(_.cloneDeep(p))
+  }
   console.log(`rpc-run ${method}(`, wrap_params, ')')
   console.groupCollapsed()
   let response

@@ -60,4 +60,3 @@ def add_view(foam_id, view):
 
 def delete_view(foam_id, view):
     return traj_stream.delete_view(view)
-
