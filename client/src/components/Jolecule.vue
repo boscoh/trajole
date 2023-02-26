@@ -1,5 +1,8 @@
 <template lang="pug">
-.w-100.overflow-hidden(:key="$route.params.id")
+.overflow-hidden(
+  :key="$route.params.id"
+  style="width: calc(100vw); height: calc(100vh);"
+)
 
   #fail-modal.modal.fade
     .modal-dialog
@@ -14,43 +17,73 @@
     .modal-dialog
       .modal-content
         .modal-header
-          h5.modal-title Edit Description of View:{{ editViewId }}
-          button.btn-close(data-bs-dismiss="modal" @click="closeViewText")
+          h5.modal-title Edit Text Description
         .modal-body
+          .mb-3(style="font-size: 0.75em") URL: {{currentUrl}}?query={{ editViewId }}
           textarea.form-control(v-model="editViewText" rows=4)
         .modal-footer
-          button.btn.btn-secondary(data-bs-dismiss="modal" @click="closeViewText") Close
+          button.btn.btn-secondary(data-bs-dismiss="modal" @click="closeViewText") Cancel
           button.btn.btn-primary(data-bs-dismiss="modal" @click="saveViewText") Save
+
+  #tags-edit-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h5.modal-title Edit Text Description
+        .modal-body
+          .mb-1.d-flex.flex-row.align-items-center(
+              v-for="(editTag, i_tag) in editTags"
+          )
+            input.form-control(v-model="editTag.key")
+            input.form-control(v-model="editTag.value")
+            .ms-2.a(@click="removeTag(i_tag)")
+              i.fas.fa-trash
+          button.btn.btn-secondary(@click="addTag") +Tag
+        .modal-footer
+          button.btn.btn-secondary(data-bs-dismiss="modal" @click="closeTagsModal") Cancel
+          button.btn.btn-primary(data-bs-dismiss="modal" @click="saveTags") Save
 
   .w-100.d-flex.flex-column.user-select-none(style="background-color: #CCC")
 
     // Top bar
-    .w-100.d-flex.flex-row.justify-content-between.mx-2(style="height: 60px")
+    .d-flex.flex-row.justify-content-between.m-2(style="height: 50px")
 
-        .d-flex.flex-grow-1.flex-row.flex-nowrap.align-items-center.text-nowrap.align-middle
-          router-link.btn.btn-sm.btn-secondary.me-2(
-             to="/" tag="button" style="font-size: 1.5em; width: 50px; height: 50px;"
+      .flex-grow-1.d-flex.flex-row
+        // Home button
+        router-link.btn.btn-sm.btn-secondary.me-2(
+          to="/" tag="button" style="font-size: 1.5em; width: 50px; height: 50px;"
+        )
+          i.fas.fa-home
+        // Title tags, fits in space in toolbar
+        .flex-grow-1.m-0.ms-2.overflow-hidden(style="height: 50px")
+          .d-flex.flex-wrap.d-inline(
+            style="width: 100%; font-family: monospace; line-height: 1.1em; font-size: 15px;"
           )
-            i.fas.fa-home
-          .text-center(
-              style="width: 50px; height: 50px; background-color: #BBB"
-          )
-            .spinner-grow.spinner-grow.text-primary(style="width: 50px; height: 50px;" v-if="isLoading")
-            div(style="width: 50px; height: 50px" v-if="!isLoading") &nbsp;
-          // Title tags, fits in space in toolbar
-          .flex-grow-1.m-0.ms-2.overflow-hidden(style="height: 50px")
-            .d-flex.flex-wrap.d-inline(
-              style="width: 100%; font-family: monospace; line-height: 1.1em; font-size: 15px;"
-            )
-              template(v-for="(key) in Object.keys(title)")
-                span(style="color: #888") {{key}}:
-                span.ms-1.me-3 {{ title[key] }}
+            template(v-for="(key) in Object.keys(title)")
+              span(style="color: #888") {{key}}:
+              span.ms-1.me-3 {{ title[key] }}
 
-          // Dropdown for energy components
-          .ms-2(v-if="opt_keys.length")
-            select.form-select.form-select-sm(v-model="key" @change="selectOptKey(key)")
-               option(v-for="opt_key in opt_keys" :value="opt_key")
-                 | {{opt_key}}
+        // Dropdown for energy components
+        .ms-2(v-if="opt_keys.length")
+          select.form-select.form-select-sm(v-model="key" @change="selectOptKey(key)")
+            option(v-for="opt_key in opt_keys" :value="opt_key")
+              | {{opt_key}}
+
+      // Loading button
+      .d-flex.ms-2(style="width: 200px; box-sizing: border-box; height: 50px")
+        .ms-2(style="width: 200px; background-color: #BBB;")
+          button.btn.btn-secondary.h-100.w-100(
+            v-if="isLoading"
+          )
+            .d-flex.flex-row.justify-content-center.align-items-center
+              span.spinner-grow.spinner-grow-sm(
+                role="status" aria-hidden="true"
+              )
+              .mx-2 Loading
+              span.spinner-grow.spinner-grow-sm(
+                role="status" aria-hidden="true"
+              )
+
 
     .w-100.d-flex.flex-row(style="height: calc(100vh - 60px)")
 
@@ -81,7 +114,7 @@
             tr(
               v-for="(row, i) in table"
               :key="i"
-              :class="[isCurrentTableiFrameTraj(row.iFrameTraj) ? 'bg-primary' : '']"
+              :class="[isIFrameTrajSelected(row.iFrameTraj) ? 'bg-primary' : '']"
               @mousedown="e => downTableEntry(e, row)"
               @mouseup="e => upTableEntry(e, row)"
               @mousemove="e => moveTableEntry(e, row)"
@@ -92,57 +125,67 @@
       #jolecule-container.h-100(:style="joleculeStyle")
 
       // Actions Strip
-      #view-container.h-100.mx-2.d-flex.flex-column(:style="viewStyle" :key="forceViewKey")
-        //// Alphaspace check box
-        //.mb-1
-        //  .form-check.input-group-sm
-        //    input.form-check-input(
-        //      type="checkbox"
-        //      v-model="isAlphaSpace"
-        //      @change="reloadLastFrame()"
-        //    )
-        //    label.form-check-label alphaspace
-        button.mb-1.btn.btn-sm.w-100.btn-secondary.me-2(@click="toggleAlphaSpace2()")
-          span(v-if="isAlphaSpace")
-            | Alphaspace&nbsp;
-            i.fas.fa-check
-          template(v-else) Alphaspace
-        button.mb-1.btn.btn-sm.w-100.btn-secondary.me-2(@click="downloadPdb")
-          | Download PDB
-        button.btn.btn-sm.w-100.btn-secondary.me-2(@click="saveView")
-          | Save View
-        .flex-grow-1.overflow-scroll
-          .w-100.mt-2(style="background-color: #BBB" v-for="view in views")
-            .d-flex.flex-row.w-100.mb-1.p-2.pb-0.text-start(style="font-size:0.9em")
-              template(v-if="view.text")
-                | {{ view.text }}
-              span.text-secondary(v-else)
-                | Click
-                i.mx-2.fas.fa-edit
-                | to add text
-            .d-flex.flex-row.justify-content-between
-              .flex-start.flex-row
-                button.btn.btn-sm.btn-outline-secondary(
-                    @click="selectView(view)"
-                    style="width: 6.4em"
+      #view-container.h-100.mx-2.d-flex.flex-column(
+        :style="viewStyle" :key="forceViewKey"
+      )
+        div(:class="[isLoading ? 'overlay' : '']")
+        .ps-2
+          button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="openTagModal()")
+            | Edit Tags
+          button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="toggleAlphaSpace()")
+            span(v-if="isAlphaSpace")
+              | Alphaspace&nbsp;
+              i.fas.fa-check
+            template(v-else) Alphaspace
+          button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="downloadPdb")
+            | Download PDB
+
+          // Views handlers
+          button.btn.btn-sm.w-100.btn-secondary(@click="saveView")
+            | Save View
+          .flex-grow-1.overflow-scroll
+            .w-100.mt-2.p-2.rounded(
+              style="background-color: #BBB"
+              v-for="view in views"
+            )
+              .d-flex.flex-row.w-100.mb-1.pt-2.pb-0.text-start(style="font-size:0.9em")
+                button.btn.w-100.text-start.btn-sm.btn-secondary(
+                  v-if="view.id == viewId"
+                  @click="selectView(view)"
                 )
-                  .flex-row.text-start
-                    i.fas.fa-arrow-right
-                    | &nbsp;{{ view.id }}
-                button.btn.btn-sm.btn-outline-secondary(
+                  .py-2
+                    template(v-if="view.text")
+                      | {{ view.text }}
+                    template(v-else)
+                      | Click
+                      i.mx-2.far.fa-comment
+                      | to add text
+                button.btn.w-100.text-start.btn-sm.btn-outline-secondary(
+                  @click="selectView(view)"
+                  v-else
+                )
+                  .py-2
+                    template(v-if="view.text")
+                      | {{ view.text }}
+                    span.text-secondary(v-else)
+                      | Click
+                      i.mx-2.far.fa-comment
+                      | to add text
+              .d-flex.flex-row.justify-content-between
+                .flex-start.flex-row
+                  button.btn.btn-sm.btn-outline-secondary(
                     @click="startEditViewModal(view)"
-                )
-                  i.fas.fa-edit
-                button.btn.btn-sm.btn-outline-secondary(
+                  )
+                    i.far.fa-comment
+                  button.btn.btn-sm.btn-outline-secondary(
                     @click="updateView(view)"
-                )
-                  i.fas.fa-sync
-                button.btn.btn-sm.btn-outline-secondary(
+                  )
+                    i.fas.fa-save
+                .flex-end
+                  button.btn.btn-sm.btn-outline-secondary(
                     @click="deleteView(view)"
-                )
-                  i.fas.fa-trash
-
-
+                  )
+                    i.fas.fa-trash
 </template>
 
 <style>
@@ -155,6 +198,17 @@ body {
   flex: 1;
   margin: 0;
   padding: 0;
+}
+.overlay {
+  top: 0px;
+  opacity: .5;
+  background: #AAA;
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  pointer-events: visible;
+  display: block;
+  z-index: 1001;
 }
 @media (max-width: 778px) {
 }
@@ -389,6 +443,9 @@ class MatrixWidget extends widgets.CanvasWidget {
     }
     if (isShift) {
       if (inFrames(this.iFrameTrajs, value.iFrameTraj)) {
+        if (this.values.length === 1) {
+          return
+        }
         delFromFrames(this.iFrameTrajs, value.iFrameTraj)
         await this.deselectGridValue(value)
         let i = getIndexOfFrames(this.iFrameTrajs, value.iFrameTraj)
@@ -454,7 +511,7 @@ export default {
   data () {
     return {
       stripWidth: '70px',
-      viewWidth: '190px',
+      viewWidth: '200px',
       foamId: '',
       mode: '',
       forceFesKey: 1,
@@ -466,13 +523,16 @@ export default {
       isAlphaSpace: false,
       isLoading: false,
       nLoaders: 0,
-      iFrameTrajs: [],
+      iFrameTrajList: [],
       table: [],
       tableHeaders: [],
       errorMsg: '',
       views: [],
       editViewText: '',
       editViewId: '',
+      currentUrl: '',
+      viewId: null,
+      editTags: [],
     }
   },
   watch: {
@@ -519,7 +579,7 @@ export default {
     this.cacheAlphaSpaceByiFrameTraj = {}
 
     // saves which structures belongs to a loaded frame on display
-    this.nStructuresInFrame = []
+    this.nStructureInFrameList = []
 
     await this.loadFoamId(this.$route.params.foamId)
 
@@ -608,15 +668,15 @@ export default {
       console.log('loadFrameId', foamId)
       document.title = '#' + foamId
       this.foamId = foamId
-      this.title = {"Connecting": ""}
+      this.title = {}
       this.pushLoading()
       await this.$forceUpdate()
 
       this.jolecule.clear()
       this.cacheByiFrameTraj = {}
       this.cacheAlphaSpaceByiFrameTraj = {}
-      this.nStructuresInFrame = []
-      this.iFrameTrajs = []
+      this.nStructureInFrameList = []
+      this.iFrameTrajList = []
       if (this.matrixWidget) {
         this.matrixWidget.iFrameTrajs = []
         this.matrixWidget.draw()
@@ -645,7 +705,7 @@ export default {
         console.log(`mounted`, _.cloneDeep(this.$route.params), _.cloneDeep(this.$route.query))
         let view = this.getView(this.$route.query.view)
         if (view) {
-          this.selectView(view)
+          await this.selectView(view)
         }
       }
 
@@ -710,7 +770,7 @@ export default {
         if (!_.isNil(iFrameTraj)) {
           if (
             this.hasFramesInJolecule() ||
-            !inFrames(this.iFrameTrajs, iFrameTraj)
+            !inFrames(this.iFrameTrajList, iFrameTraj)
           ) {
             await this.loadFrameIntoJolecule(iFrameTraj, thisFrameOnly)
           }
@@ -725,8 +785,8 @@ export default {
       } else if (_.has(value, 'iFrameTrajs')) {
         iFrameTraj = value.iFrameTrajs[0]
       }
-      if (inFrames(this.iFrameTrajs, iFrameTraj)) {
-        await this.deleteFrameFromJolecule(iFrameTraj)
+      if (inFrames(this.iFrameTrajList, iFrameTraj)) {
+        await this.deleteIFrameTraj(iFrameTraj)
       }
     },
 
@@ -754,7 +814,7 @@ export default {
       }
       if (
         this.hasFramesInJolecule() ||
-        !inFrames(this.iFrameTrajs, iFrameTraj)
+        !inFrames(this.iFrameTrajList, iFrameTraj)
       ) {
         await this.loadFrameIntoJolecule(iFrameTraj, thisFrameOnly)
       }
@@ -762,8 +822,8 @@ export default {
 
     async deselectStripGridValue (value) {
       let iFrameTraj = value.iFrameTraj
-      if (inFrames(this.iFrameTrajs, iFrameTraj)) {
-        await this.deleteFrameFromJolecule(iFrameTraj)
+      if (inFrames(this.iFrameTrajList, iFrameTraj)) {
+        await this.deleteIFrameTraj(iFrameTraj)
       }
     },
 
@@ -797,8 +857,10 @@ export default {
     async downTableEntry (event, row) {
       this.mouseDownInTable = true
       if (event.shiftKey) {
-        if (inFrames(this.iFrameTrajs, row.iFrameTraj)) {
-          await this.deleteFrameFromJolecule(row.iFrameTraj)
+        if (inFrames(this.iFrameTrajList, row.iFrameTraj)) {
+          if (this.iFrameTrajList.length > 1) {
+            await this.deleteIFrameTraj(row.iFrameTraj)
+          }
           return
         }
       }
@@ -837,8 +899,8 @@ export default {
       }
     },
 
-    isCurrentTableiFrameTraj (iFrameTraj) {
-      return inFrames(this.iFrameTrajs, iFrameTraj)
+    isIFrameTrajSelected (iFrameTraj) {
+      return inFrames(this.iFrameTrajList, iFrameTraj)
     },
 
     resize () {
@@ -890,7 +952,7 @@ export default {
     },
 
     hasFramesInJolecule () {
-      return this.nStructuresInFrame.length
+      return this.nStructureInFrameList.length
     },
 
     async loadFrameIntoJolecule (iFrameTraj, thisFrameOnly = false) {
@@ -900,12 +962,14 @@ export default {
       this.isFetching = true
       let pdbLines = await this.getPdbLines(iFrameTraj)
       if (pdbLines) {
-        let saveView = this.jolecule.soupView.getCurrentView()
+        let saveView = null
         let pdbId = `frame-${iFrameTraj}`.replace(',', '-')
-
         let soup = this.jolecule.soupWidget.soup
-
-        let iStructureStart = soup.structureIds.length
+        let nStructurePrev = soup.structureIds.length
+        if (nStructurePrev > 0) {
+          saveView = this.jolecule.soupView.getCurrentView()
+        }
+        console.log(`loadFrameIntoJolecule load`, pdbId)
         await this.jolecule.asyncAddDataServer(
           {
             version: 2,
@@ -918,65 +982,106 @@ export default {
           },
           false
         )
-        let nStructureLoaded = soup.structureIds.length - iStructureStart
 
+        let nStructureInThisFrame = soup.structureIds.length - nStructurePrev
         if (thisFrameOnly && this.hasFramesInJolecule()) {
-          let nStructuresToDelete = _.sum(this.nStructuresInFrame)
-          while (nStructuresToDelete) {
-            let iStructureToDelete =
-              soup.structureIds.length - 1 - nStructureLoaded
-            let structureId = soup.structureIds[iStructureToDelete]
-            this.jolecule.controller.deleteStructure(iStructureToDelete)
-            console.log(`loadFrameIntoJolecule delete`, structureId)
-            nStructuresToDelete -= 1
+          let iLastStructureToDelete = soup.structureIds.length - 1 - nStructureInThisFrame
+          for (let i=iLastStructureToDelete; i>=0; i-=1) {
+            console.log(`loadFrameIntoJolecule delete`, soup.structureIds[i])
+            this.jolecule.controller.deleteStructure(i)
           }
-          this.jolecule.soupView.setHardCurrentView(saveView)
-          this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame()
-
-          this.nStructuresInFrame = []
-          this.iFrameTrajs = []
+          this.nStructureInFrameList = []
+          this.iFrameTrajList = []
         }
+        this.nStructureInFrameList.push(nStructureInThisFrame)
+        this.iFrameTrajList.push(iFrameTraj)
 
+        if (saveView) {
+          this.jolecule.soupView.setHardCurrentView(saveView)
+        }
+        this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame()
         if (!this.isAlphaSpace) {
           let grid = this.jolecule.soupView.soup.grid
           grid.isElem = {}
           grid.isChanged = true
           this.jolecule.soupView.isUpdateColors = true
         }
-
-        this.nStructuresInFrame.push(nStructureLoaded)
-        this.iFrameTrajs.push(iFrameTraj)
         this.jolecule.soupWidget.buildScene()
       }
       this.isFetching = false
     },
 
-    async deleteFrameFromJolecule (iFrameTraj) {
-      let i = _.findIndex(this.iFrameTrajs, i => isSameVec(i, iFrameTraj))
-      if (_.isNil(i)) {
+    async reloadLastFrameOfJolecule() {
+      if (this.isFetching) {
         return
       }
-      if (this.iFrameTrajs.length === 1) {
-        return
+      this.isFetching = true
+      let iFrameTraj =_.last(this.iFrameTrajList)
+      let pdbLines = await this.getPdbLines(iFrameTraj)
+      if (pdbLines) {
+        let saveView = this.jolecule.soupView.getCurrentView()
+
+        let pdbId = `frame-${iFrameTraj}`.replace(',', '-')
+        let soup = this.jolecule.soup
+        let structureId = _.last(soup.structureIds)
+        await this.jolecule.asyncAddDataServer(
+          {
+            version: 2,
+            pdbId: pdbId,
+            format: 'pdb',
+            asyncGetData: async () => pdbLines.join('\n'),
+            asyncGetViews: async () => [],
+            async asyncSaveViews () {},
+            async asyncDeleteViews () {}
+          },
+          false
+        )
+        soup.structureIds[soup.structureIds.length - 1] = structureId
+
+        let nStructure = _.last(this.nStructureInFrameList)
+        let i = this.iFrameTrajList.length - 1
+        await this.deleteFromIFrameTrajList(i)
+        this.nStructureInFrameList.splice(i, 1)
+        this.iFrameTrajList.splice(i, 1)
+        this.nStructureInFrameList.push(nStructure)
+        this.iFrameTrajList.push(iFrameTraj)
+
+        this.jolecule.soupView.setHardCurrentView(saveView)
+        this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame()
+        if (!this.isAlphaSpace) {
+          let grid = this.jolecule.soupView.soup.grid
+          grid.isElem = {}
+          grid.isChanged = true
+          this.jolecule.soupView.isUpdateColors = true
+        }
+        this.jolecule.soupWidget.buildScene()
       }
-      let nStructureBefore = _.sum(this.nStructuresInFrame.slice(0, i))
-      let nStructureToDelete = this.nStructuresInFrame[i]
+      this.isFetching = false
+    },
+
+    async deleteIFrameTraj (delIFrameTraj) {
+      let i = _.findIndex(
+          this.iFrameTrajList, iFrameTraj => isSameVec(iFrameTraj, delIFrameTraj)
+      )
+      if (!_.isNil(i)) {
+        await this.deleteFromIFrameTrajList(i)
+      }
+    },
+
+    async deleteFromIFrameTrajList (iFrame) {
+      let nStructureBefore = _.sum(this.nStructureInFrameList.slice(0, iFrame))
+      let nStructureToDelete = this.nStructureInFrameList[iFrame]
       let soup = this.jolecule.soupWidget.soup
-      console.log(`deleteFrameFromJolecule before=${soup.structureIds}`)
       while (nStructureToDelete) {
         let iStructureToDelete = nStructureBefore + nStructureToDelete - 1
+        let structureId = soup.structureIds[iStructureToDelete]
         this.jolecule.controller.deleteStructure(iStructureToDelete)
-        console.log(
-          `deleteFrameFromJolecule delete structure ${iStructureToDelete}`
-        )
+        console.log(`deleteIFromIFrameTrajList ${iStructureToDelete}:${structureId}`)
         nStructureToDelete -= 1
       }
-      console.log(
-        `deleteFrameFromJolecule after=${this.jolecule.soupWidget.soup.structureIds}`
-      )
       this.jolecule.soupWidget.buildScene()
-      delFromFrames(this.iFrameTrajs, iFrameTraj)
-      this.nStructuresInFrame.splice(i, 1)
+      this.iFrameTrajList.splice(iFrame, 1)
+      this.nStructureInFrameList.splice(iFrame, 1)
     },
 
     downloadPdb() {
@@ -1039,10 +1144,46 @@ export default {
       document.body.removeChild(element);
     },
 
+    async selectView(view) {
+      this.pushLoading()
+      this.viewId = view.id
+      console.log(`selectView`, _.cloneDeep(view))
+      if (_.has(view, "matrixWidgetValues")) {
+        await this.matrixWidget.loadValues(view.matrixWidgetValues)
+      }
+      if (_.has(view, "stripWidgetValues")) {
+        await this.stripWidget.loadValues(view.stripWidgetValues)
+      }
+      let newView = this.jolecule.soupView.getCurrentView()
+      newView.setFromDict(view.viewDict)
+      this.controller.setTargetView(newView)
+      history.pushState(
+        {},
+        null,
+        '#' + this.$route.path + '?view=' + view.id
+      )
+      this.popLoading()
+    },
+
+    async startEditViewModal(view) {
+      window.keyboardLock = true
+      this.editViewText = view.text
+      this.editViewId = view.id
+      this.currentUrl = window.location.href.split('?')[0]
+      let myModal = new bootstrap.Modal(document.getElementById('view-edit-modal'))
+      myModal.show()
+    },
+    
+    async closeViewText() {
+      window.keyboardLock = false
+    },
+
     async saveView() {
       let viewDict = this.jolecule.soupView.getCurrentView().getDict()
       let view = {
         id: viewDict.view_id.replace("view:", ""),
+        foamId: this.foamId,
+        timestamp: Math.floor(Date.now() / 1000),
         viewDict: viewDict,
         text: '',
         imgs: '',
@@ -1054,59 +1195,35 @@ export default {
         view.stripWidgetValues = this.stripWidget.values
       }
       console.log(`saveView`, _.cloneDeep(view))
-      this.views.push(view)
+      // NOTE: reverse chronological order insert at top
+      this.views.unshift(view)
       this.pushLoading()
       await rpc.remote.add_view(this.foamId, view)
       this.popLoading()
-    },
-
-    async updateView(view) {
-      let viewDict = this.jolecule.soupView.getCurrentView().getDict()
-      let oldView = _.find(this.views, v => v.id === view.id)
-      oldView.viewDict = viewDict
-      this.pushLoading()
-      await rpc.remote.add_view(this.foamId, oldView)
-      this.popLoading()
-    },
-
-    async selectView(view) {
-      console.log(`selectView`, _.cloneDeep(view))
-      if (_.has(view, "matrixWidgetValues")) {
-        this.matrixWidget.loadValues(view.matrixWidgetValues)
-      }
-      if (_.has(view, "stripWidgetValues")) {
-        this.stripWidget.loadValues(view.stripWidgetValues)
-      }
-      let newView = this.jolecule.soupView.getCurrentView()
-      newView.setFromDict(view.viewDict)
-      history.pushState(
-        {},
-        null,
-        '#' + this.$route.path + '?view=' + view.id
-      )
-      this.controller.setTargetView(newView)
-    },
-
-    async startEditViewModal(view) {
-      window.keyboardLock = true
-      console.log(`window.keyboardLock`, window.keyboardLock)
-      console.log(`wi`, _.cloneDeep(view))
-      this.editViewText = view.text
-      this.editViewId = view.id
-      let myModal = new bootstrap.Modal(document.getElementById('view-edit-modal'))
-      myModal.show()
-    },
-    
-    async closeViewText() {
-      window.keyboardLock = false
     },
 
     async saveViewText() {
       let view = _.find(this.views, {id: this.editViewId})
+      view.foamId = this.foamId,
+      view.timestamp = Math.floor(Date.now() / 1000),
       view.text = this.editViewText
-      this.$forceUpdate()
       await rpc.remote.add_view(this.foamId, view)
+      this.$forceUpdate()
       window.keyboardLock = false
+    },
+
+    async updateView(view) {
+      view.viewDict = this.jolecule.soupView.getCurrentView().getDict()
+      if (this.matrixWidget) {
+        view.matrixWidgetValues = this.matrixWidget.values
+      }
+      if (this.stripWidget) {
+        view.stripWidgetValues = this.stripWidget.values
+      }
+      view.foamId = this.foamId,
+      view.timestamp = Math.floor(Date.now() / 1000),
+      await rpc.remote.add_view(this.foamId, view)
+      this.$forceUpdate()
     },
 
     async deleteView(view) {
@@ -1115,13 +1232,11 @@ export default {
       this.pushLoading()
       await rpc.remote.delete_view(this.foamId, view)
       this.popLoading()
+      this.viewId = null
+      history.pushState({}, null, '#' + this.$route.path)
     },
 
-    async reloadLastFrame () {
-      this.loadFrameIntoJolecule(_.last(this.iFrameTrajs))
-    },
-
-    async toggleAlphaSpace2 () {
+    async toggleAlphaSpace () {
       this.isAlphaSpace = !this.isAlphaSpace
       this.$forceUpdate()
       if (!this.isAlphaSpace) {
@@ -1130,13 +1245,12 @@ export default {
         grid.isChanged = true
         this.jolecule.soupView.isUpdateColors = true
         this.jolecule.soupWidget.buildScene()
-      } else {
-        this.loadFrameIntoJolecule(_.last(this.iFrameTrajs))
       }
+      this.reloadLastFrameOfJolecule()
     },
 
     async selectOptKey (key) {
-      let iFrameTraj = _.last(this.iFrameTrajs)
+      let iFrameTraj = _.last(this.iFrameTrajList)
       console.log('selectOptKey', key, iFrameTraj)
       await rpc.remote.select_new_key(this.foamId, key)
       this.forceFesKey = Math.random()
@@ -1193,6 +1307,48 @@ export default {
       } else if (c === 'Z' || event.keyCode === 13) {
         this.controller.zoomToSelection()
       }
+    },
+
+    async openTagModal(view) {
+      this.editTags = []
+      for (let key of Object.keys(this.title)) {
+        this.editTags.push({
+          key: key,
+          value: this.title[key],
+        })
+      }
+      window.keyboardLock = true
+      let myModal = new bootstrap.Modal(document.getElementById('tags-edit-modal'))
+      myModal.show()
+    },
+
+    async closeTagsModal() {
+      window.keyboardLock = false
+    },
+
+    async saveTags() {
+      let tag = {}
+      for (let editTag of this.editTags) {
+        if (editTag.key && editTag.value) {
+          tag[editTag.key] = editTag.value
+        }
+      }
+      console.log('saveTags', _.cloneDeep(this.editTags), _.cloneDeep(tag))
+      this.pushLoading()
+      let response = await rpc.remote.set_tags(this.foamId, tag)
+      this.popLoading()
+      if (response.result) {
+        this.title = tag
+      }
+    },
+
+    removeTag(i_tag) {
+      this.editTags.splice(i_tag, i)
+      this.$forceUpdate()
+    },
+
+    addTag(tag) {
+      this.editTags.push({key: '', value: ''})
     }
   }
 }

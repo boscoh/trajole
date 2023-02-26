@@ -1,10 +1,13 @@
 import logging
 from collections import OrderedDict
 from pathlib import Path
+import time
 
 from addict import Dict
 
 from rshow import stream
+from rshow.persist import PersistDictList
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +15,10 @@ config = Dict(is_solvent=False, is_hydrogen=False)
 
 traj_stream = None
 traj_stream_by_foam_id = OrderedDict()
+
+
+views_yaml = Path(__file__).parent / "last_views.yaml"
+last_foam_id_views = PersistDictList(views_yaml, key="id")
 
 
 def select_new_key(foam_id, key):
@@ -28,28 +35,41 @@ def select_new_key(foam_id, key):
 
 def get_tags(foam_id):
     import os
-
     from foamdb.client import PostgresClient
     from foamdb.config import Config
 
+    if os.environ.get("HOME") is None:
+        # when we are running under supervisord
+        # in the lounge vm where there is no HOME
+        config = Config("/home/bosco/.config/foamdb/config.json")
+    else:
+        config = Config()
+
     result = {}
-    try:
-        home = os.environ.get("HOME")
-        if home is None:
-            # when we are running under supervisord
-            # in the lounge vm where there is no HOME
-            config = Config("/home/bosco/.config/foamdb/config.json")
-        else:
-            config = Config()
-        with PostgresClient(config.get("database")) as client:
-            traj = client.get_trajectory(foam_id)
-            for k, v in traj["tags"].items():
-                # if k in ["work_dir", "command"]:
-                #     continue
-                result[k] = v
-    except:
-        pass
+    with PostgresClient(config.get("database")) as client:
+        traj = client.get_trajectory(foam_id)
+        for k, v in traj["tags"].items():
+            result[k] = v
     return result
+
+
+def set_tags(foam_id, tags: dict):
+    import os
+    from foamdb.client import PostgresClient
+    from foamdb.config import Config
+    from foamdb.query import Trajectory
+
+    if os.environ.get("HOME") is None:
+        # when we are running under supervisord
+        # in the lounge vm where there is no HOME
+        config = Config("/home/bosco/.config/foamdb/config.json")
+    else:
+        config = Config()
+    with PostgresClient(config.get("database")) as client:
+        client.update(
+            Trajectory(trajectory_id=foam_id, tags=tags)
+        )
+    return {"success": True}
 
 
 def reset_foam_id(foam_id):
@@ -114,9 +134,19 @@ def get_views(foam_id):
     return traj_stream_by_foam_id[foam_id].get_views()
 
 
+def get_last_foamid_views(n=10):
+    logger.info(f"get_last_foamid_views {n}")
+    return last_foam_id_views.get(n)
+
+
 def add_view(foam_id, view):
+    view["foamId"] = foam_id
+    view["timestamp"] = int(time.time())
+    last_foam_id_views.append(view)
+    logger.info(f"add_view {view}")
     return traj_stream_by_foam_id[foam_id].add_view(view)
 
 
 def delete_view(foam_id, view):
+    logger.info(f"delete_view {view}")
     return traj_stream_by_foam_id[foam_id].delete_view(view)

@@ -100,7 +100,7 @@ def update_view(views, update_view):
     if i is not None:
         views[i] = update_view
     else:
-        views.append(update_view)
+        views.insert(0, update_view)
     return views
 
 

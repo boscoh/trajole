@@ -1,33 +1,60 @@
 <template lang="pug">
 .d-flex.justify-content-center.text-center
   .col-md-6.col-sm-10.col-lg-4
-    .pt-5
-    .pt-5
-    .mt-2(style="font-size: 8.2rem; font-family: Courier; line-height: 1.1em")
+
+    // Title
+    .mt-4(style="font-size: 7rem; font-family: Courier; line-height: 1em")
       b R_S
-    .mt-2(style="font-size: 3.7rem; font-family: Courier; line-height: 1.1em")
+    .mt-2(style="font-size: 3.2rem; font-family: Courier; line-height: 1em")
       b Lounge
-    .mt-2(style="font-size: 1rem; font-weight: thin")
-      | Online Viewer for FoamDB
-    .mt-5.d-flex.flex-column
-      .form-group.mb-1
-        label Enter FoamID Here
-        .d-flex.flex-row
-            input.form-control(v-model="foamId" type="number" @keypress.enter="changeFoamId()")
-            button.btn.btn-secondary(@click="changeFoamId") Go
+    .text-center
       img(
-        style="width: 100%"
+        style="width: 200px"
         src="../assets/watching-tv-icon-isometric-icon-with-man-watching-tv-in-living-room-holding-remote-control-vector-vector-clipart_csp92715008.webp.png"
       )
-      h5.mt-4 Example Trajectories
-      router-link.btn.btn-light.mt-1(to='/foamtraj/23' tag="button")
-        | FES for HSP 90
-      router-link.btn.btn-light.mt-1(to='/foamtraj/25' tag="button")
-        | FES for BAX
-      router-link.btn.btn-light.mt-1(to='/foamtraj/16' tag="button")
-        | P53
-      router-link.btn.btn-light.mt-1(to='/foamtraj/17' tag="button")
-        | Alanine Dipeptide
+    | Online Viewer for FoamDB
+
+    .mt-5.d-flex.flex-column
+      // Search bar
+      .form-group.mb-1.text-center
+        label
+          h5 Enter FoamID Here
+        .d-flex.flex-row.justify-content-center
+          input.form-control(
+            v-model="foamId" type="number"
+            @keypress.enter="changeFoamId()"
+            style="width: 200px"
+          )
+          button.btn.btn-secondary(@click="changeFoamId") Go
+
+      // Example Trajectories
+      h5.mt-5 Example Trajectories
+      .d-flex.justify-content-center(v-for="example in examples")
+        router-link.btn.btn-light.mt-1(
+          :to="'/foamtraj/' + example.foamId"
+          tag="button"
+          style="width: 250px"
+        )
+          template(v-if="example.name")
+            | {{ example.name }}
+          template(v-else)
+            | FoamId:{{example.foamId}}
+
+      // Last Views
+      template(v-if="lastFoamIdViews.length > 0")
+        h5.mt-5 Last views updated
+        .d-flex.justify-content-center(v-for="v in lastFoamIdViews")
+          router-link.btn.btn-light.mt-1(
+            :to="'/foamtraj/' + v.foamId + '?view=' + v.id"
+            tag="button"
+            style="width: 250px"
+          )
+            | FoamId:{{v.foamId}}:{{v.id}}
+            span.text-muted(v-if="v.text" style="font-size: 0.8rem")
+              br
+              | {{v.text}}
+
+
     .pb-5
     .pb-5
 </template>
@@ -39,14 +66,39 @@ body {
 </style>
 
 <script>
+import * as rpc from '../modules/rpc'
+import * as _ from 'lodash'
+
 export default {
   name: 'Home',
   data () {
     return {
-      foamId: ''
+      foamId: '',
+      examples: [
+        {foamId: 23, name: 'FES for HSP 90'},
+        {foamId: 17, name: 'Alanine Dipeptide'},
+      ],
+      lastFoamIdViews: []
     }
   },
+  watch: {
+    async $route (to, from) {
+      console.log('route changed', to, from)
+      await this.restart()
+    }
+  },
+  async mounted() {
+    await this.restart()
+  },
   methods: {
+    async restart() {
+      document.title = "R_S Lounge"
+      let response = await rpc.remote.get_last_foamid_views(100)
+      if (response.result) {
+        this.lastFoamIdViews = response.result.reverse()
+      }
+      console.log('restart', _.cloneDeep(this.lastFoamIdViews))
+    },
     changeFoamId (event) {
       console.log(this.foamId)
       this.$router.push(`/foamtraj/${this.foamId}`)
