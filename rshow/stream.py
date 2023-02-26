@@ -247,6 +247,7 @@ class FrameStream(TrajStream):
             self.frame = get_traj_frame_from_parmed(Granary(fname).structure)
         else:
             self.frame = mdtraj.load_pdb(self.config.pdb_or_parmed)
+        self.views_yaml = fname.with_suffix('.views.yaml')
         return True
 
     def get_frame(self, i_frame_traj=None):
