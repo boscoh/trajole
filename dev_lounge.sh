@@ -1,10 +1,10 @@
 # install ttab using `npm i -g ttab`
 # on mac, need to change
 #   System Prefs -> Security -> Privacy -> Accessibility: add Terminal
-psword -k npm
-psword -k rseed
+psword -k node
+psword -k miniconda3
+psword -k rshow
 psword -k serve.py
 ttab "cd client; npm run dev "
 ttab "cd server; python rshow/serve.py"
-sleep 0.5
-open http://localhost:3333
+rshow2 open-url http://localhost:9023 http://localhost:3333
