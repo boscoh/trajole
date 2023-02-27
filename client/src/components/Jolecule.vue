@@ -1,7 +1,7 @@
 <template lang="pug">
 .overflow-hidden(
   :key="$route.params.id"
-  style="width: calc(100vw); height: calc(100vh);"
+  style="width: calc(100vw); height: calc(var(--vh));"
 )
 
   #fail-modal.modal.fade
@@ -49,19 +49,21 @@
     .d-flex.flex-row.justify-content-between.m-2(style="height: 50px")
 
       .flex-grow-1.d-flex.flex-row
+
         // Home button
-        router-link.btn.btn-sm.btn-secondary.me-2(
+        router-link.btn.btn-sm.btn-secondary.me-3(
           to="/" tag="button" style="font-size: 1.5em; width: 50px; height: 50px;"
         )
           i.fas.fa-home
+
         // Title tags, fits in space in toolbar
-        .flex-grow-1.m-0.ms-2.overflow-hidden(style="height: 50px")
-          .d-flex.flex-wrap.d-inline(
-            style="width: 100%; font-family: monospace; line-height: 1.1em; font-size: 15px;"
-          )
-            template(v-for="(key) in Object.keys(title)")
-              span(style="color: #888") {{key}}:
-              span.ms-1.me-3 {{ title[key] }}
+        .flex-grow-1.overflow-hidden.w-100(style="height: 50px")
+            .d-flex.flex-row.flex-wrap.text-wrap(
+              style="font-family: monospace; line-height: 1.1em; font-size: 15px;"
+            )
+              template(v-for="(key) in Object.keys(title)")
+                span(style="color: #888") {{key}}:
+                | {{ title[key] }}&nbsp;
 
         // Dropdown for energy components
         .ms-2(v-if="opt_keys.length")
@@ -70,22 +72,20 @@
               | {{opt_key}}
 
       // Loading button
-      .d-flex.ms-2(style="width: 200px; box-sizing: border-box; height: 50px")
+      .d-flex.ms-2(style="width: 200px; box-sizing: border-box; height: 50px; z-index:1002")
         .ms-2(style="width: 200px; background-color: #BBB;")
           button.btn.btn-secondary.h-100.w-100(
-            v-if="isLoading"
+            :disabled="!isLoading"
           )
             .d-flex.flex-row.justify-content-center.align-items-center
-              span.spinner-grow.spinner-grow-sm(
-                role="status" aria-hidden="true"
-              )
-              .mx-2 Loading
-              span.spinner-grow.spinner-grow-sm(
-                role="status" aria-hidden="true"
-              )
+              template(v-if="isLoading")
+                span.spinner-border.spinner-border-sm(
+                  role="status" aria-hidden="true"
+                )
+                .mx-2 Loading...
 
 
-    .w-100.d-flex.flex-row(style="height: calc(100vh - 60px)")
+    .w-100.d-flex.flex-row(style="height: calc(var(--vh) - 60px)")
 
       // The Free-Energy Surface
       #matrix-widget.h-100(:style="matrixStyle" :key="forceFesKey")
@@ -142,50 +142,52 @@
 
           // Views handlers
           button.btn.btn-sm.w-100.btn-secondary(@click="saveView")
-            | Save View
-          .flex-grow-1.overflow-scroll
-            .w-100.mt-2.p-2.rounded(
-              style="background-color: #BBB"
-              v-for="view in views"
-            )
-              .d-flex.flex-row.w-100.mb-1.pt-2.pb-0.text-start(style="font-size:0.9em")
-                button.btn.w-100.text-start.btn-sm.btn-secondary(
-                  v-if="view.id == viewId"
-                  @click="selectView(view)"
-                )
-                  .py-2
-                    template(v-if="view.text")
-                      | {{ view.text }}
-                    template(v-else)
-                      | Click
-                      i.mx-2.far.fa-comment
-                      | to add text
-                button.btn.w-100.text-start.btn-sm.btn-outline-secondary(
-                  @click="selectView(view)"
-                  v-else
-                )
-                  .py-2
-                    template(v-if="view.text")
-                      | {{ view.text }}
-                    span.text-secondary(v-else)
-                      | Click
-                      i.mx-2.far.fa-comment
-                      | to add text
-              .d-flex.flex-row.justify-content-between
-                .flex-start.flex-row
-                  button.btn.btn-sm.btn-outline-secondary(
-                    @click="startEditViewModal(view)"
+            | Save Views
+
+          .flex-grow-1.overflow-scroll.mt-2(style="height: calc(var(--vh) - 210px")
+            div
+              .w-100.mb-2.p-2.rounded(
+                style="background-color: #BBB"
+                v-for="view in views"
+              )
+                .d-flex.flex-row.w-100.mb-1.pt-2.pb-0.text-start(style="font-size:0.9em")
+                  button.btn.w-100.text-start.btn-sm.btn-secondary(
+                    v-if="view.id == viewId"
+                    @click="selectView(view)"
                   )
-                    i.far.fa-comment
-                  button.btn.btn-sm.btn-outline-secondary(
-                    @click="updateView(view)"
+                    .py-2
+                      template(v-if="view.text")
+                        | {{ view.text }}
+                      template(v-else)
+                        | Click
+                        i.mx-2.far.fa-comment
+                        | to add text
+                  button.btn.w-100.text-start.btn-sm.btn-outline-secondary(
+                    @click="selectView(view)"
+                    v-else
                   )
-                    i.fas.fa-save
-                .flex-end
-                  button.btn.btn-sm.btn-outline-secondary(
-                    @click="deleteView(view)"
-                  )
-                    i.fas.fa-trash
+                    .py-2
+                      template(v-if="view.text")
+                        | {{ view.text }}
+                      span.text-secondary(v-else)
+                        | Click
+                        i.mx-2.far.fa-comment
+                        | to add text
+                .d-flex.flex-row.justify-content-between
+                  .flex-start.flex-row
+                    button.btn.btn-sm.btn-outline-secondary(
+                      @click="startEditViewModal(view)"
+                    )
+                      i.far.fa-comment
+                    button.btn.btn-sm.btn-outline-secondary(
+                      @click="updateView(view)"
+                    )
+                      i.fas.fa-save
+                  .flex-end
+                    button.btn.btn-sm.btn-outline-secondary(
+                      @click="deleteView(view)"
+                    )
+                      i.fas.fa-trash
 </template>
 
 <style>
@@ -201,7 +203,7 @@ body {
 }
 .overlay {
   top: 0px;
-  opacity: .5;
+  opacity: .6;
   background: #AAA;
   position: absolute;
   height: 100%;
@@ -578,14 +580,15 @@ export default {
     // saves the alphaspace-PDB for every frame
     this.cacheAlphaSpaceByiFrameTraj = {}
 
+    window.addEventListener('beforeunload', e => this.close())
+    window.addEventListener('resize', this.resize)
+
+    this.resize()
+
     // saves which structures belongs to a loaded frame on display
     this.nStructureInFrameList = []
 
     await this.loadFoamId(this.$route.params.foamId)
-
-    this.url
-    window.addEventListener('beforeunload', e => this.close())
-    window.addEventListener('resize', this.resize)
 
     this.resize()
     this.popLoading()
@@ -904,6 +907,8 @@ export default {
     },
 
     resize () {
+      let vh = window.innerHeight
+      document.documentElement.style.setProperty('--vh', `${vh}px`)
       if (this.matrixWidget) {
         this.matrixWidget.resize()
       }

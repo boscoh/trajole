@@ -12,25 +12,32 @@
         style="width: 200px"
         src="../assets/watching-tv-icon-isometric-icon-with-man-watching-tv-in-living-room-holding-remote-control-vector-vector-clipart_csp92715008.webp.png"
       )
-    | Online Viewer for FoamDB
+    div Online Viewer for FoamDB
+    div
+      // User Guide
+      a.mt-1(
+        href="https://www.notion.so/redesignscience/Trajectories-in-FoamDB-77c74685264a4d908e567669ff897fe9"
+      ) User Guide to FoamDB
 
-    .mt-5.d-flex.flex-column
+
+    .d-flex.flex-column.align-items-center
+
       // Search bar
-      .form-group.mb-1.text-center
+      .mt-5.form-group.mb-1.text-center
         label
-          h5 Enter FoamID Here
+          | Enter FoamID Here
         .d-flex.flex-row.justify-content-center
           input.form-control(
             v-model="foamId" type="number"
             @keypress.enter="changeFoamId()"
             style="width: 200px"
           )
-          button.btn.btn-secondary(@click="changeFoamId") Go
+          button.btn.btn-light(@click="changeFoamId") Go
 
       // Example Trajectories
-      h5.mt-5 Example Trajectories
+      .mt-5 Example Trajectories
       .d-flex.justify-content-center(v-for="example in examples")
-        router-link.btn.btn-light.mt-1(
+        router-link.btn.btn-light.mb-1(
           :to="'/foamtraj/' + example.foamId"
           tag="button"
           style="width: 250px"
@@ -42,7 +49,7 @@
 
       // Last Views
       template(v-if="lastFoamIdViews.length > 0")
-        h5.mt-5 Last views updated
+        .mt-5 Last views updated
         .d-flex.justify-content-center(v-for="v in lastFoamIdViews")
           router-link.btn.btn-light.mt-1(
             :to="'/foamtraj/' + v.foamId + '?view=' + v.id"
@@ -53,7 +60,6 @@
             span.text-muted(v-if="v.text" style="font-size: 0.8rem")
               br
               | {{v.text}}
-
 
     .pb-5
     .pb-5
