@@ -32,11 +32,11 @@
           h5.modal-title Edit Text Description
         .modal-body
           .mb-1.d-flex.flex-row.align-items-center(
-              v-for="(editTag, i_tag) in editTags"
+              v-for="(editTag, iTag) in editTags"
           )
-            input.form-control(v-model="editTag.key")
-            input.form-control(v-model="editTag.value")
-            .ms-2.a(@click="removeTag(i_tag)")
+            input.form-control.w-25(v-model="editTag.key")
+            input.form-control.w-75(v-model="editTag.value")
+            .ms-2.a(@click="removeTag(iTag)")
               i.fas.fa-trash
           button.btn.btn-secondary(@click="addTag") +Tag
         .modal-footer
@@ -1216,7 +1216,9 @@ export default {
       view.foamId = this.foamId,
       view.timestamp = Math.floor(Date.now() / 1000),
       view.text = this.editViewText
+      this.pushLoading()
       await rpc.remote.add_view(this.foamId, view)
+      this.popLoading()
       this.$forceUpdate()
       window.keyboardLock = false
     },
@@ -1231,7 +1233,9 @@ export default {
       }
       view.foamId = this.foamId,
       view.timestamp = Math.floor(Date.now() / 1000),
+      this.pushLoading()
       await rpc.remote.add_view(this.foamId, view)
+      this.popLoading()
       this.$forceUpdate()
     },
 
@@ -1351,8 +1355,8 @@ export default {
       }
     },
 
-    removeTag(i_tag) {
-      this.editTags.splice(i_tag, i)
+    removeTag(iTag) {
+      this.editTags.splice(iTag, 1)
       this.$forceUpdate()
     },
 
