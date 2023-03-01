@@ -693,7 +693,11 @@ export default {
       if (response.error) {
         let myModal = new bootstrap.Modal(document.getElementById('fail-modal'))
         myModal.show()
-        this.errorMsg = JSON.stringify(response.error, null, 2)
+        if (_.last(response.error.message).includes("FileNotFoundError")) {
+          this.errorMsg = `Trajectory #${this.foamId} is empty`
+        } else {
+          this.errorMsg = JSON.stringify(response.error, null, 2)
+        }
         this.title = {"Error": `loading FoamId=${this.foamId}`}
       } else {
         this.title = response.result.title
