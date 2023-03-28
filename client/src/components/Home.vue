@@ -1,5 +1,5 @@
 <template lang="pug">
-.d-flex.justify-content-center.text-center
+.d-flex.justify-content-center.text-center.overflow-scroll
   .col-md-6.col-sm-10.col-lg-4
 
     // Title
@@ -64,12 +64,6 @@
     .pb-5
     .pb-5
 </template>
-
-<style>
-body {
-  overflow: auto;
-}
-</style>
 
 <script>
 import * as rpc from '../modules/rpc'

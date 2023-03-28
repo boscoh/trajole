@@ -60,3 +60,22 @@ def add_view(foam_id, view):
 
 def delete_view(foam_id, view):
     return traj_stream.delete_view(view)
+
+
+def get_tags(foam_id):
+    traj_manager = traj_stream.traj_manager
+    return traj_manager.get_h5(0)
+
+
+def get_h5(foam_id):
+    traj_manager = traj_stream.traj_manager
+    return traj_manager.get_h5(0)
+
+
+def get_json_datasets(foam_id):
+    return get_h5(foam_id).get_dataset_keys()
+
+
+def get_json(foam_id, key):
+    return get_h5(foam_id).get_json_dataset(key)
+

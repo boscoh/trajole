@@ -43,154 +43,168 @@
           button.btn.btn-secondary(data-bs-dismiss="modal" @click="closeTagsModal") Cancel
           button.btn.btn-primary(data-bs-dismiss="modal" @click="saveTags") Save
 
-  .w-100.d-flex.flex-column.user-select-none(style="background-color: #CCC")
+  // Main Page
+  .w-100.d-flex.flex-row.user-select-none(style="background-color: #CCC")
 
-    // Top bar
-    .d-flex.flex-row.justify-content-between.m-2(style="height: 50px")
+    // Left Two Panels
+    .flex-grow-1.d-flex.flex-column.user-select-none(
+      style="background-color: #CCC; width: calc(100vw - 200px)"
+    )
 
-      .flex-grow-1.d-flex.flex-row
+      // Top bar
+      .d-flex.flex-row.justify-content-between.m-2(style="height: 50px")
 
-        // Home button
-        router-link.btn.btn-sm.btn-secondary.me-3(
-          to="/" tag="button" style="font-size: 1.5em; width: 50px; height: 50px;"
-        )
-          i.fas.fa-home
+        .flex-grow-1.d-flex.flex-row
 
-        // Title tags, fits in space in toolbar
-        .flex-grow-1.overflow-hidden.w-100(style="height: 50px")
-            .d-flex.flex-row.flex-wrap.text-wrap(
-              style="font-family: monospace; line-height: 1.1em; font-size: 15px;"
-            )
-              template(v-for="(key) in Object.keys(title)")
-                span(style="color: #888") {{key}}:
-                | {{ title[key] }}&nbsp;
-
-        // Dropdown for energy components
-        .ms-2(v-if="opt_keys.length")
-          select.form-select.form-select-sm(v-model="key" @change="selectOptKey(key)")
-            option(v-for="opt_key in opt_keys" :value="opt_key")
-              | {{opt_key}}
-
-      // Loading button
-      .d-flex.ms-2(style="width: 200px; box-sizing: border-box; height: 50px; z-index:1002")
-        .ms-2(style="width: 200px; background-color: #BBB;")
-          button.btn.btn-secondary.h-100.w-100(
-            :disabled="!isLoading"
+          // Home button
+          router-link.btn.btn-sm.btn-secondary.me-3(
+            to="/" tag="button" style="font-size: 1.5em; width: 50px; height: 50px;"
           )
-            .d-flex.flex-row.justify-content-center.align-items-center
-              template(v-if="isLoading")
-                span.spinner-border.spinner-border-sm(
-                  role="status" aria-hidden="true"
-                )
-                .mx-2 Loading...
+            i.fas.fa-home
 
-
-    .w-100.d-flex.flex-row(style="height: calc(var(--vh) - 60px)")
-
-      // The Free-Energy Surface
-      #matrix-widget.h-100(:style="matrixStyle" :key="forceFesKey")
-
-      // Traj Strip
-      #strip-widget.h-100(:style="stripStyle" :key="forceStripKey")
-
-      // Table of Ligands
-      #table.p-2.overflow-scroll(:style="tableStyle")
-        table.table(v-if="table" style="cursor: pointer")
-          thead(v-if="tableHeaders")
-            tr
-              th(v-for="h in tableHeaders")
-                .d-flex.flex-nowrap(@click="sortTable(h.iCol, h.status)")
-                  span.me-1 {{ h.value }}
-                  template(v-if="h.status === 'none'")
-                    span.text-muted &uarr;
-                    span.text-muted &darr;
-                  template(v-if="h.status==='up'")
-                    span &uarr;
-                    span.text-muted &darr;
-                  template(v-if="h.status==='down'")
-                    span.text-muted &uarr;
-                    span &darr;
-          tbody
-            tr(
-              v-for="(row, i) in table"
-              :key="i"
-              :class="[isIFrameTrajSelected(row.iFrameTraj) ? 'bg-primary' : '']"
-              @mousedown="e => downTableEntry(e, row)"
-              @mouseup="e => upTableEntry(e, row)"
-              @mousemove="e => moveTableEntry(e, row)"
-            )
-              td(v-for="val in row.vals") {{val}}
-
-      // Jolecule
-      #jolecule-container.h-100(:style="joleculeStyle")
-
-      // Actions Strip
-      #view-container.h-100.mx-2.d-flex.flex-column(
-        :style="viewStyle" :key="forceViewKey"
-      )
-        div(:class="[isLoading ? 'overlay' : '']")
-        .ps-2
-          button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="openTagModal()")
-            | Edit Tags
-          button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="toggleAlphaSpace()")
-            span(v-if="isAlphaSpace")
-              | Alphaspace&nbsp;
-              i.fas.fa-check
-            template(v-else) Alphaspace
-          button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="downloadPdb")
-            | Download PDB
-
-          // Views handlers
-          button.btn.btn-sm.w-100.btn-secondary(@click="saveView")
-            | Save Views
-
-          .flex-grow-1.overflow-scroll.mt-2(style="height: calc(var(--vh) - 210px")
-            div
-              .w-100.mb-2.p-2.rounded(
-                style="background-color: #BBB"
-                v-for="view in views"
+          // Title tags, fits in space in toolbar
+          .flex-grow-1.overflow-hidden.w-100(style="height: 50px")
+              .d-flex.flex-row.flex-wrap.text-wrap(
+                style="font-family: monospace; line-height: 1.1em; font-size: 15px;"
               )
-                .d-flex.flex-row.w-100.mb-1.pt-2.pb-0.text-start(style="font-size:0.9em")
-                  button.btn.w-100.text-start.btn-sm.btn-secondary(
-                    v-if="view.id == viewId"
-                    @click="selectView(view)"
+                template(v-for="(key) in Object.keys(title)")
+                  span(style="color: #888") {{key}}:
+                  | {{ title[key] }}&nbsp;
+
+          // Dropdown for energy components
+          .ms-2(v-if="opt_keys.length")
+            select.form-select.form-select-sm(v-model="key" @change="selectOptKey(key)")
+              option(v-for="opt_key in opt_keys" :value="opt_key")
+                | {{opt_key}}
+
+      // FES, strip & ligand table
+      .d-flex.flex-row(style="height: calc(var(--vh) - 60px)")
+
+        // The Free-Energy Surface
+        #matrix-widget.h-100(:style="matrixStyle" :key="forceFesKey")
+
+        // Traj Strip
+        #strip-widget.h-100(:style="stripStyle" :key="forceStripKey")
+
+        // Table of Ligands
+        #table.p-2.me-2.overflow-scroll(:style="tableStyle")
+          table.table(v-if="table" style="cursor: pointer")
+            thead(v-if="tableHeaders")
+              tr
+                th(v-for="h in tableHeaders")
+                  .d-flex.flex-nowrap(@click="sortTable(h.iCol, h.status)")
+                    span.me-1 {{ h.value }}
+                    template(v-if="h.status === 'none'")
+                      span.text-muted &uarr;
+                      span.text-muted &darr;
+                    template(v-if="h.status==='up'")
+                      span &uarr;
+                      span.text-muted &darr;
+                    template(v-if="h.status==='down'")
+                      span.text-muted &uarr;
+                      span &darr;
+            tbody
+              tr(
+                v-for="(row, i) in table"
+                :key="i"
+                :class="[isIFrameTrajSelected(row.iFrameTraj) ? 'bg-primary' : '']"
+                @mousedown="e => downTableEntry(e, row)"
+                @mouseup="e => upTableEntry(e, row)"
+                @mousemove="e => moveTableEntry(e, row)"
+              )
+                td(v-for="val in row.vals") {{val}}
+
+        // Jolecule
+        #jolecule-container.h-100(:style="joleculeStyle")
+
+    // Actions Strip
+    #view-container.h-100.me-2.d-flex.flex-column(
+      :style="viewStyle" :key="forceViewKey"
+    )
+
+      .ps-2
+
+        // isLoading status button
+        .my-2.w-100(style="background-color: #CCC; z-index: 2002; height: 50px; position: relative")
+          template(v-if="isLoading")
+            button.flash-button.btn.btn-primary.h-100.w-100(disabled=false)
+              .d-flex.flex-row.justify-content-center.align-items-center
+                span.spinner-border.spinner-border-sm
+                .mx-2 Connecting...
+          //button.flash-button.btn.btn-primary.h-100.w-100(disabled=false)
+          //  .d-flex.flex-row.justify-content-center.align-items-center
+          //    span.spinner-border.spinner-border-sm
+          //    .mx-2 Connecting...
+
+      div(:class="[isLoading ? 'overlay' : '']")
+      //div(class="overlay")
+
+      .ps-2
+        button.mb-1.btn.btn-sm.w-100.btn-secondary(
+          @click="goToJson()"
+        )
+          | JSON
+        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="openTagModal()")
+          | Edit Tags
+        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="toggleAlphaSpace()")
+          span(v-if="isAlphaSpace")
+            | Alphaspace&nbsp;
+            i.fas.fa-check
+          template(v-else) Alphaspace
+        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="downloadPdb")
+          | Download PDB
+
+        // Views handlers
+        button.btn.btn-sm.w-100.btn-secondary(@click="saveView")
+          | Save Views
+
+        .flex-grow-1.overflow-scroll.mt-2(style="height: calc(var(--vh) - 210px")
+          div
+            .w-100.mb-2.p-2.rounded(
+              style="background-color: #BBB"
+              v-for="view in views"
+            )
+              .d-flex.flex-row.w-100.mb-1.pt-2.pb-0.text-start(style="font-size:0.9em")
+                button.btn.w-100.text-start.btn-sm.btn-secondary(
+                  v-if="view.id == viewId"
+                  @click="selectView(view)"
+                  :key="view.id"
+                )
+                  .py-2(v-if="view.text")
+                      | {{ view.text }}
+                  .py-2(v-if="!view.text")
+                      | Click
+                      i.mx-2.far.fa-comment
+                      | to add text
+                button.btn.w-100.text-start.btn-sm.btn-outline-secondary(
+                  @click="selectView(view)"
+                  v-else
+                )
+                  .py-2
+                    template(v-if="view.text")
+                      | {{ view.text }}
+                    span.text-secondary(v-else)
+                      | Click
+                      i.mx-2.far.fa-comment
+                      | to add text
+              .d-flex.flex-row.justify-content-between
+                .flex-start.flex-row
+                  button.btn.btn-sm.btn-outline-secondary(
+                    @click="startEditViewModal(view)"
                   )
-                    .py-2
-                      template(v-if="view.text")
-                        | {{ view.text }}
-                      template(v-else)
-                        | Click
-                        i.mx-2.far.fa-comment
-                        | to add text
-                  button.btn.w-100.text-start.btn-sm.btn-outline-secondary(
-                    @click="selectView(view)"
-                    v-else
+                    i.far.fa-comment
+                  button.btn.btn-sm.btn-outline-secondary(
+                    @click="updateView(view)"
                   )
-                    .py-2
-                      template(v-if="view.text")
-                        | {{ view.text }}
-                      span.text-secondary(v-else)
-                        | Click
-                        i.mx-2.far.fa-comment
-                        | to add text
-                .d-flex.flex-row.justify-content-between
-                  .flex-start.flex-row
-                    button.btn.btn-sm.btn-outline-secondary(
-                      @click="startEditViewModal(view)"
-                    )
-                      i.far.fa-comment
-                    button.btn.btn-sm.btn-outline-secondary(
-                      @click="updateView(view)"
-                    )
-                      i.fas.fa-save
-                  .flex-end
-                    button.btn.btn-sm.btn-outline-secondary(
-                      @click="deleteView(view)"
-                    )
-                      i.fas.fa-trash
+                    i.fas.fa-save
+                .flex-end
+                  button.btn.btn-sm.btn-outline-secondary(
+                    @click="deleteView(view)"
+                  )
+                    i.fas.fa-trash
 </template>
 
-<style>
+<style scoped>
 body {
   overflow: hidden;
 }
@@ -202,7 +216,7 @@ body {
   padding: 0;
 }
 .overlay {
-  top: 0px;
+  top: 0;
   opacity: .6;
   background: #AAA;
   position: absolute;
@@ -212,9 +226,26 @@ body {
   display: block;
   z-index: 1001;
 }
-@media (max-width: 778px) {
+@keyframes glowing {
+  0% {
+    background-color: #BBB;
+    box-shadow: 0 0 0;
+    border: 0;
+  }
+  50% {
+    background-color: #55B;
+    box-shadow: 0 0 0;
+    border: 0;
+  }
+  100% {
+    background-color: #BBB;
+    box-shadow: 0 0 0;
+    border: 0;
+  }
 }
-@media (max-width: 992px) {
+.flash-button {
+  color: white;
+  animation: glowing 2000ms infinite;
 }
 </style>
 
@@ -603,7 +634,7 @@ export default {
 
     tableStyle () {
       if (this.mode === 'table') {
-        return `width: calc(50% - ${this.viewWidth})`
+        return `width: calc(50vw - ${this.viewWidth})`
       }
       return 'display: none'
     },
@@ -702,7 +733,6 @@ export default {
       } else {
         this.title = response.result.title
       }
-      this.popLoading()
 
       await this.reload()
 
@@ -716,6 +746,7 @@ export default {
         }
       }
 
+      this.popLoading()
     },
 
     getView(viewId) {
@@ -1154,7 +1185,6 @@ export default {
     },
 
     async selectView(view) {
-      this.pushLoading()
       this.viewId = view.id
       console.log(`selectView`, _.cloneDeep(view))
       if (_.has(view, "matrixWidgetValues")) {
@@ -1171,7 +1201,6 @@ export default {
         null,
         '#' + this.$route.path + '?view=' + view.id
       )
-      this.popLoading()
     },
 
     async startEditViewModal(view) {
@@ -1209,6 +1238,7 @@ export default {
       this.pushLoading()
       await rpc.remote.add_view(this.foamId, view)
       this.popLoading()
+      this.selectView(view)
     },
 
     async saveViewText() {
@@ -1362,6 +1392,10 @@ export default {
 
     addTag(tag) {
       this.editTags.push({key: '', value: ''})
+    },
+
+    goToJson() {
+      this.$router.push(`/json/${this.foamId}`)
     }
   }
 }

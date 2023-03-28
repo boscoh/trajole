@@ -349,6 +349,8 @@ class LigandsStream(TrajStream):
         i_frame = i_frame_traj[0]
         return self.receptor_lines + self.get_ligand_pdb_lines(i_frame)
 
+    def get_title(self):
+        return self.config.title
 
 def convert_rows_to_p_rows(rows):
     values = py_.flatten_deep(rows)

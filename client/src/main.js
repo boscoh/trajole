@@ -6,12 +6,14 @@ import App from './App.vue'
 
 import Jolecule from './components/Jolecule.vue'
 import Home from './components/Home.vue'
+import JsonDisplay from './components/JsonDisplay.vue'
 
 Vue.use(VueRouter)
 
 const routes = [
   { path: '/', component: Home },
-  { path: '/foamtraj/:foamId', component: Jolecule }
+  { path: '/foamtraj/:foamId', component: Jolecule },
+  { path: '/json/:foamId', component: JsonDisplay }
 ]
 
 const router = new VueRouter({

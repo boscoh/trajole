@@ -7,6 +7,7 @@ from addict import Dict
 
 from rshow import stream
 from rshow.persist import PersistDictList
+from rshow.stream import TrajStream
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -150,3 +151,18 @@ def add_view(foam_id, view):
 def delete_view(foam_id, view):
     logger.info(f"delete_view {view}")
     return traj_stream_by_foam_id[foam_id].delete_view(view)
+
+
+def get_h5(foam_id):
+    traj_stream: TrajStream = traj_stream_by_foam_id[foam_id]
+    traj_manager = traj_stream.traj_manager
+    return traj_manager.get_h5(0)
+
+
+def get_json_datasets(foam_id):
+    return get_h5(foam_id).get_dataset_keys()
+
+
+def get_json(foam_id, key):
+    return get_h5(foam_id).get_json_dataset(key)
+

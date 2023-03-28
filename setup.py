@@ -26,7 +26,7 @@ setuptools.setup(
     ],
     entry_points="""
         [console_scripts]
-        rshow2=rshow.cli:cli
+        rshow=rshow.cli:cli
     """,
     python_requires=">=3.6",
     package_data={

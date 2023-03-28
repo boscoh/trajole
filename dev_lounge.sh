@@ -7,4 +7,4 @@ psword -k rshow
 psword -k serve.py
 ttab "cd client; npm run dev "
 ttab "python rshow/serve.py"
-rshow2 open-url http://localhost:9023 http://localhost:3333
+rshow open-url http://localhost:9023 http://localhost:3333
