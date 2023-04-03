@@ -247,7 +247,7 @@ class FrameStream(TrajStream):
             self.frame = get_traj_frame_from_parmed(Granary(fname).structure)
         else:
             self.frame = mdtraj.load_pdb(self.config.pdb_or_parmed)
-        self.views_yaml = fname.with_suffix('.views.yaml')
+        self.views_yaml = fname.with_suffix(".views.yaml")
         return True
 
     def get_frame(self, i_frame_traj=None):
@@ -351,6 +351,7 @@ class LigandsStream(TrajStream):
 
     def get_title(self):
         return self.config.title
+
 
 def convert_rows_to_p_rows(rows):
     values = py_.flatten_deep(rows)

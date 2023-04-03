@@ -106,4 +106,4 @@ class RemoteResultRpcProxy {
 const remote = new RemoteRpcProxy()
 const remoteResult = new RemoteRpcProxy()
 
-export { remote, remoteResult }
+export { remote, remoteResult, remoteUrl }

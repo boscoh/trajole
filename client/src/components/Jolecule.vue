@@ -22,7 +22,7 @@
           .mb-3(style="font-size: 0.75em") URL: {{currentUrl}}?query={{ editViewId }}
           textarea.form-control(v-model="editViewText" rows=4)
         .modal-footer
-          button.btn.btn-secondary(data-bs-dismiss="modal" @click="closeViewText") Cancel
+          button.btn.btn-secondary(data-bs-dismiss="modal" @click="clearKeyboardLock") Cancel
           button.btn.btn-primary(data-bs-dismiss="modal" @click="saveViewText") Save
 
   #tags-edit-modal.modal.fade
@@ -40,7 +40,7 @@
               i.fas.fa-trash
           button.btn.btn-secondary(@click="addTag") +Tag
         .modal-footer
-          button.btn.btn-secondary(data-bs-dismiss="modal" @click="closeTagsModal") Cancel
+          button.btn.btn-secondary(data-bs-dismiss="modal" @click="clearKeyboardLock") Cancel
           button.btn.btn-primary(data-bs-dismiss="modal" @click="saveTags") Save
 
   // Main Page
@@ -81,7 +81,7 @@
       .d-flex.flex-row(style="height: calc(var(--vh) - 60px)")
 
         // The Free-Energy Surface
-        #matrix-widget.h-100(:style="matrixStyle" :key="forceFesKey")
+        #matrix-widget.h-100(:style="matrixStyle" :key="forceMatrixKey")
 
         // Traj Strip
         #strip-widget.h-100(:style="stripStyle" :key="forceStripKey")
@@ -118,42 +118,44 @@
         #jolecule-container.h-100(:style="joleculeStyle")
 
     // Actions Strip
-    #view-container.h-100.me-2.d-flex.flex-column(
-      :style="viewStyle" :key="forceViewKey"
-    )
+    #view-container.h-100.me-2.d-flex.flex-column(:style="viewStyle")
 
-      .ps-2
-
-        // isLoading status button
-        .my-2.w-100(style="background-color: #CCC; z-index: 2002; height: 50px; position: relative")
-          template(v-if="isLoading")
-            button.flash-button.btn.btn-primary.h-100.w-100(disabled=false)
-              .d-flex.flex-row.justify-content-center.align-items-center
-                span.spinner-border.spinner-border-sm
-                .mx-2 Connecting...
-          //button.flash-button.btn.btn-primary.h-100.w-100(disabled=false)
-          //  .d-flex.flex-row.justify-content-center.align-items-center
-          //    span.spinner-border.spinner-border-sm
-          //    .mx-2 Connecting...
+      // isLoading status button
+      .ps-2.my-2.w-100(style="z-index: 2002; height: 50px; position: relative")
+        button.border-0.flash-button.btn.h-100.w-100(
+            disabled=false
+            v-if="isLoading"
+        )
+          .d-flex.flex-row.justify-content-center.align-items-center
+            span.spinner-border.spinner-border-sm
+            .mx-2 Connecting...
 
       div(:class="[isLoading ? 'overlay' : '']")
-      //div(class="overlay")
 
       .ps-2
-        button.mb-1.btn.btn-sm.w-100.btn-secondary(
-          @click="goToJson()"
-        )
-          | JSON
-        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="openTagModal()")
-          | Edit Tags
+
         button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="toggleAlphaSpace()")
           span(v-if="isAlphaSpace")
             | Alphaspace&nbsp;
             i.fas.fa-check
           template(v-else) Alphaspace
+
         button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="downloadPdb")
           | Download PDB
 
+        button.mb-1.btn.btn-sm.w-100.btn-secondary(
+          @click="downloadParmed()"
+          :disabled="!isParmed"
+        )
+          span(v-if="!isParmed") No Parmed
+          span(v-else) Download Parmed
+
+        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="goToJson()") JSON
+
+        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="openTagModal()")
+          | Edit Tags
+
+        //////////////////////////////////
         // Views handlers
         button.btn.btn-sm.w-100.btn-secondary(@click="saveView")
           | Save Views
@@ -250,342 +252,65 @@ body {
 </style>
 
 <script>
-import { getColor } from '../modules/viridis'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import * as bootstrap from 'bootstrap'
 import _ from 'lodash'
-import { initEmbedJolecule } from 'jolecule'
-import { widgets } from 'jolecule'
+import {initEmbedJolecule} from 'jolecule'
 import * as rpc from '../modules/rpc'
+import {MatrixWidget} from "../modules/matrixwidget";
+import {getFirstValue, inFrames, isSameVec} from "../modules/util";
+import {saveFile} from "../modules/util";
 
-function isSameVec (v1, v2) {
-  if (_.isNil(v1) || _.isNil(v2)) {
-    return false
-  }
-  const n = v1.length
-  if (n !== v2.length) {
-    return false
-  }
-  for (let i = 0; i < n; i += 1) {
-    if (v1[i] !== v2[i]) {
-      return false
-    }
-  }
-  return true
+
+function openModal(elemId) {
+  let myModal = new bootstrap.Modal(document.getElementById(elemId))
+  myModal.show()
 }
 
-function inFrames (iFrameTrajs, iFrameTraj) {
-  return _.some(iFrameTrajs, i => isSameVec(i, iFrameTraj))
-}
-
-function getIndexOfFrames (iFrameTrajs, iFrameTraj) {
-  return _.findIndex(iFrameTrajs, i => isSameVec(i, iFrameTraj))
-}
-
-
-function delFromFrames (iFrameTrajs, iFrameTraj) {
-  let i = _.findIndex(iFrameTrajs, i => isSameVec(i, iFrameTraj))
-  iFrameTrajs.splice(i, 1)
-}
-
-function getFirstValue (matrix) {
-  let value
-  value = _.first(_.filter(_.flattenDeep(matrix), v => _.has(v, 'iFrameTraj')))
-  if (value) {
-    return value
-  }
-  value = _.first(_.filter(_.flattenDeep(matrix), v => _.has(v, 'iFrameTrajs')))
-  if (value) {
-    return value
-  }
-  return null
-}
-
-class MatrixWidget extends widgets.CanvasWidget {
-  constructor (selector, grid, isSparse) {
-    super(selector)
-    this.iFrameTrajs = []
-    this.values = []
-    this.isSparse = isSparse
-    this.mousePressed = false
-    this.borderColor = 'rgb(255, 0, 0, 0.2)'
-    this.clickBox = 8
-    this.clickBoxHalf = this.clickBox / 2
-    this.div.attr('id', `${this.parentDivId}-inner`)
-    this.div.css({
-      'background-color': '#CCC',
-      position: 'relative'
-    })
-    this.hover = new widgets.PopupText(`#${this.parentDivId}-inner`, 15)
-    this.grid = grid
-    this.canvasDom.addEventListener('mouseleave', e => this.mouseleave(e))
-    this.loadGrid(grid)
-    this.resize()
-  }
-
-  loadGrid (grid) {
-    this.grid = grid
-    this.nGridX = this.grid.length
-    this.nGridY = this.grid[0].length
-    console.log(`FesWidget.loadGrid ${this.nGridX} x ${this.nGridY}`)
-    this.draw()
-  }
-
-  resize () {
-    super.resize()
-    this.div.height(this.height())
-    this.parentDiv.height(this.height())
-    this.draw()
-  }
-
-  getValue (i, j) {
-    if (i < 0 || j < 0) {
-      return {}
-    }
-    if (i >= this.grid.length || j >= this.grid[0].length) {
-      return {}
-    }
-    return this.grid[i][this.nGridY - j - 1]
-  }
-
-  getIFrameTrajFromValue (value) {
-    if (_.has(value, 'iFrameTrajs')) {
-      if (value.iFrameTrajs.length) {
-        return value.iFrameTrajs[0]
-      }
-    } else if (_.has(value, 'iFrameTraj')) {
-      return value.iFrameTraj
-    }
-    return null
-  }
-
-  getIFrameTraj (i, j) {
-    let value = this.getValue(i, j)
-    return this.getIFrameTrajFromValue(value)
-  }
-
-  async loadValues(values) {
-    await this.clickGridValue(values[0], false)
-    for (let i=1; i<values.length; i+=1) {
-      await this.clickGridValue(values[i], true)
-    }
-  }
-
-  getXFromI (i) {
-    return i * this.diffX
-  }
-
-  getIFromX (x) {
-    return i * this.diffX
-  }
-
-  draw () {
-    // draw background
-    this.diffX = this.width() / this.nGridX
-    this.diffY = this.height() / this.nGridY
-    for (let i = 0; i < this.nGridX; i += 1) {
-      for (let j = 0; j < this.nGridY; j += 1) {
-        let color = getColor(this.getValue(i, j).p)
-        this.fillRect(
-          i * this.diffX,
-          j * this.diffY,
-          this.diffX + 1,
-          this.diffY + 1,
-          color
-        )
-      }
-    }
-    let boxX = this.diffX
-    let boxY = this.diffY
-    if (this.isSparse) {
-      boxX = _.max([this.diffX, this.clickBox])
-      boxY = _.max([this.diffY, this.clickBox])
-    }
-    let boxXHalf = boxX / 2
-    let boxYHalf = boxY / 2
-    for (let i = 0; i < this.nGridX; i += 1) {
-      for (let j = 0; j < this.nGridY; j += 1) {
-        let iFrameTraj = this.getIFrameTraj(i, j)
-        if (!iFrameTraj) {
-          continue
-        }
-        if (this.isSparse) {
-          this.fillRect(
-            i * this.diffX + this.diffX / 2 - boxXHalf,
-            j * this.diffY + this.diffY / 2 - boxYHalf,
-            boxX,
-            boxY,
-            this.borderColor
-          )
-        }
-        for (let selectediFrameTraj of this.iFrameTrajs) {
-          if (isSameVec(iFrameTraj, selectediFrameTraj)) {
-            this.fillRect(
-              i * this.diffX + this.diffX / 2 - boxXHalf,
-              j * this.diffY + this.diffY / 2 - boxYHalf,
-              boxX,
-              boxY,
-              'red'
-            )
-          }
-        }
-      }
-    }
-  }
-
-  getMouseValue (event) {
-    this.getPointer(event)
-    let i = Math.floor(this.pointerX / this.diffX)
-    let j = Math.floor(this.pointerY / this.diffY)
-    let centralValue = this.getValue(i, j)
-    if (this.diffX > this.clickBox && this.diffY > this.clickBox) {
-      return centralValue
-    }
-    if (_.get(centralValue, 'iFrameTraj')) {
-      return centralValue
-    }
-    let boxX = _.max([this.diffX, this.clickBox])
-    let boxY = _.max([this.diffY, this.clickBox])
-    let delta = 1
-    while (
-      (delta - 1) * this.diffX <= boxX &&
-      (delta - 1) * this.diffY <= boxY
-    ) {
-      for (let i2 = i - delta; i2 <= i + delta; i2 += 1) {
-        for (let j2 = j - delta; j2 <= j + delta; j2 += 1) {
-          let value = this.getValue(i2, j2)
-          if (_.get(value, 'iFrameTraj')) {
-            return value
-          }
-        }
-      }
-      delta += 1
-    }
-    return centralValue
-  }
-
-  // to be overriden
-  async selectGridValue (value, thisFrameOnly) {}
-
-  // to be overriden
-  async deselectGridValue (value) {}
-
-  async clickGridValue (value, isShift) {
-    if (!value.iFrameTraj) {
-      return
-    }
-    if (isShift) {
-      if (inFrames(this.iFrameTrajs, value.iFrameTraj)) {
-        if (this.values.length === 1) {
-          return
-        }
-        delFromFrames(this.iFrameTrajs, value.iFrameTraj)
-        await this.deselectGridValue(value)
-        let i = getIndexOfFrames(this.iFrameTrajs, value.iFrameTraj)
-        this.values.splice(i, 1)
-      } else {
-        await this.selectGridValue(value, false)
-        this.iFrameTrajs.push(value.iFrameTraj)
-        this.values.push(value)
-      }
-    } else {
-      await this.selectGridValue(value, true)
-      this.iFrameTrajs = [value.iFrameTraj]
-      this.values = [value]
-    }
-    this.draw()
-  }
-
-  async handleSelect (event) {
-    let value = this.getMouseValue(event)
-    let isShift = event.shiftKey
-    this.clickGridValue(value, isShift)
-  }
-
-  mouseleave (event) {
-    this.hover.hide()
-  }
-
-  mousemove (event) {
-    let value = this.getMouseValue(event)
-    let s = ''
-    if (value.label) {
-      s += `${value.label}`
-    }
-    if (_.has(value, 'iFrameTraj')) {
-      if (s) {
-        s += '<br>'
-      }
-      s += `frame ${value.iFrameTraj}`
-    }
-    if (s) {
-      this.hover.html(s)
-      this.hover.move(this.pointerX, this.pointerY)
-      if (this.mousePressed) {
-        this.handleSelect(event)
-      }
-    } else {
-      this.hover.hide()
-    }
-  }
-
-  mouseup (event) {
-    this.mousePressed = false
-  }
-
-  mousedown (event) {
-    this.mousePressed = true
-    this.handleSelect(event)
-  }
-}
 
 export default {
   name: 'Jolecule',
   data () {
     return {
+      nLoaders: 0,
       stripWidth: '70px',
       viewWidth: '200px',
-      foamId: '',
-      mode: '',
-      forceFesKey: 1,
+      forceMatrixKey: 1,
       forceStripKey: -1,
-      forceViewKey: -2,
+      currentUrl: '',
+      foamId: '',
+      views: [],
+      viewId: null,
+      editTags: [],
+      isAlphaSpace: false,
+      iFrameTrajList: [],
+      isParmed: false,
+      mode: '',
       title: {},
       key: '',
       opt_keys: [],
-      isAlphaSpace: false,
-      isLoading: false,
-      nLoaders: 0,
-      iFrameTrajList: [],
       table: [],
       tableHeaders: [],
       errorMsg: '',
-      views: [],
       editViewText: '',
       editViewId: '',
-      currentUrl: '',
-      viewId: null,
-      editTags: [],
     }
   },
   watch: {
     $route (to, from) {
-      console.log(this.$route.params.foamId)
-      this.forceFesKey = Math.random()
+      this.forceMatrixKey = Math.random()
       this.forceStripKey = Math.random()
       this.loadFoamId(this.$route.params.foamId)
     }
   },
   async mounted () {
     this.pushLoading()
-    this.$forceUpdate()
 
     document.oncontextmenu = _.noop
     document.onkeydown = e => {
       this.onkeydown(e)
     }
 
-    // let backgroundColor = (await rpc.remote.get_config(this.foamId, "background"))?.result;
     let backgroundColor = '#CCC'
 
     this.jolecule = initEmbedJolecule({
@@ -657,45 +382,64 @@ export default {
         return `width: calc(50% - ${this.viewWidth})`
       }
       return 'display: none'
+    },
+
+    isLoading() {
+      return this.nLoaders > 0
     }
   },
 
   methods: {
+    resize () {
+      let vh = window.innerHeight
+      document.documentElement.style.setProperty('--vh', `${vh}px`)
+
+      if (this.matrixWidget) {
+        this.matrixWidget.resize()
+      }
+
+      if (this.stripWidget) {
+        this.stripWidget.resize()
+      }
+
+      if (this.jolecule) {
+        this.jolecule.resize()
+      }
+    },
+
     pushLoading() {
-      this.isLoading = true
       this.nLoaders += 1
+      this.$forceUpdate()
     },
 
     popLoading() {
       this.nLoaders -= 1
       if (this.nLoaders <= 0) {
         this.nLoaders = 0
-        this.isLoading = false
+      }
+      this.$forceUpdate()
+    },
+
+    handleError(response) {
+      if (response.error) {
+        openModal('fail-modal')
+        if (_.last(response.error.message).includes("FileNotFoundError")) {
+          this.errorMsg = `Trajectory #${this.foamId} is empty`
+        } else {
+          this.errorMsg = JSON.stringify(response.error, null, 2)
+        }
+        this.title = {"Error": `loading FoamId=${this.foamId}`}
       }
     },
 
-    async reload () {
+    async get_config (key) {
       this.pushLoading()
-      await this.$forceUpdate()
-      this.mode = (await rpc.remote.get_config(this.foamId, 'mode'))?.result
-      this.key = (await rpc.remote.get_config(this.foamId, 'key'))?.result
-      this.opt_keys = (
-        await rpc.remote.get_config(this.foamId, 'opt_keys')
-      )?.result
-      await this.$forceUpdate()
-      if (this.mode === 'strip') {
-        await this.loadStrip()
-      } else if ((this.mode === 'sparse-matrix') || (this.mode === 'matrix')) {
-        await this.loadMatrix()
-      } else if (this.mode.includes('matrix-strip')) {
-        await this.loadStrip()
-        await this.loadMatrix()
-      } else if (this.mode === 'table') {
-        await this.loadTable()
-      } else if (this.mode === 'frame') {
-        await this.loadFrameIntoJolecule([0, 0], false)
-      }
+      let response = await rpc.remote.get_config(this.foamId, key)
       this.popLoading()
+      if (response.result) {
+        return response.result
+      }
+      return null
     },
 
     async loadFoamId (foamId) {
@@ -704,7 +448,6 @@ export default {
       this.foamId = foamId
       this.title = {}
       this.pushLoading()
-      await this.$forceUpdate()
 
       this.jolecule.clear()
       this.cacheByiFrameTraj = {}
@@ -721,64 +464,57 @@ export default {
       }
 
       let response = await rpc.remote.reset_foam_id(this.foamId)
-      if (response.error) {
-        let myModal = new bootstrap.Modal(document.getElementById('fail-modal'))
-        myModal.show()
-        if (_.last(response.error.message).includes("FileNotFoundError")) {
-          this.errorMsg = `Trajectory #${this.foamId} is empty`
-        } else {
-          this.errorMsg = JSON.stringify(response.error, null, 2)
-        }
-        this.title = {"Error": `loading FoamId=${this.foamId}`}
-      } else {
+      this.handleError(response)
+      if (response.result) {
         this.title = response.result.title
       }
 
-      await this.reload()
+      this.mode = await this.get_config('mode')
+      this.key = await this.get_config('key')
+      this.opt_keys = await this.get_config('opt_keys')
+
+      if (this.mode === 'strip') {
+        await this.loadStrip()
+      } else if ((this.mode === 'sparse-matrix') || (this.mode === 'matrix')) {
+        await this.loadMatrix()
+      } else if (this.mode.includes('matrix-strip')) {
+        await this.loadStrip()
+        await this.loadMatrix()
+      } else if (this.mode === 'table') {
+        await this.loadTable()
+      } else if (this.mode === 'frame') {
+        await this.loadFrameIntoJolecule([0, 0], false)
+      }
 
       response = await rpc.remote.get_views(this.foamId)
       if (response.result) {
         this.views = response.result
-        console.log(`mounted`, _.cloneDeep(this.$route.params), _.cloneDeep(this.$route.query))
-        let view = this.getView(this.$route.query.view)
+        let viewId = this.$route.query.view
+        let view = _.find(this.views, v => v.id === viewId)
         if (view) {
           await this.selectView(view)
         }
       }
 
       this.popLoading()
-    },
 
-    getView(viewId) {
-      return _.find(this.views, v => v.id === viewId)
-    },
-
-    async get_config (key) {
-      this.pushLoading()
-
-      await this.$forceUpdate()
-      let response = await rpc.remote.get_config(this.foamId, 'matrix')
-
-      this.popLoading()
-
+      response = (await rpc.remote.get_json_datasets(this.foamId))
       if (response.result) {
-        return response.result
+        let keys = response?.result
+        if (keys.includes("parmed")) {
+          this.isParmed = true
+          this.$forceUpdate()
+        }
       }
-      return null
+
     },
 
     async loadMatrix (iFrameTraj) {
-      let response = await rpc.remote.get_config(this.foamId, 'matrix')
-      let matrix = response.result
+      let matrix = await this.get_config('matrix')
       if (_.isEmpty(matrix)) {
         return
       }
-      let value
-      if (_.isNil(iFrameTraj)) {
-        value = getFirstValue(matrix)
-      } else {
-        value = { iFrameTraj }
-      }
+      let value = _.isNil(iFrameTraj) ? getFirstValue(matrix) : { iFrameTraj }
       let isSparse = this.mode === 'sparse-matrix'
       this.matrixWidget = new MatrixWidget('#matrix-widget', matrix, isSparse)
       this.resize()
@@ -829,17 +565,15 @@ export default {
     },
 
     async loadStrip () {
-      let response = await rpc.remote.get_config(this.foamId, 'strip')
-      let strip = response.result
+      let strip = await this.get_config('strip')
       if (_.isEmpty(strip)) {
         strip = [[]]
       }
-      let value = getFirstValue(strip)
-
       this.stripWidget = new MatrixWidget('#strip-widget', strip, false)
       this.resize()
       this.stripWidget.selectGridValue = this.selectStripGridValue
       this.stripWidget.deselectGridValue = this.deselectStripGridValue
+      let value = getFirstValue(strip)
       if (value) {
         await this.stripWidget.clickGridValue(value)
       }
@@ -866,13 +600,11 @@ export default {
     },
 
     async loadTable (iFrameTraj) {
-      let response = await rpc.remote.get_config(this.foamId, 'table')
-      this.table = response.result
-      if (_.isEmpty(this.table)) {
+      this.table = await this.config('table')
+      if (_.isEmpty(this.table)) {``
         return
       }
-      let headers = (await rpc.remote.get_config(this.foamId, 'table_headers'))
-        ?.result
+      let headers = await this.get_config('table_headers')
       if (headers) {
         this.tableHeaders = _.map(headers, (h, i) => ({
           value: h,
@@ -941,18 +673,6 @@ export default {
       return inFrames(this.iFrameTrajList, iFrameTraj)
     },
 
-    resize () {
-      let vh = window.innerHeight
-      document.documentElement.style.setProperty('--vh', `${vh}px`)
-      if (this.matrixWidget) {
-        this.matrixWidget.resize()
-      }
-      if (this.stripWidget) {
-        this.stripWidget.resize()
-      }
-      this.jolecule.resize()
-    },
-
     async getPdbLines (iFrameTraj) {
       let key = `${iFrameTraj[0]}-${iFrameTraj[1]}`
       let result = []
@@ -962,7 +682,6 @@ export default {
           result = this.cacheAlphaSpaceByiFrameTraj[key]
         } else {
           this.pushLoading()
-          await this.$forceUpdate()
           let response = await rpc.remote.get_pdb_lines_with_alphaspace(
             this.foamId,
             iFrameTraj
@@ -979,7 +698,6 @@ export default {
           result = this.cacheByiFrameTraj[key]
         } else {
           this.pushLoading()
-          await this.$forceUpdate()
           let response = await rpc.remote.get_pdb_lines(this.foamId, iFrameTraj)
           this.popLoading()
           if (response.result) {
@@ -1208,11 +926,10 @@ export default {
       this.editViewText = view.text
       this.editViewId = view.id
       this.currentUrl = window.location.href.split('?')[0]
-      let myModal = new bootstrap.Modal(document.getElementById('view-edit-modal'))
-      myModal.show()
+      openModal('view-edit-modal')
     },
     
-    async closeViewText() {
+    async clearKeyboardLock() {
       window.keyboardLock = false
     },
 
@@ -1249,7 +966,6 @@ export default {
       this.pushLoading()
       await rpc.remote.add_view(this.foamId, view)
       this.popLoading()
-      this.$forceUpdate()
       window.keyboardLock = false
     },
 
@@ -1296,7 +1012,7 @@ export default {
       let iFrameTraj = _.last(this.iFrameTrajList)
       console.log('selectOptKey', key, iFrameTraj)
       await rpc.remote.select_new_key(this.foamId, key)
-      this.forceFesKey = Math.random()
+      this.forceMatrixKey = Math.random()
       this.forceStripKey = Math.random()
       await this.loadMatrix(iFrameTraj)
     },
@@ -1306,8 +1022,8 @@ export default {
     },
 
     onkeydown (event) {
-      if (window.keyboardLock) {
-        return
+      if ((window.keyboardLock) || (event.metaKey)) {
+          return
       }
       let c = String.fromCharCode(event.keyCode).toUpperCase()
       if (c === 'V') {
@@ -1355,18 +1071,10 @@ export default {
     async openTagModal(view) {
       this.editTags = []
       for (let key of Object.keys(this.title)) {
-        this.editTags.push({
-          key: key,
-          value: this.title[key],
-        })
+        this.editTags.push({key: key, value: this.title[key]})
       }
       window.keyboardLock = true
-      let myModal = new bootstrap.Modal(document.getElementById('tags-edit-modal'))
-      myModal.show()
-    },
-
-    async closeTagsModal() {
-      window.keyboardLock = false
+      openModal('tags-edit-modal')
     },
 
     async saveTags() {
@@ -1396,7 +1104,27 @@ export default {
 
     goToJson() {
       this.$router.push(`/json/${this.foamId}`)
+    },
+
+    async downloadParmed() {
+      this.pushLoading()
+      let url = rpc.remoteUrl.replace('rpc-run', 'parmed') + `/${this.foamId}`
+      let fname = `foamid-${this.foamId}`
+      let iFrameTraj = _.last(this.iFrameTrajList)
+      if (iFrameTraj) {
+        let iFrame = iFrameTraj[0]
+        url += `?i_frame=${iFrame}`
+        fname += `-frame-${iFrame}`
+      }
+      fname += '.parmed'
+      console.log(`downloadParmed ${url}`)
+      const fetchResponse = await fetch(url, {method: 'get'})
+      let blob = await fetchResponse.blob()
+      console.log(`downloadParmed`, fname, blob)
+      saveFile(blob, fname)
+      this.popLoading()
     }
+
   }
 }
 </script>

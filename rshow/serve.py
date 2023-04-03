@@ -4,11 +4,14 @@ import threading
 import time
 import traceback
 import webbrowser
+from io import BytesIO
+from typing import Union
 from urllib.request import urlopen
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 
@@ -72,6 +75,13 @@ def start_fastapi_server(handlers, client_dir, port):
                 "jsonrpc": "2.0",
                 "id": job_id,
             }
+
+    @app.get("/parmed/{foam_id}")
+    async def get_parmed(foam_id: str, i_frame: int=None):
+        logger.info(f"get_parmed {foam_id} {i_frame}")
+        blob = handlers.get_parmed_blob(foam_id)
+        bytes_io = BytesIO(blob)
+        return StreamingResponse(bytes_io, media_type="application/octet-stream")
 
     @app.get("/")
     async def serve_index(request: Request):

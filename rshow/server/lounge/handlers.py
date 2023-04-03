@@ -1,14 +1,15 @@
 import logging
+import time
 from collections import OrderedDict
 from pathlib import Path
-import time
 
 from addict import Dict
+from rseed.formats.easyh5 import EasyH5
+from rseed.granary import Granary
 
 from rshow import stream
 from rshow.persist import PersistDictList
 from rshow.stream import TrajStream
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ def select_new_key(foam_id, key):
 
 def get_tags(foam_id):
     import os
+
     from foamdb.client import PostgresClient
     from foamdb.config import Config
 
@@ -56,6 +58,7 @@ def get_tags(foam_id):
 
 def set_tags(foam_id, tags: dict):
     import os
+
     from foamdb.client import PostgresClient
     from foamdb.config import Config
     from foamdb.query import Trajectory
@@ -67,9 +70,7 @@ def set_tags(foam_id, tags: dict):
     else:
         config = Config()
     with PostgresClient(config.get("database")) as client:
-        client.update(
-            Trajectory(trajectory_id=foam_id, tags=tags)
-        )
+        client.update(Trajectory(trajectory_id=foam_id, tags=tags))
     return {"success": True}
 
 
@@ -166,3 +167,17 @@ def get_json_datasets(foam_id):
 def get_json(foam_id, key):
     return get_h5(foam_id).get_json_dataset(key)
 
+
+def get_parmed_blob(foam_id, i_frame=None):
+    h5: EasyH5 = get_h5(foam_id)
+    blob = h5.get_bytes_dataset("parmed")
+    if i_frame is not None:
+        n = h5.get_n_frame()
+        if i_frame < 0:
+            i_frame = n + i_frame
+        pmd = Structure()
+        pmd.__setstate__(pickle.loads(blob))
+        granary = Granary.from_parmed_structure(pmd)
+        granary.set_frame_from_easy_h5(h5, i_frame)
+        blob = pickle.dumps(granary.structure.__getstate__())
+    return blob

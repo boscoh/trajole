@@ -162,6 +162,7 @@ def open_url(test_url, open_url):
     Single frame of PDB or PARMED file
     """
     from rshow.serve import open_url_in_background
+
     logging.basicConfig(level=logging.INFO)
     open_url_in_background(test_url, open_url)
 

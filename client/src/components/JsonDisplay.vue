@@ -1,7 +1,5 @@
 <template lang="pug">
-.overflow-hidden(
-  :key="$route.params.id"
-)
+.overflow-hidden(:key="$route.params.id")
 
   #fail-modal.modal.fade
     .modal-dialog
@@ -41,7 +39,7 @@
                   | {{ title[key] }}&nbsp;
 
           div(style="width: 200px; height: 50px;")
-            template(v-if="isLoading")
+            template(v-if="nLoaders > 0")
               button.flash-button.btn.btn-info.h-100.w-100
                 .d-flex.flex-row.justify-content-center.align-items-center
                   span.spinner-border.spinner-border-sm
@@ -52,7 +50,14 @@
 
         h4 JSON Datasets
         .d-flex.flex-row(style="height: calc(var(--vh) - 120px)")
+
           .h-100.overflow-scroll
+
+            template(v-if="hasParmed")
+              button.w-100.mb-2.btn.btn-primary(
+                @click="downloadParmed"
+              ) Download Parmed
+
             ul.list-group.justify-content-between(v-for="key in keys")
                 li.list-group-item(
                     style="cursor: pointer"
@@ -60,9 +65,9 @@
                     :class="{active: key === selectKey}"
                 )
                     | {{ key }}
+
           .h-100.ms-2.p-2.overflow-scroll.bg-white.flex-grow-1
               pre(style="user-select: text;") {{ content }}
-
 
 </template>
 
@@ -95,57 +100,34 @@ import 'bootstrap/dist/css/bootstrap.min.css'
 import * as bootstrap from 'bootstrap'
 import _ from 'lodash'
 import * as rpc from '../modules/rpc'
+import {saveFile} from "../modules/util";
 
 export default {
   name: 'JsonDisplay',
   data () {
     return {
       foamId: '',
-      mode: '',
-      forceFesKey: 1,
-      forceStripKey: -1,
-      forceViewKey: -2,
       title: {},
-      isLoading: false,
       nLoaders: 0,
       keys: [],
+      hasParmed: false,
       selectKey: '',
       content: '',
-      table: [],
-      tableHeaders: [],
       errorMsg: '',
-      currentUrl: '',
     }
   },
   watch: {
     $route (to, from) {
       console.log(this.$route.params.foamId)
-      this.forceFesKey = Math.random()
-      this.forceStripKey = Math.random()
       this.loadFoamId(this.$route.params.foamId)
     }
   },
   async mounted () {
     this.pushLoading()
-    this.$forceUpdate()
-
     window.addEventListener('resize', this.resize)
-
-    this.resize()
-
     await this.loadFoamId(this.$route.params.foamId)
-
     this.resize()
     this.popLoading()
-  },
-  computed: {
-    tableStyle () {
-      if (this.mode === 'table') {
-        return `width: calc(50vw - ${this.viewWidth})`
-      }
-      return 'display: none'
-    },
-
   },
 
   methods: {
@@ -155,7 +137,6 @@ export default {
     },
 
     pushLoading() {
-      this.isLoading = true
       this.nLoaders += 1
       this.$forceUpdate()
     },
@@ -164,7 +145,6 @@ export default {
       this.nLoaders -= 1
       if (this.nLoaders <= 0) {
         this.nLoaders = 0
-        this.isLoading = false
         this.$forceUpdate()
       }
     },
@@ -182,47 +162,64 @@ export default {
     },
 
     async loadFoamId (foamId) {
-      console.log('loadFrameId', foamId)
+      console.log('loadFoamId', foamId)
       document.title = '#' + foamId
       this.foamId = foamId
+      await this.loadTitle()
+      this.loadDatasetKeys()
+    },
+
+    async loadTitle() {
       this.title = {}
       this.pushLoading()
-
-      let response = await rpc.remote.get_tags(this.foamId)
+      let response = await rpc.remote.reset_foam_id(this.foamId)
       this.handleError(response)
       if (response.error) {
         this.title = {"Error": `loading FoamId=${this.foamId}`}
       } else {
-        this.title = response.result
+        this.title = response.result.title
       }
-
-      await this.reload()
-
       this.popLoading()
     },
 
-    async reload () {
+    async loadDatasetKeys () {
       this.pushLoading()
       let response = (await rpc.remote.get_json_datasets(this.foamId))
       this.handleError(response)
       if (response.result) {
         let keys = response?.result
+        if (keys.includes("parmed")) {
+          this.hasParmed = true
+        }
         this.keys = _.filter(keys, k => k.includes("json"))
+        this.loadContent(this.keys[0])
       }
       this.popLoading()
     },
 
     async loadContent (key) {
+      this.content = ''
+      this.selectKey = key
       this.pushLoading()
       let response = (await rpc.remote.get_json(this.foamId, key))
       this.handleError(response)
       if (response.result) {
         this.content = JSON.stringify(response.result, null, 2)
       }
-      this.selectKey = key
       this.popLoading()
     },
 
+    async downloadParmed() {
+      this.pushLoading()
+      let url = rpc.remoteUrl.replace('rpc-run', 'parmed') + `/${this.foamId}`
+      console.log(`downloadParmed ${url}`)
+      const fetchResponse = await fetch(url, {method: 'get'})
+      let blob = await fetchResponse.blob()
+      let fname = `foamid-${this.foamId}.parmed`
+      console.log(`downloadParmed`, fname, blob)
+      saveFile(blob, fname)
+      this.popLoading()
+    }
   }
 }
 </script>
