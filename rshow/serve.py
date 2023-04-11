@@ -78,9 +78,15 @@ def start_fastapi_server(handlers, client_dir, port):
 
     @app.get("/parmed/{foam_id}")
     async def get_parmed(foam_id: str, i_frame: int=None):
-        logger.info(f"get_parmed {foam_id} {i_frame}")
-        blob = handlers.get_parmed_blob(foam_id)
-        bytes_io = BytesIO(blob)
+        try:
+            logger.info(f"get_parmed {foam_id} {i_frame}")
+            blob = handlers.get_parmed_blob(foam_id, i_frame)
+            bytes_io = BytesIO(blob)
+        except Exception as e:
+            error_lines = str(traceback.format_exc()).splitlines()
+            for line in error_lines:
+                logger.debug(line)
+            raise e
         return StreamingResponse(bytes_io, media_type="application/octet-stream")
 
     @app.get("/")

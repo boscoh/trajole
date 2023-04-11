@@ -2,9 +2,10 @@ import logging
 import time
 from collections import OrderedDict
 from pathlib import Path
+import pickle
 
 from addict import Dict
-from rseed.formats.easyh5 import EasyH5
+from rseed.formats.easyh5 import EasyTrajH5
 from rseed.granary import Granary
 
 from rshow import stream
@@ -168,16 +169,19 @@ def get_json(foam_id, key):
     return get_h5(foam_id).get_json_dataset(key)
 
 
-def get_parmed_blob(foam_id, i_frame=None):
-    h5: EasyH5 = get_h5(foam_id)
-    blob = h5.get_bytes_dataset("parmed")
-    if i_frame is not None:
-        n = h5.get_n_frame()
+def get_parmed_blob(foam_id, i_frame=None) -> bytes:
+    logger.info(f"get_parmed_blob {foam_id} {i_frame} {type(i_frame)}")
+    h5: EasyTrajH5 = get_h5(foam_id)
+    if i_frame is None:
+        logger.info(f"get_parmed_blob {foam_id}")
+        blob = h5.get_bytes_dataset("parmed")
+    else:
+        i_frame = int(i_frame)
+        granary = Granary.from_easy_h5(h5)
         if i_frame < 0:
-            i_frame = n + i_frame
-        pmd = Structure()
-        pmd.__setstate__(pickle.loads(blob))
-        granary = Granary.from_parmed_structure(pmd)
+            i_frame = h5.get_n_frame() + i_frame
+        logger.info(f"get_parmed_blob {foam_id} {i_frame}")
         granary.set_frame_from_easy_h5(h5, i_frame)
         blob = pickle.dumps(granary.structure.__getstate__())
+    logger.info(f"get_parmed_blob {type(blob)} {len(blob)}")
     return blob

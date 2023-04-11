@@ -262,12 +262,6 @@ import {getFirstValue, inFrames, isSameVec} from "../modules/util";
 import {saveFile} from "../modules/util";
 
 
-function openModal(elemId) {
-  let myModal = new bootstrap.Modal(document.getElementById(elemId))
-  myModal.show()
-}
-
-
 export default {
   name: 'Jolecule',
   data () {
@@ -311,11 +305,9 @@ export default {
       this.onkeydown(e)
     }
 
-    let backgroundColor = '#CCC'
-
     this.jolecule = initEmbedJolecule({
       divTag: '#jolecule-container',
-      backgroundColor: backgroundColor,
+      backgroundColor: '#CCC',
       viewId: '',
       viewHeight: 170,
       isViewTextShown: false,
@@ -420,9 +412,18 @@ export default {
       this.$forceUpdate()
     },
 
+    openModal(elemId) {
+      let myModal = new bootstrap.Modal(document.getElementById(elemId))
+      myModal.show()
+    },
+
+    async clearKeyboardLock() {
+      window.keyboardLock = false
+    },
+
     handleError(response) {
       if (response.error) {
-        openModal('fail-modal')
+        this.openModal('fail-modal')
         if (_.last(response.error.message).includes("FileNotFoundError")) {
           this.errorMsg = `Trajectory #${this.foamId} is empty`
         } else {
@@ -432,7 +433,7 @@ export default {
       }
     },
 
-    async get_config (key) {
+    async getConfig (key) {
       this.pushLoading()
       let response = await rpc.remote.get_config(this.foamId, key)
       this.popLoading()
@@ -444,11 +445,12 @@ export default {
 
     async loadFoamId (foamId) {
       console.log('loadFrameId', foamId)
+
       document.title = '#' + foamId
       this.foamId = foamId
-      this.title = {}
-      this.pushLoading()
 
+      // Clear all widgets
+      this.title = {}
       this.jolecule.clear()
       this.cacheByiFrameTraj = {}
       this.cacheAlphaSpaceByiFrameTraj = {}
@@ -463,15 +465,17 @@ export default {
         this.stripWidget.draw()
       }
 
+      this.pushLoading()
+
       let response = await rpc.remote.reset_foam_id(this.foamId)
       this.handleError(response)
       if (response.result) {
         this.title = response.result.title
       }
 
-      this.mode = await this.get_config('mode')
-      this.key = await this.get_config('key')
-      this.opt_keys = await this.get_config('opt_keys')
+      this.mode = await this.getConfig('mode')
+      this.key = await this.getConfig('key')
+      this.opt_keys = await this.getConfig('opt_keys')
 
       if (this.mode === 'strip') {
         await this.loadStrip()
@@ -510,7 +514,7 @@ export default {
     },
 
     async loadMatrix (iFrameTraj) {
-      let matrix = await this.get_config('matrix')
+      let matrix = await this.getConfig('matrix')
       if (_.isEmpty(matrix)) {
         return
       }
@@ -565,7 +569,7 @@ export default {
     },
 
     async loadStrip () {
-      let strip = await this.get_config('strip')
+      let strip = await this.getConfig('strip')
       if (_.isEmpty(strip)) {
         strip = [[]]
       }
@@ -604,7 +608,7 @@ export default {
       if (_.isEmpty(this.table)) {``
         return
       }
-      let headers = await this.get_config('table_headers')
+      let headers = await this.getConfig('table_headers')
       if (headers) {
         this.tableHeaders = _.map(headers, (h, i) => ({
           value: h,
@@ -889,7 +893,13 @@ export default {
       }
 
       let text = lines.join("\n")
-      let filename = 'out.pdb';
+      let filename = `foamid-${this.foamId}`
+      let iFrameTraj = _.last(this.iFrameTrajList)
+      if (iFrameTraj) {
+        let iFrame = iFrameTraj[0]
+        filename += `-frame-${iFrame}`
+      }
+      filename += '.pdb'
 
       let element = document.createElement('a');
       element.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(text));
@@ -926,13 +936,9 @@ export default {
       this.editViewText = view.text
       this.editViewId = view.id
       this.currentUrl = window.location.href.split('?')[0]
-      openModal('view-edit-modal')
+      this.openModal('view-edit-modal')
     },
     
-    async clearKeyboardLock() {
-      window.keyboardLock = false
-    },
-
     async saveView() {
       let viewDict = this.jolecule.soupView.getCurrentView().getDict()
       let view = {
@@ -1022,7 +1028,7 @@ export default {
     },
 
     onkeydown (event) {
-      if ((window.keyboardLock) || (event.metaKey)) {
+      if ((window.keyboardLock) || (event.metaKey) || (event.ctrlKey)) {
           return
       }
       let c = String.fromCharCode(event.keyCode).toUpperCase()
@@ -1074,7 +1080,7 @@ export default {
         this.editTags.push({key: key, value: this.title[key]})
       }
       window.keyboardLock = true
-      openModal('tags-edit-modal')
+      this.openModal('tags-edit-modal')
     },
 
     async saveTags() {
@@ -1117,10 +1123,9 @@ export default {
         fname += `-frame-${iFrame}`
       }
       fname += '.parmed'
-      console.log(`downloadParmed ${url}`)
       const fetchResponse = await fetch(url, {method: 'get'})
       let blob = await fetchResponse.blob()
-      console.log(`downloadParmed`, fname, blob)
+      console.log(`downloadParmed ${url} ${fname}`, blob)
       saveFile(blob, fname)
       this.popLoading()
     }
