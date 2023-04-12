@@ -1,0 +1,4 @@
+include rshow/server/local/client/**
+include rshow/server/local/client/assets/**
+include rshow/server/lounge/client/**
+include rshow/server/lounge/client/assets/**

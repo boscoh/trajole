@@ -33,6 +33,8 @@ setuptools.setup(
         "rshow": [
             "rshow/server/local/client/**",
             "rshow/server/lounge/client/**",
+            "rshow/server/local/client/assets/**",
+            "rshow/server/lounge/client/assets/**",
         ]
     },
     include_package_data=True,
