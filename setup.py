@@ -13,6 +13,7 @@ setuptools.setup(
     ],
     install_requires=[
         "addict",
+        "docopt",
         "fastapi",
         "foamdb",
         "mdtraj",
