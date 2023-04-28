@@ -3,7 +3,7 @@ import setuptools
 setuptools.setup(
     name="rshow",
     description="rshow",
-    version="0.9",
+    version="1.1",
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     classifiers=[

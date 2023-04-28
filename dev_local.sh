@@ -8,7 +8,7 @@ psword -k serve.py
 ttab "cd client; npm run dev "
 # ttab "rshow --dev traj-foam 17"
 #ttab "cd examples; rshow --dev matrix matrix"
-ttab "rshow --dev fes examples/fes"
+ttab "python rshow/cli.py --dev fes examples/fes"
 #ttab "rshow --dev traj examples/trajectory.h5"
 #ttab "cd examples/temper; rshow --dev re ."
 #ttab "rshow --dev frame examples/3hhm.pdb"

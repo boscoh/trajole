@@ -63,18 +63,20 @@ class RshowStreamMixin(ABC):
         )
 
     def get_pdb_lines_with_alphaspace(self, i_frame_traj: [int, int]):
-        pmd = get_parmed_from_traj_frame(self.get_frame())
+        frame = self.get_frame(i_frame_traj)
+        pdb_lines = filter_for_atom_lines(get_pdb_lines_of_traj_frame(frame))
 
+        pmd = get_parmed_from_traj_frame(frame)
         i_protein_atoms = select_mask(pmd, "protein")
-        alpha_space = AlphaSpace(self.get_frame().atom_slice(i_protein_atoms))
+
+        alpha_space = AlphaSpace(frame.atom_slice(i_protein_atoms))
         alpha_space_pdb_lines = alpha_space.get_pdb_lines()
 
         alpha_pdb = get_empty_path_str("alphaspace.pdb")
+        logger.info(f"alphaspace({alpha_pdb} {i_frame_traj}")
         with open(alpha_pdb, "w") as f:
             f.write("\n".join(alpha_space_pdb_lines))
-        logger.info(f"alphaspace({alpha_pdb} {i_frame_traj}")
 
-        pdb_lines = self.get_pdb_lines(i_frame_traj)
         pdb_lines.extend(alpha_space_pdb_lines)
         return pdb_lines
 
