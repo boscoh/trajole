@@ -43,6 +43,45 @@
           button.btn.btn-secondary(data-bs-dismiss="modal" @click="clearKeyboardLock") Cancel
           button.btn.btn-primary(data-bs-dismiss="modal" @click="saveTags") Save
 
+  #frames-edit-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h5.modal-title {{frames}}
+        .modal-body
+          .mb-1.d-flex.flex-row.align-items-center(
+              v-for="frame in editFrames"
+          )
+            | Frame
+            input.ms-2.form-control(
+              style="width: 8em"
+              type="number"
+              disabled
+              v-model="frame.frame"
+            )
+            button.ms-2.btn.btn-small.btn-outline-secondary(
+                @click="copyFramesToClipboard(frame.frame)"
+            )
+              i.far.fa-copy
+            button.ms-2.btn.btn-small.btn-outline-secondary(
+                v-if="editFrames.length > 1"
+                @click="addFrame(frame.frame)"
+            )
+              i.fas.fa-minus
+          .mb-1.d-flex.flex-row.align-items-center
+            | Frame
+            input.ms-2.form-control(
+              style="width: 8em"
+              v-model="newFrame"
+              type="number"
+            )
+            button.ms-2.btn.btn-small.btn-outline-secondary(
+                @click="addFrame(newFrame)"
+            )
+              i.fas.fa-plus
+        .modal-footer
+          button.btn.btn-secondary(data-bs-dismiss="modal" @click="clearKeyboardLock") Cancel
+
   // Main Page
   .w-100.d-flex.flex-row.user-select-none(style="background-color: #CCC")
 
@@ -64,12 +103,15 @@
 
           // Title tags, fits in space in toolbar
           .flex-grow-1.overflow-hidden.w-100(style="height: 50px")
-              .d-flex.flex-row.flex-wrap.text-wrap(
-                style="font-family: monospace; line-height: 1.1em; font-size: 15px;"
-              )
-                template(v-for="(key) in Object.keys(title)")
-                  span(style="color: #888") {{key}}:
-                  | {{ title[key] }}&nbsp;
+            .d-flex.flex-row.flex-wrap.text-wrap(
+              style="font-family: monospace; line-height: 1.1em; font-size: 15px;"
+            )
+              template(v-for="(key) in Object.keys(tags)")
+                span(style="color: #888") {{key}}:
+                | {{ tags[key] }}&nbsp;
+              span &nbsp;
+              span.text-secondary(@click="openTagModal()")
+                i.fas.fa-edit
 
           // Dropdown for energy components
           .ms-2(v-if="opt_keys.length")
@@ -133,6 +175,11 @@
       div(:class="[isLoading ? 'overlay' : '']")
 
       .ps-2
+        //////////////////////////////////
+        // Buttons on the side
+
+        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="openFramesModal")
+          | {{ frames }}
 
         button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="toggleAlphaSpace()")
           span(v-if="isAlphaSpace")
@@ -152,17 +199,13 @@
 
         button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="goToJson()") JSON
 
-        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="openTagModal()")
-          | Edit Tags
-
-        //////////////////////////////////
         // Views handlers
-        button.btn.btn-sm.w-100.btn-secondary(@click="saveView")
-          | Save Views
+        button.mt-3.btn.btn-sm.w-100.btn-secondary(@click="saveView")
+          | Save View
 
-        .flex-grow-1.overflow-scroll.mt-2(style="height: calc(var(--vh) - 210px")
+        .flex-grow-1.overflow-scroll.mt-1(style="height: calc(var(--vh) - 210px")
           div
-            .w-100.mb-2.p-2.rounded(
+            .w-100.mb-1.p-2.rounded(
               style="background-color: #BBB"
               v-for="view in views"
             )
@@ -191,16 +234,16 @@
                       | to add text
               .d-flex.flex-row.justify-content-between
                 .flex-start.flex-row
-                  button.btn.btn-sm.btn-outline-secondary(
+                  button.btn.btn-sm.btn-outline-secondary.border-0(
                     @click="startEditViewModal(view)"
                   )
                     i.far.fa-comment
-                  button.btn.btn-sm.btn-outline-secondary(
+                  button.btn.btn-sm.btn-outline-secondary.border-0(
                     @click="updateView(view)"
                   )
                     i.fas.fa-save
                 .flex-end
-                  button.btn.btn-sm.btn-outline-secondary(
+                  button.btn.btn-sm.btn-outline-secondary.border-0(
                     @click="deleteView(view)"
                   )
                     i.fas.fa-trash
@@ -280,7 +323,7 @@ export default {
       iFrameTrajList: [],
       isParmed: false,
       mode: '',
-      title: {},
+      tags: {},
       key: '',
       opt_keys: [],
       table: [],
@@ -288,6 +331,8 @@ export default {
       errorMsg: '',
       editViewText: '',
       editViewId: '',
+      editFrames: [],
+      newFrame: null,
     }
   },
   watch: {
@@ -378,6 +423,11 @@ export default {
 
     isLoading() {
       return this.nLoaders > 0
+    },
+
+    frames() {
+      let values = _.map(this.iFrameTrajList, x => x[0])
+      return `Foam: ${this.foamId} - Frame: ${values.join(" ")}`
     }
   },
 
@@ -429,7 +479,7 @@ export default {
         } else {
           this.errorMsg = JSON.stringify(response.error, null, 2)
         }
-        this.title = {"Error": `loading FoamId=${this.foamId}`}
+        this.tags = {"Error": `loading FoamId=${this.foamId}`}
       }
     },
 
@@ -450,7 +500,7 @@ export default {
       this.foamId = foamId
 
       // Clear all widgets
-      this.title = {}
+      this.tags = {}
       this.jolecule.clear()
       this.cacheByiFrameTraj = {}
       this.cacheAlphaSpaceByiFrameTraj = {}
@@ -467,10 +517,13 @@ export default {
 
       this.pushLoading()
 
-      let response = await rpc.remote.reset_foam_id(this.foamId)
+      let response
+
+      response = await rpc.remote.reset_foam_id(this.foamId)
+
       this.handleError(response)
       if (response.result) {
-        this.title = response.result.title
+        this.tags = response.result.title
       }
 
       this.mode = await this.getConfig('mode')
@@ -490,13 +543,28 @@ export default {
         await this.loadFrameIntoJolecule([0, 0], false)
       }
 
+      let frameStr = this.$route.query.frame
+      let viewId = this.$route.query.view
+
+      if (frameStr) {
+        let initIFrame = this.iFrameTrajList[0][0]
+        let frames = _.map(frameStr.split(','), _.parseInt)
+        console.log('loading frame', frames)
+        for (let iFrame of frames) {
+            await this.clickFrame(iFrame)
+        }
+        await this.clickFrame(initIFrame)
+      }
+
       response = await rpc.remote.get_views(this.foamId)
       if (response.result) {
         this.views = response.result
-        let viewId = this.$route.query.view
-        let view = _.find(this.views, v => v.id === viewId)
-        if (view) {
-          await this.selectView(view)
+        console.log('loading view', viewId)
+        if (viewId && this.views) {
+          let view = _.find(this.views, v => v.id === viewId)
+          if (view) {
+            await this.selectView(view)
+          }
         }
       }
 
@@ -717,6 +785,15 @@ export default {
       return this.nStructureInFrameList.length
     },
 
+    rewriteUrlWithFrames() {
+      let values = _.map(this.iFrameTrajList, x => x[0])
+      history.pushState(
+        {},
+        null,
+        '#' + this.$route.path + '?frame=' + values.join(",")
+      )
+    },
+
     async loadFrameIntoJolecule (iFrameTraj, thisFrameOnly = false) {
       if (this.isFetching) {
         return
@@ -771,6 +848,7 @@ export default {
         this.jolecule.soupWidget.buildScene()
       }
       this.isFetching = false
+      this.rewriteUrlWithFrames()
     },
 
     async reloadLastFrameOfJolecule() {
@@ -828,6 +906,7 @@ export default {
       if (!_.isNil(i)) {
         await this.deleteFromIFrameTrajList(i)
       }
+      this.rewriteUrlWithFrames()
     },
 
     async deleteFromIFrameTrajList (iFrame) {
@@ -1076,26 +1155,26 @@ export default {
 
     async openTagModal(view) {
       this.editTags = []
-      for (let key of Object.keys(this.title)) {
-        this.editTags.push({key: key, value: this.title[key]})
+      for (let key of Object.keys(this.tags)) {
+        this.editTags.push({key: key, value: this.tags[key]})
       }
       window.keyboardLock = true
       this.openModal('tags-edit-modal')
     },
 
     async saveTags() {
-      let tag = {}
+      let tags = {}
       for (let editTag of this.editTags) {
         if (editTag.key && editTag.value) {
-          tag[editTag.key] = editTag.value
+          tags[editTag.key] = editTag.value
         }
       }
-      console.log('saveTags', _.cloneDeep(this.editTags), _.cloneDeep(tag))
+      console.log('saveTags', _.cloneDeep(this.editTags), _.cloneDeep(tags))
       this.pushLoading()
-      let response = await rpc.remote.set_tags(this.foamId, tag)
+      let response = await rpc.remote.set_tags(this.foamId, tags)
       this.popLoading()
       if (response.result) {
-        this.title = tag
+        this.tags = tags
       }
     },
 
@@ -1128,8 +1207,72 @@ export default {
       console.log(`downloadParmed ${url} ${fname}`, blob)
       saveFile(blob, fname)
       this.popLoading()
-    }
+    },
 
+    setEditFrames() {
+      this.editFrames = []
+      for (let iFrameTraj of this.iFrameTrajList) {
+        this.editFrames.push({frame: iFrameTraj[0]})
+      }
+      let frames = _.map(this.editFrames, 'frame')
+    },
+
+    async openFramesModal(view) {
+      this.setEditFrames()
+      window.keyboardLock = true
+      this.openModal('frames-edit-modal')
+    },
+
+    async clickFrame(iFrame) {
+
+      let widget
+
+      if (this.matrixWidget) {
+        widget = this.matrixWidget
+      } else if (this.stripWidget) {
+        widget = this.stripWidget
+      } else {
+        return
+      }
+      let getMatrixValue = (iFrameTraj) => {
+        let value = null
+        let grid = widget.grid
+        let nCol = widget.grid.length
+        let nRow = widget.grid[0].length
+        for (let i=0; i<nCol; i+=1) {
+          for (let j=0; j<nRow; j+=1) {
+            let isMatch = false
+            let gridValue = grid[i][j]
+            if (!grid[i][j].iFrameTraj) {
+              continue
+            }
+            let iFrameTrajCell = grid[i][j].iFrameTraj
+            let thisMatch = (iFrameTraj[0] == iFrameTrajCell[0]) && (iFrameTraj[1] == iFrameTrajCell[1])
+            if (thisMatch) {
+              return gridValue
+            }
+          }
+        }
+        return null
+      }
+
+      let iFrameTraj = [iFrame, 0]
+      let value = getMatrixValue(iFrameTraj)
+      if (!value) {
+        return
+      }
+      await widget.clickGridValue(value, true)
+    },
+
+    async addFrame(iFrame) {
+      await this.clickFrame(iFrame)
+      this.setEditFrames()
+      this.newFrame = null
+    },
+
+    copyFramesToClipboard(text) {
+      navigator.clipboard.writeText(text);
+    }
   }
 }
 </script>

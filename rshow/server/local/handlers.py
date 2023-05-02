@@ -30,7 +30,7 @@ def init_traj_stream_from_config(in_config):
 
 
 def reset_foam_id(foam_id):
-    return {"title": {"title": traj_stream.get_title()}}
+    return {"title": traj_stream.get_title()}
 
 
 def get_config(foam_id, k):

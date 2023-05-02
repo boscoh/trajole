@@ -149,9 +149,9 @@ class TrajStream(RshowStreamMixin):
     def get_title(self):
         names = [Path(t).name for t in self.config.trajectories]
         if len(names) == 1:
-            return f"Trajectory of {names[0]}"
+            return {"h5": names[0]}
         elif len(names) >= 1:
-            return "Trajectories of:\n" + "\n".join(names)
+            return {"h5": " ".join(names)}
         else:
             raise ValueError("No trajectories found.")
 
@@ -208,7 +208,7 @@ class FoamTrajStream(TrajStream):
         )
 
     def get_title(self):
-        return f"Connected: FoamDB {self.config.trajectories[0]}"
+        return {"foamd": self.config.trajectories[0]}
 
     def process_config(self):
         super().process_config()
@@ -242,7 +242,7 @@ class FoamTrajStream(TrajStream):
 
 class FrameStream(TrajStream):
     def process_config(self):
-        self.config.title = f"frame: {self.config.pdb_or_parmed}"
+        self.config.title = self.config.pdb_or_parmed
         self.config.mode = "frame"
         fname = Path(self.config.pdb_or_parmed)
         if fname.suffix == ".parmed":
@@ -256,7 +256,14 @@ class FrameStream(TrajStream):
         return self.frame
 
     def get_title(self):
-        return self.config.title
+        fname = self.config.title.lower()
+        if fname.endswith("parmed"):
+            key = "parmed"
+        elif fname.endswith("pdb"):
+            key = "pdb"
+        else:
+            key = "file"
+        return {key: self.config.title}
 
 
 class FesStream(TrajStream):
@@ -300,7 +307,7 @@ class MatrixStream(TrajStream):
 
 class LigandsStream(TrajStream):
     def process_config(self):
-        self.config.title = f"Ligands for {Path(self.config.pdb).name}"
+        self.config.title = f"{Path(self.config.pdb).name}"
         self.config.mode = "table"
 
         pdb = get_checked_path(self.config.pdb)
@@ -352,7 +359,7 @@ class LigandsStream(TrajStream):
         return self.receptor_lines + self.get_ligand_pdb_lines(i_frame)
 
     def get_title(self):
-        return self.config.title
+        return {"fname": self.config.title}
 
 
 def convert_rows_to_p_rows(rows):

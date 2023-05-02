@@ -86,7 +86,6 @@ def reset_foam_id(foam_id):
     new_config.foam_id = foam_id
     init_traj_stream_from_config(new_config)
     tags = get_tags(foam_id)
-    tags["foam_id"] = foam_id
     pieces = [f"{k}={v}" for k, v in tags.items()]
     title = " ".join(pieces)
     return {"title": tags}
