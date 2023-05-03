@@ -337,12 +337,14 @@ export default {
   },
   watch: {
     $route (to, from) {
+      console.log(`watch new url`, to)
       this.forceMatrixKey = Math.random()
       this.forceStripKey = Math.random()
-      this.loadFoamId(this.$route.params.foamId)
+      this.handleNewUrl()
     }
   },
   async mounted () {
+    console.log(`mounted`)
     this.pushLoading()
 
     document.oncontextmenu = _.noop
@@ -380,8 +382,7 @@ export default {
 
     // saves which structures belongs to a loaded frame on display
     this.nStructureInFrameList = []
-
-    await this.loadFoamId(this.$route.params.foamId)
+    this.handleNewUrl()
 
     this.resize()
     this.popLoading()
@@ -493,8 +494,19 @@ export default {
       return null
     },
 
-    async loadFoamId (foamId) {
-      console.log('loadFrameId', foamId)
+    handleNewUrl() {
+      let frameQuery = this.$route.query.frame
+      if (!frameQuery) {
+        frameQuery = ""
+      }
+      let frames = _.map(frameQuery.split(','), _.parseInt)
+      let viewId = this.$route.query.view
+      let foamId = this.$route.params.foamId
+      this.loadFoamId(foamId, frames, viewId)
+    },
+
+    async loadFoamId (foamId, frames, viewId) {
+      console.log('loadFoamId', foamId, frames, viewId)
 
       document.title = '#' + foamId
       this.foamId = foamId
@@ -543,13 +555,9 @@ export default {
         await this.loadFrameIntoJolecule([0, 0], false)
       }
 
-      let frameStr = this.$route.query.frame
-      let viewId = this.$route.query.view
-
-      if (frameStr) {
+      if (frames) {
         let initIFrame = this.iFrameTrajList[0][0]
-        let frames = _.map(frameStr.split(','), _.parseInt)
-        console.log('loading frame', frames)
+        console.log('loading frames', frames)
         for (let iFrame of frames) {
             await this.clickFrame(iFrame)
         }
@@ -559,7 +567,7 @@ export default {
       response = await rpc.remote.get_views(this.foamId)
       if (response.result) {
         this.views = response.result
-        console.log('loading view', viewId)
+        console.log('loading view', this.queryView)
         if (viewId && this.views) {
           let view = _.find(this.views, v => v.id === viewId)
           if (view) {
@@ -1140,12 +1148,8 @@ export default {
           this.controller.selectResidue(atom.iRes)
         }
       } else if (c === 'A') {
-        if (event.metaKey) {
-          this.controller.selectAllSidechains(true)
-          event.preventDefault()
-        } else {
-          this.soupWidget.atomLabelDialog()
-        }
+        this.toggleAlphaSpace()
+        event.preventDefault()
       } else if (event.keyCode === 27) {
         this.controller.clear()
       } else if (c === 'Z' || event.keyCode === 13) {
