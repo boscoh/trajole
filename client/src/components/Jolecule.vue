@@ -1154,7 +1154,10 @@ export default {
         this.controller.clear()
       } else if (c === 'Z' || event.keyCode === 13) {
         this.controller.zoomToSelection()
+      } else if (event.key == "Escape") {
+        this.controller.clear()
       }
+
     },
 
     async openTagModal(view) {

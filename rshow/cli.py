@@ -33,7 +33,7 @@ def run():
     if not config.is_dev:
         serve.open_url_in_background(f"http://localhost:{config.port}/#/foamtraj/0")
 
-    serve.start_fastapi_server(handlers, client_dir, port)
+    serve.start_fastapi_server(handlers, client_dir, port, config.is_dev)
 
 
 @click.group()

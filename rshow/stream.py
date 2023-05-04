@@ -22,7 +22,7 @@ from rseed.freeenergy import (
     sort_temperatures,
 )
 from rseed.granary import Granary
-from rseed.util.alphaspace import AlphaSpace
+from rshow.alphaspace import AlphaSpace
 from rseed.util.fs import (
     dump_yaml,
     get_checked_path,
@@ -73,7 +73,6 @@ class RshowStreamMixin(ABC):
         alpha_space_pdb_lines = alpha_space.get_pdb_lines()
 
         alpha_pdb = get_empty_path_str("alphaspace.pdb")
-        logger.info(f"alphaspace({alpha_pdb} {i_frame_traj}")
         with open(alpha_pdb, "w") as f:
             f.write("\n".join(alpha_space_pdb_lines))
 

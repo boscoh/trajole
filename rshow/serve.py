@@ -44,7 +44,7 @@ def open_url_in_background(test_url, open_url=None, sleep_in_s=1):
     threading.Thread(target=inner).start()
 
 
-def start_fastapi_server(handlers, client_dir, port):
+def start_fastapi_server(handlers, client_dir, port, is_dev=False):
     app = FastAPI()
 
     app.add_middleware(
@@ -77,7 +77,7 @@ def start_fastapi_server(handlers, client_dir, port):
             }
 
     @app.get("/parmed/{foam_id}")
-    async def get_parmed(foam_id: str, i_frame: int=None):
+    async def get_parmed(foam_id: str, i_frame: int = None):
         try:
             logger.info(f"get_parmed {foam_id} {i_frame}")
             blob = handlers.get_parmed_blob(foam_id, i_frame)
