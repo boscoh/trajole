@@ -15,12 +15,18 @@ from addict import Dict
 from rseed.formats.easyh5 import EasyFoamTrajH5, EasyTrajH5
 from rseed.formats.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
 from rseed.formats.stream import StreamingTrajectoryManager, TrajectoryManager
-from rseed.freeenergy import (
-    FreeEnergySampler,
-    FreeEnergySurface,
-    get_matrix,
-    sort_temperatures,
-)
+try:
+    from rseed.freeenergy import (
+        FreeEnergySampler,
+        FreeEnergySurface,
+        get_matrix,
+        sort_temperatures,
+    )
+except:
+    from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
+    from rseed.analysis.fes import MappableFes as FreeEnergySurface
+    from rseed.analysis.fes import get_matrix_json as get_matrix
+    from rseed.analysis.fn import sort_temperatures
 from rseed.granary import Granary
 from rshow.alphaspace import AlphaSpace
 from rseed.util.fs import (
