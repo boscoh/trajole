@@ -118,7 +118,7 @@ class AlphaSpace:
     #     logger.info(f"Generated {len(result)} lines of PDB.")
     #     return result
 
-    def get_pdb_lines(self):
+    def get_community_pdb_lines(self):
         result = []
         i_atom = self.mdtraj.xyz.shape[1]
         i_res = len(list(self.mdtraj.top.residues))
@@ -147,6 +147,33 @@ class AlphaSpace:
                     )
                     result.append(line)
                     i_atom += 1
+            i_res += 1
+        logger.info(f"Generated {len(result)} lines of PDB.")
+        return result
+
+    def get_pocket_pdb_lines(self):
+        result = []
+        i_atom = self.mdtraj.xyz.shape[1]
+        i_res = len(list(self.mdtraj.top.residues))
+        self.pockets.sort(key=lambda p: -p.nonpolar_space)
+        for i_pocket, pocket in enumerate(self.pockets):
+            if i_pocket >= len(self.elements):
+                break
+            element = self.elements[i_pocket % len(self.elements)]
+            for alpha in pocket.alphas:
+                line = self.gen_pdb_line(
+                    i_atom,
+                    atom_name=f"P{i_pocket+1}",
+                    res_name="XXX",
+                    i_res=i_res,
+                    chain_name=" ",
+                    bfactor=i_pocket,
+                    occupancy=pocket.nonpolar_space,
+                    element=element,
+                    xyz=alpha.xyz,
+                )
+                result.append(line)
+                i_atom += 1
             i_res += 1
         logger.info(f"Generated {len(result)} lines of PDB.")
         return result

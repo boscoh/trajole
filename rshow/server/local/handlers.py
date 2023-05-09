@@ -46,8 +46,12 @@ def get_pdb_lines(foam_id, i_frame_traj):
     return traj_stream.get_pdb_lines(i_frame_traj)
 
 
-def get_pdb_lines_with_alphaspace(foam_id, i_frame_traj):
-    return traj_stream.get_pdb_lines_with_alphaspace(i_frame_traj)
+def get_pdb_lines_with_as_communities(foam_id, i_frame_traj):
+    return traj_stream.get_pdb_lines_with_as_communities(i_frame_traj)
+
+
+def get_pdb_lines_with_as_pockets(foam_id, i_frame_traj):
+    return traj_stream.get_pdb_lines_with_as_pockets(i_frame_traj)
 
 
 def get_views(foam_id):

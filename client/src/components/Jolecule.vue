@@ -181,11 +181,17 @@
         button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="openFramesModal")
           | {{ frames }}
 
-        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="toggleAlphaSpace()")
-          span(v-if="isAlphaSpace")
-            | Alphaspace&nbsp;
+        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="toggleAsCommunities()")
+          span(v-if="isAsCommunities")
+            | AS Communities&nbsp;
             i.fas.fa-check
-          template(v-else) Alphaspace
+          template(v-else) AS Communities
+
+        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="toggleAsPockets()")
+          span(v-if="isAsPockets")
+            | AS Pockets&nbsp;
+            i.fas.fa-check
+          template(v-else) AS Pockets
 
         button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="downloadPdb")
           | Download PDB
@@ -319,7 +325,8 @@ export default {
       views: [],
       viewId: null,
       editTags: [],
-      isAlphaSpace: false,
+      isAsCommunities: false,
+      isAsPockets: false,
       iFrameTrajList: [],
       isParmed: false,
       mode: '',
@@ -373,7 +380,8 @@ export default {
     this.cacheByiFrameTraj = {}
 
     // saves the alphaspace-PDB for every frame
-    this.cacheAlphaSpaceByiFrameTraj = {}
+    this.cacheAsCommunitiesByiFrameTraj = {}
+    this.cacheAsPocketsByiFrameTraj = {}
 
     window.addEventListener('beforeunload', e => this.close())
     window.addEventListener('resize', this.resize)
@@ -515,7 +523,8 @@ export default {
       this.tags = {}
       this.jolecule.clear()
       this.cacheByiFrameTraj = {}
-      this.cacheAlphaSpaceByiFrameTraj = {}
+      this.cacheAsCommunitiesByiFrameTraj = {}
+      this.cacheAsPocketsByiFrameTraj = {}
       this.nStructureInFrameList = []
       this.iFrameTrajList = []
       if (this.matrixWidget) {
@@ -756,19 +765,35 @@ export default {
     async getPdbLines (iFrameTraj) {
       let key = `${iFrameTraj[0]}-${iFrameTraj[1]}`
       let result = []
-      if (this.isAlphaSpace) {
-        if (key in this.cacheAlphaSpaceByiFrameTraj) {
-          console.log(`getPdbLines from cacheAlphaSpaceByiFrameTraj[${key}]`)
-          result = this.cacheAlphaSpaceByiFrameTraj[key]
+      if (this.isAsCommunities) {
+        if (key in this.cacheAsCommunitiesByiFrameTraj) {
+          console.log(`getPdbLines from cacheAsCommunitiesByiFrameTraj[${key}]`)
+          result = this.cacheAsCommunitiesByiFrameTraj[key]
         } else {
           this.pushLoading()
-          let response = await rpc.remote.get_pdb_lines_with_alphaspace(
+          let response = await rpc.remote.get_pdb_lines_with_as_communities(
+              this.foamId,
+              iFrameTraj
+          )
+          this.popLoading()
+          if (response.result) {
+            this.cacheAsCommunitiesByiFrameTraj[key] = response.result
+            result = response.result
+          }
+        }
+      } else if (this.isAsPockets) {
+        if (key in this.cacheAsPocketsByiFrameTraj) {
+          console.log(`getPdbLines from cacheAsPocketsByiFrameTraj[${key}]`)
+          result = this.cacheAsPocketsByiFrameTraj[key]
+        } else {
+          this.pushLoading()
+          let response = await rpc.remote.get_pdb_lines_with_as_pockets(
             this.foamId,
             iFrameTraj
           )
           this.popLoading()
           if (response.result) {
-            this.cacheAlphaSpaceByiFrameTraj[key] = response.result
+            this.cacheAsPocketsByiFrameTraj[key] = response.result
             result = response.result
           }
         }
@@ -847,11 +872,8 @@ export default {
           this.jolecule.soupView.setHardCurrentView(saveView)
         }
         this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame()
-        if (!this.isAlphaSpace) {
-          let grid = this.jolecule.soupView.soup.grid
-          grid.isElem = {}
-          grid.isChanged = true
-          this.jolecule.soupView.isUpdateColors = true
+        if (!this.isAsCommunities && !this.isAsPockets) {
+          this.clearGridDisplay()
         }
         this.jolecule.soupWidget.buildScene()
       }
@@ -896,11 +918,8 @@ export default {
 
         this.jolecule.soupView.setHardCurrentView(saveView)
         this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame()
-        if (!this.isAlphaSpace) {
-          let grid = this.jolecule.soupView.soup.grid
-          grid.isElem = {}
-          grid.isChanged = true
-          this.jolecule.soupView.isUpdateColors = true
+        if (!this.isAsCommunities && !this.isAsPockets) {
+          this.clearGridDisplay()
         }
         this.jolecule.soupWidget.buildScene()
       }
@@ -1088,15 +1107,32 @@ export default {
       history.pushState({}, null, '#' + this.$route.path)
     },
 
-    async toggleAlphaSpace () {
-      this.isAlphaSpace = !this.isAlphaSpace
+    clearGridDisplay() {
+      let grid = this.jolecule.soupView.soup.grid
+      grid.isElem = {}
+      grid.isChanged = true
+      this.jolecule.soupView.isUpdateColors = true
+      this.jolecule.soupWidget.buildScene()
+    },
+
+    async toggleAsCommunities () {
+      this.isAsCommunities = !this.isAsCommunities
       this.$forceUpdate()
-      if (!this.isAlphaSpace) {
-        let grid = this.jolecule.soupView.soup.grid
-        grid.isElem = {}
-        grid.isChanged = true
-        this.jolecule.soupView.isUpdateColors = true
-        this.jolecule.soupWidget.buildScene()
+      if (!this.isAsCommunities) {
+        this.clearGridDisplay()
+      } else {
+        this.isAsPockets = false
+      }
+      this.reloadLastFrameOfJolecule()
+    },
+
+    async toggleAsPockets () {
+      this.isAsPockets = !this.isAsPockets
+      this.$forceUpdate()
+      if (!this.isAsPockets) {
+        this.clearGridDisplay()
+      } else {
+        this.isAsCommunities = false
       }
       this.reloadLastFrameOfJolecule()
     },
@@ -1148,7 +1184,7 @@ export default {
           this.controller.selectResidue(atom.iRes)
         }
       } else if (c === 'A') {
-        this.toggleAlphaSpace()
+        this.toggleAsCommunities()
         event.preventDefault()
       } else if (event.keyCode === 27) {
         this.controller.clear()
