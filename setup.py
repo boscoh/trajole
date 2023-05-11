@@ -15,7 +15,6 @@ setuptools.setup(
         "addict",
         "docopt",
         "fastapi",
-        "foamdb",
         "mdtraj",
         "numpy",
         "parmed",
