@@ -66,15 +66,12 @@ def traj(h5):
 
 @cli.command()
 @click.argument("metad_dir", default=".", required=False)
-@click.option("--n-bin", type=int)
-def fes(metad_dir, n_bin):
+def fes(metad_dir):
     """
     Integrated MD traj w/Free-Energy Surface of CV
     """
     config.command = "FesStream"
     config.metad_dir = metad_dir
-    if n_bin:
-        config.n_bin = n_bin
     run()
 
 

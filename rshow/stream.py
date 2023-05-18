@@ -15,16 +15,11 @@ from addict import Dict
 from rseed.formats.easyh5 import EasyFoamTrajH5, EasyTrajH5
 from rseed.formats.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
 from rseed.formats.stream import StreamingTrajectoryManager, TrajectoryManager
+
 try:
-    from rseed.freeenergy import (
-        FreeEnergySampler,
-        FreeEnergySurface,
-        get_matrix,
-        sort_temperatures,
-    )
+    from rseed.freeenergy import FreeEnergySampler, get_matrix, sort_temperatures
 except:
     from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
-    from rseed.analysis.fes import MappableFes as FreeEnergySurface
     from rseed.analysis.fes import get_matrix_json as get_matrix
     from rseed.analysis.fn import sort_temperatures
 from rseed.granary import Granary
@@ -292,16 +287,9 @@ class FesStream(TrajStream):
     def process_config(self):
         self.config.title = "Free-energy surface of collective variables"
         self.config.mode = "sparse-matrix"
-        if self.config.n_bin:
-            fes = FreeEnergySurface(self.config.metad_dir)
-            fes.coarse_grain(n_bins=self.config.n_bin)
-            data = fes.export()
-            self.config.matrix = data.matrix
-            self.config.trajectories = [fes.trajectory_path]
-        else:
-            data = get_matrix(self.config.metad_dir)
-            self.config.matrix = data.matrix
-            self.config.trajectories = data.trajectories
+        data = get_matrix(self.config.metad_dir)
+        self.config.matrix = data.matrix
+        self.config.trajectories = data.trajectories
         self.traj_manager = TrajectoryManager(
             self.config.trajectories, atom_mask=self.get_atom_mask()
         )
