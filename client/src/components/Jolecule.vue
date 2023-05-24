@@ -689,7 +689,7 @@ export default {
     },
 
     async loadTable (iFrameTraj) {
-      this.table = await this.config('table')
+      this.table = await this.getConfig('table')
       if (_.isEmpty(this.table)) {``
         return
       }
