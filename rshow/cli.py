@@ -5,6 +5,8 @@ from pathlib import Path
 
 import click
 from addict import Dict
+from rich.pretty import pprint
+
 
 from rshow import serve
 from rshow.server.local import handlers
@@ -19,6 +21,9 @@ def run():
         config.mode = ""
 
     logging.basicConfig(level=logging.INFO)
+    logging.getLogger("root").setLevel(logging.WARNING)
+    for name in logging.root.manager.loggerDict:
+        logging.getLogger(name).setLevel(logging.INFO)
 
     handlers.init_traj_stream_from_config(config)
 

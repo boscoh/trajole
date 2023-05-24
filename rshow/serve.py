@@ -109,6 +109,9 @@ if __name__ == "__main__":
     from server.lounge import handlers
 
     logging.basicConfig(level=logging.INFO)
+    logging.getLogger("root").setLevel(logging.WARNING)
+    for name in logging.root.manager.loggerDict:
+        logging.getLogger(name).setLevel(logging.INFO)
 
     client_dir = Path(__file__).resolve().parent / "server/lounge/client"
 
