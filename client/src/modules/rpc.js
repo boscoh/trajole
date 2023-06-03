@@ -43,9 +43,10 @@ async function rpc (method, ...params) {
     .slice(-6)
   let wrap_params = []
   for (let p of params) {
-    wrap_params.push(_.cloneDeep(p))
+    wrap_params.push(JSON.stringify(_.cloneDeep(p)))
   }
-  console.log(`rpc-run ${method}(`, wrap_params, ')')
+  let s = wrap_params.join(", ")
+  console.log(`rpc-run ${method}(${s})`)
   console.groupCollapsed()
   let response
   try {

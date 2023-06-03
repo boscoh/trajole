@@ -20,6 +20,7 @@ setuptools.setup(
         "parmed",
         "psutil",
         "pydash",
+        "rich",
         "rseed",
         "starlette",
         "uvicorn",

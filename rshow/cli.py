@@ -11,6 +11,10 @@ from rich.pretty import pprint
 from rshow import serve
 from rshow.server.local import handlers
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 config = Dict()
 
 
@@ -24,6 +28,9 @@ def run():
     logging.getLogger("root").setLevel(logging.WARNING)
     for name in logging.root.manager.loggerDict:
         logging.getLogger(name).setLevel(logging.INFO)
+
+    logger.info(f"init")
+    pprint(config)
 
     handlers.init_traj_stream_from_config(config)
 

@@ -8,6 +8,7 @@ from io import BytesIO
 from typing import Union
 from urllib.request import urlopen
 
+from rich.pretty import pprint
 import uvicorn
 from fastapi import FastAPI, File, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,17 +60,19 @@ def start_fastapi_server(handlers, client_dir, port, is_dev=False):
         try:
             if not hasattr(handlers, method):
                 raise Exception(f"rpc-run {method} is not found")
+            params_str = ", ".join(repr(p) for p in params)
+            logger.info(f"rpc-run {method}({params_str})")
+
             fn = getattr(handlers, method)
             if inspect.iscoroutinefunction(fn):
                 result = await fn(*params)
             else:
                 result = fn(*params)
-            logger.debug(f"rpc-run {method}")
             return {"result": result, "jsonrpc": "2.0", "id": job_id}
         except Exception as e:
             error_lines = str(traceback.format_exc()).splitlines()
             for line in error_lines:
-                logger.debug(line)
+                logger.error(line)
             return {
                 "error": {"code": -1, "message": error_lines},
                 "jsonrpc": "2.0",
