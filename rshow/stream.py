@@ -5,13 +5,13 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 import mdtraj
 import numpy as np
 import parmed
 import pydash as py_
 from addict import Dict
+from rich.pretty import pprint
+
 from rseed.formats.easyh5 import EasyFoamTrajH5, EasyTrajH5
 from rseed.formats.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
 from rseed.formats.stream import StreamingTrajectoryManager, TrajectoryManager
@@ -28,12 +28,13 @@ from rseed.util.fs import (
     dump_yaml,
     get_checked_path,
     get_empty_path_str,
-    get_yaml_str,
     load_yaml,
 )
 from rseed.util.ligand import iter_ff_mol_from_file
 from rseed.util.select import select_mask
 from rseed.util.struct import get_parmed_from_traj_frame, get_traj_frame_from_parmed
+
+logger = logging.getLogger(__name__)
 
 
 class RshowStreamMixin(ABC):
@@ -287,7 +288,16 @@ class FesStream(TrajStream):
     def process_config(self):
         self.config.title = "Free-energy surface of collective variables"
         self.config.mode = "sparse-matrix"
-        data = get_matrix(self.config.metad_dir)
+        pprint(self.config)
+        fes_yaml = Path(self.config.metad_dir) / "fes.rshow.yaml"
+        if fes_yaml.exists():
+            logger.info(f"Loading {fes_yaml}")
+            data = load_yaml(fes_yaml, is_addict=True)
+        else:
+            logger.info(f"Generating fes matrix form {self.config.metad_dir}")
+            logger.info(f"Current dir {os.getcwd()}")
+            data = get_matrix(self.config.metad_dir)
+            dump_yaml(data, fes_yaml)
         self.config.matrix = data.matrix
         self.config.trajectories = data.trajectories
         self.traj_manager = TrajectoryManager(

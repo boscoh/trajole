@@ -2,7 +2,7 @@
 # on mac, need to change
 #   System Prefs -> Security -> Privacy -> Accessibility: add Terminal
 psword -k node
-psword -k miniconda3
+psword -k mambaforge
 psword -k rshow
 psword -k serve.py
 ttab "cd client; npm run dev "

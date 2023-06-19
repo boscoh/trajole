@@ -53,6 +53,11 @@
 
           .h-100.overflow-scroll
 
+            router-link.mb-1.w-100.btn.btn-sm.btn-primary(
+              :to="`/foamtraj/${foamId}`" tag="button"
+            )
+              | back
+
             template(v-if="hasParmed")
               button.w-100.mb-2.btn.btn-primary(
                 @click="downloadParmed"
@@ -219,7 +224,12 @@ export default {
       console.log(`downloadParmed`, fname, blob)
       saveFile(blob, fname)
       this.popLoading()
-    }
+    },
+
+    async goToFoamTraj() {
+      this.$router.push(`/foamtraj/${this.foamId}`)
+    },
+
   }
 }
 </script>

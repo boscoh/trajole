@@ -1,51 +1,61 @@
 #!/usr/bin/env python
 import json
 import logging
+import os
 from pathlib import Path
 
 import click
 from addict import Dict
 from rich.pretty import pprint
 
+from rseed.util.fs import dump_yaml
 
-from rshow import serve
+import rshow.openurl
 from rshow.server.local import handlers
+from rshow.make_app import make_app
+import uvicorn
 
-import logging
 
-logger = logging.getLogger(__name__)
-
-config = Dict()
+config = Dict(mode="")
 
 
 def run():
     global config
 
-    if "mode" not in config:
-        config.mode = ""
-
-    logging.basicConfig(level=logging.INFO)
-    logging.getLogger("root").setLevel(logging.WARNING)
-    for name in logging.root.manager.loggerDict:
-        logging.getLogger(name).setLevel(logging.INFO)
-
-    logger.info(f"init")
-    pprint(config)
-
-    handlers.init_traj_stream_from_config(config)
-
-    client_dir = Path(__file__).resolve().parent / "server/local/client"
-
+    this_dir = Path(__file__).parent
     if not config.get("port"):
-        port_json = Path(__file__).resolve().parent.parent / "config" / "port.json"
+        port_json = this_dir.parent / "config" / "port.json"
         port = json.load(open(port_json)).get("port")
     else:
         port = config.port
 
-    if not config.is_dev:
-        serve.open_url_in_background(f"http://localhost:{config.port}/#/foamtraj/0")
+    if config.is_dev:
+        config.server = "local"
+        config.work_dir = os.getcwd()
 
-    serve.start_fastapi_server(handlers, client_dir, port, config.is_dev)
+        os.chdir(this_dir)
+        dump_yaml(config, "dev_config.yaml")
+
+        # Run in uvicorn cli using the reload facility
+        # Requires a module with configs loaded in already
+        # to expose an app objct
+        os.system(f"uvicorn app_from_config:app --reload --port {port}")
+    else:
+        logging.basicConfig(level=logging.INFO)
+        logging.getLogger("root").setLevel(logging.WARNING)
+        for name in logging.root.manager.loggerDict:
+            logging.getLogger(name).setLevel(logging.INFO)
+
+        rshow.openurl.open_url_in_background(
+            f"http://localhost:{config.port}/#/foamtraj/0"
+        )
+
+        handlers.init_traj_stream_from_config(config)
+        client_dir = Path(__file__).resolve().parent / "server/local/client"
+
+        app = make_app(handlers, client_dir)
+
+        uvicorn.run(app, port=port, log_level="critical")
 
 
 @click.group()
@@ -71,7 +81,7 @@ def traj(h5):
     """
     MD Trajectory
     """
-    config.command = "TrajStream"
+    config.stream_class = "TrajStream"
     config.trajectories = [h5]
     run()
 
@@ -82,7 +92,7 @@ def fes(metad_dir):
     """
     Integrated MD traj w/Free-Energy Surface of CV
     """
-    config.command = "FesStream"
+    config.stream_class = "FesStream"
     config.metad_dir = metad_dir
     run()
 
@@ -93,7 +103,7 @@ def traj_foam(foam_id):
     """
     MD trajectory stored on FoamDB
     """
-    config.command = "FoamTrajStream"
+    config.stream_class = "FoamTrajStream"
     config.trajectories = [foam_id]
     run()
 
@@ -105,7 +115,7 @@ def matrix(matrix_yaml, mode):
     """
     Generic 2D surface linked to a set of MD trajs
     """
-    config.command = "MatrixStream"
+    config.stream_class = "MatrixStream"
     config.matrix_yaml = matrix_yaml
     config.mode = mode
     run()
@@ -118,7 +128,7 @@ def re(re_dir, key):
     """
     Multiple replicas in a replica-exchange
     """
-    config.command = "ParallelStream"
+    config.stream_class = "ParallelStream"
     config.re_dir = re_dir
     config.key = key
     run()
@@ -131,7 +141,7 @@ def re_dock(re_dir, key):
     """
     Multiple replicas in a replica-exchange w/fixed receptor
     """
-    config.command = "ParallelDockStream"
+    config.stream_class = "ParallelDockStream"
     config.re_dir = re_dir
     config.key = key
     run()
@@ -145,7 +155,7 @@ def ligands(pdb, sdf, csv):
     """
     Multiple ligands in single receptor
     """
-    config.command = "LigandsStream"
+    config.stream_class = "LigandsStream"
     config.pdb = pdb
     config.ligands = sdf
     config.csv = csv
@@ -158,7 +168,7 @@ def frame(pdb):
     """
     Single frame of PDB or PARMED file
     """
-    config.command = "FrameStream"
+    config.stream_class = "FrameStream"
     config.pdb_or_parmed = pdb
     run()
 
@@ -170,7 +180,7 @@ def open_url(test_url, open_url):
     """
     Single frame of PDB or PARMED file
     """
-    from rshow.serve import open_url_in_background
+    from rshow.openurl import open_url_in_background
 
     logging.basicConfig(level=logging.INFO)
     open_url_in_background(test_url, open_url)

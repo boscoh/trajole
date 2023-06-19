@@ -5,7 +5,7 @@ from pathlib import Path
 import pickle
 
 from addict import Dict
-from rseed.formats.easyh5 import EasyTrajH5
+from rseed.formats.easyh5 import EasyTrajH5, EasyFoamTrajH5
 from rseed.granary import Granary
 
 from rshow import stream
@@ -169,7 +169,7 @@ def get_json_datasets(foam_id):
 
 
 def get_json(foam_id, key):
-    return get_h5(foam_id).get_json_dataset(key)
+    return ["json_min_yaml"]
 
 
 def get_parmed_blob(foam_id, i_frame=None) -> bytes:
@@ -188,3 +188,12 @@ def get_parmed_blob(foam_id, i_frame=None) -> bytes:
         blob = pickle.dumps(granary.structure.__getstate__())
     logger.info(f"get_parmed_blob {type(blob)} {len(blob)}")
     return blob
+
+
+def get_min_frame(foam_id):
+    h5: EasyFoamTrajH5 = get_h5(foam_id)
+    if h5.has_dataset("json_min"):
+        data = h5.get_json_dataset("json_min")
+        logger.info(f"get_min_frame {data}")
+        return data["frame"]
+    return None

@@ -206,6 +206,8 @@
         button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="goToJson()") JSON
 
         // Views handlers
+        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="getMinFrame()") FES Min
+
         button.mt-3.btn.btn-sm.w-100.btn-secondary(@click="saveView")
           | Save View
 
@@ -1315,6 +1317,14 @@ export default {
 
     copyFramesToClipboard(text) {
       navigator.clipboard.writeText(text);
+    },
+
+    async getMinFrame() {
+      let response = await rpc.remote.get_min_frame(this.foamId)
+      console.log(`getMinFrame ${this.foamId} ${response}`)
+      if (response.result) {
+        let iFrame = response.result
+      }
     }
   }
 }

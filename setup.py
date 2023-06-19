@@ -18,6 +18,7 @@ setuptools.setup(
         "mdtraj",
         "numpy",
         "parmed",
+        "path",
         "psutil",
         "pydash",
         "rich",
