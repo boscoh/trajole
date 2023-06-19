@@ -1,10 +1,11 @@
 import logging
 import json
 import os
-from pathlib import Path
+from path import Path
 import sys
 
 from addict import Dict
+from rich.pretty import pprint
 import uvicorn
 from rseed.util.fs import dump_yaml
 from rshow.make_app import make_app
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 init_logging()
 
-this_dir = Path(__file__).parent
+this_dir = Path(__file__).abspath().parent
 
 client_dir = this_dir / "server/lounge/client"
 port_json = this_dir.parent / "config" / "port.json"

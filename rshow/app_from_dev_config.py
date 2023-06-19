@@ -6,7 +6,7 @@ from rshow.stream import init_logging
 
 init_logging()
 
-this_dir = Path(__file__).parent
+this_dir = Path(__file__).abspath().parent
 client_dir = this_dir / "server/lounge/client"
 
 config = load_yaml_dict(this_dir / "dev_config.yaml")

@@ -1,7 +1,7 @@
 import logging
 import time
 from collections import OrderedDict
-from pathlib import Path
+from path import Path
 import pickle
 
 from addict import Dict
@@ -21,7 +21,7 @@ traj_stream = None
 traj_stream_by_foam_id = OrderedDict()
 
 
-views_yaml = Path(__file__).parent / "last_views.yaml"
+views_yaml = Path(__file__).abspath().parent / "last_views.yaml"
 last_foam_id_views = PersistDictList(views_yaml, key="id")
 
 

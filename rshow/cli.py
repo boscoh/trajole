@@ -2,7 +2,7 @@
 import json
 import logging
 import os
-from pathlib import Path
+from path import Path
 
 import click
 from addict import Dict
@@ -23,7 +23,7 @@ config = Dict(mode="")
 def run():
     global config
 
-    this_dir = Path(__file__).parent
+    this_dir = Path(__file__).abspath().parent
     if not config.get("port"):
         port_json = this_dir.parent / "config" / "port.json"
         port = json.load(open(port_json)).get("port")
@@ -49,7 +49,7 @@ def run():
         )
 
         handlers.init_traj_stream_from_config(config)
-        client_dir = Path(__file__).resolve().parent / "server/local/client"
+        client_dir = this_dir / "server/local/client"
 
         app = make_app(handlers, client_dir)
 
