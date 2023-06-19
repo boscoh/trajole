@@ -5,6 +5,7 @@ from pathlib import Path
 import pickle
 
 from addict import Dict
+from rich.pretty import pprint
 from rseed.formats.easyh5 import EasyTrajH5, EasyFoamTrajH5
 from rseed.granary import Granary
 
@@ -14,7 +15,7 @@ from rshow.stream import TrajStream
 
 logger = logging.getLogger(__name__)
 
-config = Dict(is_solvent=False, is_hydrogen=False)
+config = Dict(is_solvent=False, is_hydrogen=True)
 
 traj_stream = None
 traj_stream_by_foam_id = OrderedDict()
@@ -98,8 +99,10 @@ def init_traj_stream_from_config(in_config):
     if not hasattr(stream, in_config.command):
         return False
 
-    logger.info(f"init_traj_stream_from_config {in_config.command}")
     global traj_stream, config
+
+    logger.info("config:")
+    pprint(in_config)
 
     foam_id = in_config.trajectories[0]
 

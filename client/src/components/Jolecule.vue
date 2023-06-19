@@ -1268,7 +1268,7 @@ export default {
       this.openModal('frames-edit-modal')
     },
 
-    async clickFrame(iFrame) {
+    async clickFrame(iFrame, isShift=true) {
 
       let widget
 
@@ -1306,7 +1306,7 @@ export default {
       if (!value) {
         return
       }
-      await widget.clickGridValue(value, true)
+      await widget.clickGridValue(value, isShift)
     },
 
     async addFrame(iFrame) {
@@ -1321,9 +1321,10 @@ export default {
 
     async getMinFrame() {
       let response = await rpc.remote.get_min_frame(this.foamId)
-      console.log(`getMinFrame ${this.foamId} ${response}`)
       if (response.result) {
+        console.log(`getMinFrame foamId=${this.foamId} frame=`, _.cloneDeep(response.result))
         let iFrame = response.result
+        await this.clickFrame(iFrame, false)
       }
     }
   }

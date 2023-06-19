@@ -104,7 +104,6 @@ def get_min_frame(foam_id):
         config = traj_stream.config
         print_config = py_.clone(config)
         py_.unset(print_config, "matrix")
-        pprint(print_config)
         if hasattr(config, "metad_dir"):
             min_yaml = Path(traj_stream.config["metad_dir"]) / "min.yaml"
             data = load_yaml_dict(min_yaml)

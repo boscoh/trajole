@@ -59,7 +59,7 @@ def run():
 @click.group()
 @click.option("--dev", is_flag=True, help="Run continuous server")
 @click.option("--solvent", is_flag=True, help="Keep solvent")
-@click.option("--hydrogen", is_flag=True, help="Keep hydrogens")
+@click.option("--hydrogen", is_flag=True, default=True, help="Keep hydrogens")
 @click.option("--port", default=9023, help="port number")
 def cli(dev, solvent, hydrogen, port):
     """

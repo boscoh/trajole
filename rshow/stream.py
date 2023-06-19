@@ -288,6 +288,7 @@ class FesStream(TrajStream):
     def process_config(self):
         self.config.title = "Free-energy surface of collective variables"
         self.config.mode = "sparse-matrix"
+        logger.info("config:")
         pprint(self.config)
         fes_yaml = Path(self.config.metad_dir) / "fes.rshow.yaml"
         if fes_yaml.exists():
@@ -479,6 +480,7 @@ class ParallelDockStream(TrajStream):
 
 
 def init_logging():
+    logging.basicConfig(level=logging.INFO)
     logging.getLogger("root").setLevel(logging.WARNING)
     for name in logging.root.manager.loggerDict:
         logging.getLogger(name).setLevel(logging.INFO)

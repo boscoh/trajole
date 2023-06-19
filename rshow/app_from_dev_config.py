@@ -1,10 +1,10 @@
 import os
-import logging
 from path import Path
 from rseed.util.fs import load_yaml_dict
 from rshow.make_app import make_app
+from rshow.stream import init_logging
 
-logging.basicConfig(level=logging.INFO)
+init_logging()
 
 this_dir = Path(__file__).parent
 client_dir = this_dir / "server/lounge/client"
