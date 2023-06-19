@@ -39,7 +39,7 @@ def run():
         # Run in uvicorn cli using the reload facility
         # Requires a module with configs loaded in already
         # to expose an app objct
-        os.system(f"uvicorn app_from_config:app --reload --port {port}")
+        os.system(f"uvicorn app_from_dev_config:app --reload --port {port}")
     else:
         logging.basicConfig(level=logging.INFO)
         logging.getLogger("root").setLevel(logging.WARNING)
