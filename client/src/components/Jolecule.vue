@@ -198,15 +198,15 @@
 
         button.mb-1.btn.btn-sm.w-100.btn-secondary(
           @click="downloadParmed()"
-          :disabled="!isParmed"
+          v-if="isParmed"
         )
-          span(v-if="!isParmed") No Parmed
-          span(v-else) Download Parmed
+          | Download Parmed
 
         button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="goToJson()") JSON
 
         // Views handlers
-        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="getMinFrame()") FES Min
+        button.mb-1.btn.btn-sm.w-100.btn-secondary(
+          v-if="hasMin" @click="getMinFrame()") FES Min
 
         button.mt-3.btn.btn-sm.w-100.btn-secondary(@click="saveView")
           | Save View
@@ -342,6 +342,7 @@ export default {
       editViewId: '',
       editFrames: [],
       newFrame: null,
+      hasMin: false,
     }
   },
   watch: {
@@ -594,6 +595,10 @@ export default {
         let keys = response?.result
         if (keys.includes("parmed")) {
           this.isParmed = true
+          this.$forceUpdate()
+        }
+        if (keys.includes("json_min")) {
+          this.hasMin = true
           this.$forceUpdate()
         }
       }

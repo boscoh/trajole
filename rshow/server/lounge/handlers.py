@@ -172,7 +172,7 @@ def get_json_datasets(foam_id):
 
 
 def get_json(foam_id, key):
-    return ["json_min_yaml"]
+    return get_h5(foam_id).get_json_dataset(key)
 
 
 def get_parmed_blob(foam_id, i_frame=None) -> bytes:

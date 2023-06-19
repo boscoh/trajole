@@ -41,11 +41,12 @@ async function rpc (method, ...params) {
   const id = Math.random()
     .toString(36)
     .slice(-6)
-  let wrap_params = []
+  let wrap_params = [`rpc-run ${method} [`]
   for (let p of params) {
-    wrap_params.push(_.cloneDeep(p))
+    wrap_params.push(JSON.stringify(_.cloneDeep(p)))
   }
-  console.log(`rpc-run ${method}(`, wrap_params, ')')
+  wrap_params.push("]")
+  console.log(...wrap_params)
   let response
   try {
     const payload = { method, params, jsonrpc: '2.0', id }
