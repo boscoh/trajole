@@ -476,3 +476,9 @@ class ParallelDockStream(TrajStream):
         i_frame = i_frame_traj[0]
         self.frame.xyz[0][self.i_ligand_atoms] = self.conformations_nm[i_frame]
         return self.frame
+
+
+def init_logging():
+    logging.getLogger("root").setLevel(logging.WARNING)
+    for name in logging.root.manager.loggerDict:
+        logging.getLogger(name).setLevel(logging.INFO)

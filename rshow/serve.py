@@ -9,14 +9,13 @@ import uvicorn
 from rseed.util.fs import dump_yaml
 from rshow.make_app import make_app
 from rshow.server.lounge import handlers
+from rshow.stream import init_logging
 
 # Entry point of lounge web-server
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-logging.getLogger("root").setLevel(logging.WARNING)
-for name in logging.root.manager.loggerDict:
-    logging.getLogger(name).setLevel(logging.INFO)
+
+init_logging()
 
 this_dir = Path(__file__).parent
 

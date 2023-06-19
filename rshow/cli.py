@@ -13,6 +13,7 @@ from rseed.util.fs import dump_yaml
 import rshow.openurl
 from rshow.server.local import handlers
 from rshow.make_app import make_app
+from rshow.stream import init_logging
 import uvicorn
 
 
@@ -41,10 +42,7 @@ def run():
         # to expose an app objct
         os.system(f"uvicorn app_from_dev_config:app --reload --port {port}")
     else:
-        logging.basicConfig(level=logging.INFO)
-        logging.getLogger("root").setLevel(logging.WARNING)
-        for name in logging.root.manager.loggerDict:
-            logging.getLogger(name).setLevel(logging.INFO)
+        init_logging()
 
         rshow.openurl.open_url_in_background(
             f"http://localhost:{config.port}/#/foamtraj/0"
