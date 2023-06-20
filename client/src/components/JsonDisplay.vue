@@ -53,10 +53,10 @@
 
           .h-100.overflow-scroll
 
-            router-link.mb-1.w-100.btn.btn-sm.btn-primary(
+            router-link.mb-2.w-100.btn.btn-primary(
               :to="`/foamtraj/${foamId}`" tag="button"
             )
-              | back
+              | Back
 
             template(v-if="hasParmed")
               button.w-100.mb-2.btn.btn-primary(
