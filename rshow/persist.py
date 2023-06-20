@@ -1,5 +1,5 @@
 import uuid
-from pathlib import Path
+from path import Path
 
 from rseed.util.fs import dump_yaml, load_yaml
 

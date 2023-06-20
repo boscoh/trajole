@@ -2,7 +2,7 @@ import csv
 import logging
 import os
 from abc import ABC, abstractmethod
-from pathlib import Path
+from path import Path
 from typing import Any
 
 import mdtraj
