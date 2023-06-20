@@ -41,12 +41,16 @@ async function rpc (method, ...params) {
   const id = Math.random()
     .toString(36)
     .slice(-6)
-  let wrap_params = [`rpc-run ${method} [`]
-  for (let p of params) {
-    wrap_params.push(JSON.stringify(_.cloneDeep(p)))
+  let s = `rpc.${method}(`
+  let n = params.length
+  for (let i=0; i<n; i+=1) {
+    s += JSON.stringify(_.cloneDeep(params[i]))
+    if (i<n-1) {
+      s +=", "
+    }
   }
-  wrap_params.push("]")
-  console.log(...wrap_params)
+  s += ")"
+  console.log(s)
   let response
   try {
     const payload = { method, params, jsonrpc: '2.0', id }
@@ -62,13 +66,13 @@ async function rpc (method, ...params) {
       })
       response = await fetchResponse.json()
       if (_.has(response, 'result')) {
-        console.log(`rpc-result:`)
+        console.log(`rpc.result:`)
         console.groupCollapsed()
         console.log(_.cloneDeep(response.result))
         console.groupEnd()
       } else {
         console.log(
-          `rpc-error:`,
+          `rpc.error:`,
           _.cloneDeep(response.error)
         )
         for (let line of response.error.message) {
