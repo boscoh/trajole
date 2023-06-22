@@ -75,8 +75,8 @@ export default {
     return {
       foamId: '',
       examples: [
-        {foamId: 23, name: 'FES for HSP 90'},
-        {foamId: 17, name: 'Alanine Dipeptide'},
+        { foamId: 23, name: 'FES for HSP 90' },
+        { foamId: 17, name: 'Alanine Dipeptide' }
       ],
       lastFoamIdViews: []
     }
@@ -87,12 +87,12 @@ export default {
       await this.restart()
     }
   },
-  async mounted() {
+  async mounted () {
     await this.restart()
   },
   methods: {
-    async restart() {
-      document.title = "R_S Lounge"
+    async restart () {
+      document.title = 'R_S Lounge'
       let response = await rpc.remote.get_last_foamid_views(100)
       if (response.result) {
         this.lastFoamIdViews = response.result.reverse()

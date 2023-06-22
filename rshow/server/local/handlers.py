@@ -88,7 +88,7 @@ def get_h5(foam_id):
 
 
 def get_json_datasets(foam_id):
-    return ["json_min_yaml"]
+    return ["json_min"]
 
 
 def get_json(foam_id, key):

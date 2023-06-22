@@ -43,13 +43,13 @@ async function rpc (method, ...params) {
     .slice(-6)
   let s = `rpc.${method}(`
   let n = params.length
-  for (let i=0; i<n; i+=1) {
+  for (let i = 0; i < n; i += 1) {
     s += JSON.stringify(_.cloneDeep(params[i]))
-    if (i<n-1) {
-      s +=", "
+    if (i < n - 1) {
+      s += ', '
     }
   }
-  s += ")"
+  s += ')'
   console.log(s)
   let response
   try {
@@ -71,10 +71,7 @@ async function rpc (method, ...params) {
         console.log(_.cloneDeep(response.result))
         console.groupEnd()
       } else {
-        console.log(
-          `rpc.error:`,
-          _.cloneDeep(response.error)
-        )
+        console.log(`rpc.error:`, _.cloneDeep(response.error))
         for (let line of response.error.message) {
           console.log(`!! ${line}`)
         }
