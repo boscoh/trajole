@@ -310,10 +310,10 @@ class FesStream(TrajStream):
 class MatrixStream(TrajStream):
     def process_config(self):
         fname = Path(self.config.matrix_yaml)
-        if fname.is_dir():
+        if fname.isdir():
             fname = fname / "matrix.yaml"
         data = load_yaml(fname, is_addict=True)
-        parent_dir = Path(fname).parent
+        parent_dir = Path(fname).abspath().parent
         self.config.matrix = data.matrix
         self.config.title = "Matrix"
         self.config.trajectories = data.trajectories
