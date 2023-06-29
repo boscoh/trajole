@@ -69,7 +69,7 @@ class RshowStreamMixin(ABC):
         pdb_lines = filter_for_atom_lines(get_pdb_lines_of_traj_frame(frame))
 
         pmd = get_parmed_from_traj_frame(frame)
-        i_protein_atoms = select_mask(pmd, "protein")
+        i_protein_atoms = select_mask(pmd, "diff {protein} {mdtraj type H}")
 
         alpha_space = AlphaSpace(frame.atom_slice(i_protein_atoms))
         alpha_space_pdb_lines = alpha_space.get_community_pdb_lines()
@@ -86,7 +86,7 @@ class RshowStreamMixin(ABC):
         pdb_lines = filter_for_atom_lines(get_pdb_lines_of_traj_frame(frame))
 
         pmd = get_parmed_from_traj_frame(frame)
-        i_protein_atoms = select_mask(pmd, "protein")
+        i_protein_atoms = select_mask(pmd, "diff {protein} {mdtraj type H}")
 
         alpha_space = AlphaSpace(frame.atom_slice(i_protein_atoms))
         alpha_space_pdb_lines = alpha_space.get_pocket_pdb_lines()
@@ -101,7 +101,7 @@ class RshowStreamMixin(ABC):
     def get_views(self):
         return []
 
-    def add_view(self, view):
+    def update_view(self, view):
         return {}
 
     def delete_view(self, view):
@@ -205,7 +205,7 @@ class TrajStream(RshowStreamMixin):
                 return result
         return []
 
-    def add_view(self, view):
+    def update_view(self, view):
         views = self.get_views()
         update_view(views, view)
         dump_yaml(views, self.views_yaml)
@@ -247,7 +247,7 @@ class FoamTrajStream(TrajStream):
         h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
         h5.set_json_dataset("json_views", views)
 
-    def add_view(self, view):
+    def update_view(self, view):
         views = self.get_views()
         self.save_views(update_view(views, view))
         return {"success": True}
@@ -300,7 +300,7 @@ class FesStream(TrajStream):
             data = get_matrix(self.config.metad_dir)
             dump_yaml(data, fes_yaml)
         self.config.matrix = data.matrix
-        self.config.trajectories = data.trajectories
+        self.config.trajectories = [fes_yaml.parent / t for t in data.trajectories]
         self.traj_manager = TrajectoryManager(
             self.config.trajectories, atom_mask=self.get_atom_mask()
         )
@@ -368,6 +368,7 @@ class LigandsStream(TrajStream):
                     elif i > n:
                         break
                     else:
+                        row = [round(float(x), 3) for x in row]
                         self.config.table[i - 1]["vals"].extend(row)
         self.views_yaml = Path(pdb).with_suffix(".views.yaml")
 

@@ -4,26 +4,28 @@ import "@fortawesome/fontawesome-free/js/all.js";
 import VueRouter from "vue-router";
 import App from "./App.vue";
 import Vuex from "vuex";
+
 import Jolecule from "./components/Jolecule.vue";
-import Page from "./components/Page.vue";
 import Home from "./components/Home.vue";
 import mystore from "./store.js";
+Vue.use(Vuex);
 
 Vue.use(VueRouter);
+
 const routes = [
   { path: "/", component: Home },
-  { path: "/foamtraj/:foamId", component: Page },
+  { path: "/foamtraj/:foamId", component: Jolecule },
 ];
+
 const router = new VueRouter({
   routes,
 });
 
-Vue.use(Vuex);
 const store = new Vuex.Store(mystore);
 
 // Vue.config.productionTip = false
 new Vue({
   router,
-  store,
+  store: store,
   render: (h) => h(App),
 }).$mount("#app");

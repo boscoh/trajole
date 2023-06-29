@@ -1,18 +1,21 @@
-import * as rpc from "./modules/rpc";
 import _ from "lodash";
 
 export default {
   state() {
     return {
       foamId: "",
+      tags: {},
       nLoaders: 0,
       keyboardLock: false,
       datasets: [],
+      views: [],
+      viewId: "",
+      newView: null,
+      selectView: null,
       iFrameTrajList: [],
       selectFrame: null,
-      tags: {},
-      editTags: [],
-      editFrames: [],
+      loadIFrameTraj: null,
+      dumpIFrameTraj: null,
     };
   },
   getters: {
@@ -26,6 +29,12 @@ export default {
     },
   },
   mutations: {
+    setItem(state, payload) {
+      for (let key of _.keys(payload)) {
+        state[key] = payload[key];
+      }
+    },
+
     setFoamId(state, foamId) {
       state.foamId = foamId;
     },
@@ -35,7 +44,9 @@ export default {
     },
 
     addIFrameTraj(state, iFrameTraj) {
-      state.iFrameTrajList.push(iFrameTraj);
+      let iFrameTrajList = state.iFrameTrajList;
+      iFrameTrajList.push(iFrameTraj);
+      state.iFrameTrajList = iFrameTrajList;
     },
 
     deleteIFrameTraj(state, i) {
@@ -44,16 +55,6 @@ export default {
 
     cleariFrameTrajList(state) {
       state.iFrameTrajList = [];
-    },
-
-    setItem(state, payload) {
-      for (let key of _.keys(payload)) {
-        let value = payload[key];
-        console.log(
-          `setItem this.$store.state.${payload.key}=${payload.value}`
-        );
-        state[key] = value;
-      }
     },
 
     toggleFrame(state, iFrameTraj) {
@@ -69,23 +70,6 @@ export default {
       if (state.nLoaders <= 0) {
         state.nLoaders = 0;
       }
-    },
-
-    addEditTag(state) {
-      state.editTags.push({ key: "", value: "" });
-    },
-
-    addFrame(state, frame) {
-      state.editFrames.push({ frame });
-    },
-
-    setEditFrames(state) {
-      let editFrames = [];
-      for (let iFrameTraj of state.iFrameTrajList) {
-        editFrames.push({ frame: iFrameTraj[0] });
-      }
-      console.log(`setEditFrames`, editFrames);
-      state.editFrames = editFrames;
     },
   },
 };

@@ -148,12 +148,12 @@ def get_last_foamid_views(n=10):
     return last_foam_id_views.get(n)
 
 
-def add_view(foam_id, view):
+def update_view(foam_id, view):
     view["foamId"] = foam_id
     view["timestamp"] = int(time.time())
     last_foam_id_views.append(view)
-    logger.info(f"add_view {view}")
-    return traj_stream_by_foam_id[foam_id].add_view(view)
+    logger.info(f"update_view {view}")
+    return traj_stream_by_foam_id[foam_id].update_view(view)
 
 
 def delete_view(foam_id, view):

@@ -69,8 +69,8 @@ def get_views(foam_id):
     return traj_stream.get_views()
 
 
-def add_view(foam_id, view):
-    return traj_stream.add_view(view)
+def update_view(foam_id, view):
+    return traj_stream.update_view(view)
 
 
 def delete_view(foam_id, view):

@@ -1,11 +1,11 @@
-import _ from 'lodash'
-import config from '../../../config/config.json'
+import _ from "lodash";
+import config from "../../../config/config.json";
 
-const defaultRemoteUrl = `${location.protocol}//${location.host}/rpc-run`
-const remoteUrl = config.apiUrl
-console.log(`config.apiUrl = ${config.apiUrl}`)
-console.log(`defaultRemoteUrl = ${defaultRemoteUrl}`)
-console.log(`rpc-run remoteUrl = ${remoteUrl}`)
+const defaultRemoteUrl = `${location.protocol}//${location.host}/rpc-run`;
+const remoteUrl = config.apiUrl;
+console.log(`config.apiUrl = ${config.apiUrl}`);
+console.log(`defaultRemoteUrl = ${defaultRemoteUrl}`);
+console.log(`rpc-run remoteUrl = ${remoteUrl}`);
 
 /**
  * RPC interface to talk to a function on a server.
@@ -37,79 +37,77 @@ console.log(`rpc-run remoteUrl = ${remoteUrl}`)
  *        }
  *      }
  */
-async function rpc (method, ...params) {
-  const id = Math.random()
-    .toString(36)
-    .slice(-6)
-  let s = `rpc.${method}(`
-  let n = params.length
+async function aysnc_rpc(method, ...params) {
+  const id = Math.random().toString(36).slice(-6);
+  let s = `rpc.${method}(`;
+  let n = params.length;
   for (let i = 0; i < n; i += 1) {
-    s += JSON.stringify(_.cloneDeep(params[i]))
+    s += JSON.stringify(_.cloneDeep(params[i]));
     if (i < n - 1) {
-      s += ', '
+      s += ", ";
     }
   }
-  s += ')'
-  console.log(s)
-  let response
+  s += ")";
+  console.log(s);
+  let response;
   try {
-    const payload = { method, params, jsonrpc: '2.0', id }
-    if ('electron' in window) {
-      response = await window.electron.rpc(payload)
+    const payload = { method, params, jsonrpc: "2.0", id };
+    if ("electron" in window) {
+      response = await window.electron.rpc(payload);
     } else {
       const fetchResponse = await fetch(remoteUrl, {
-        method: 'post',
-        mode: 'cors',
-        cache: 'no-cache',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-      response = await fetchResponse.json()
-      if (_.has(response, 'result')) {
-        console.log(`rpc.result:`)
-        console.groupCollapsed()
-        console.log(_.cloneDeep(response.result))
-        console.groupEnd()
+        method: "post",
+        mode: "cors",
+        cache: "no-cache",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      response = await fetchResponse.json();
+      if (_.has(response, "result")) {
+        console.log(`rpc.result:`);
+        console.groupCollapsed();
+        console.log(_.cloneDeep(response.result));
+        console.groupEnd();
       } else {
-        console.log(`rpc.error:`, _.cloneDeep(response.error))
+        console.log(`rpc.error:`, _.cloneDeep(response.error));
         for (let line of response.error.message) {
-          console.log(`!! ${line}`)
+          console.log(`!! ${line}`);
         }
       }
     }
   } catch (e) {
-    console.log(`rpc-run ${method} fail: ${e}`)
-    response = { error: { message: `${e}`, code: -32000 }, jsonrpc: '2.0', id }
+    console.log(`rpc-run ${method} fail: ${e}`);
+    response = { error: { message: `${e}`, code: -32000 }, jsonrpc: "2.0", id };
   }
-  return response
+  return response;
 }
 
 class RemoteRpcProxy {
-  constructor () {
+  constructor() {
     return new Proxy(this, {
-      get (target, prop) {
+      get(target, prop) {
         return async function () {
-          return await rpc(prop, ...arguments)
-        }
-      }
-    })
+          return await aysnc_rpc(prop, ...arguments);
+        };
+      },
+    });
   }
 }
 
 class RemoteResultRpcProxy {
-  constructor () {
+  constructor() {
     return new Proxy(this, {
-      get (target, prop) {
+      get(target, prop) {
         return async function () {
-          let response = await rpc(prop, ...arguments)
-          return response.result
-        }
-      }
-    })
+          let response = await aysnc_rpc(prop, ...arguments);
+          return response.result;
+        };
+      },
+    });
   }
 }
 
-const remote = new RemoteRpcProxy()
-const remoteResult = new RemoteRpcProxy()
+const remote = new RemoteRpcProxy();
+const remoteResult = new RemoteResultRpcProxy();
 
-export { remote, remoteResult, remoteUrl }
+export { remote, remoteResult, remoteUrl, aysnc_rpc };

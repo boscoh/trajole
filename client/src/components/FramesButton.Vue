@@ -56,36 +56,41 @@ import * as bootstrap from "bootstrap";
 export default {
   data() {
     return {
-      newFrame: null
+      newFrame: null,
+      editFrames: []
     };
   },
   computed: {
     frameStr() {
       return this.$store.getters.frameStr
     },
-    editFrames() {
-      return this.$store.state.editFrames
+    iFrameTrajList() {
+      return this.$store.state.iFrameTrajList
     }
   },
   mounted() {
     this.editFramesModal = new bootstrap.Modal(document.getElementById("edit-frames-modal"));
   },
   methods: {
+    buildEditFrames() {
+      this.editFrames = [];
+      for (let iFrameTraj of this.iFrameTrajList) {
+        this.editFrames.push({ frame: iFrameTraj[0] });
+      }
+    },
     async openFramesModal() {
-      this.$store.commit("setEditFrames");
+      this.buildEditFrames()
       this.$store.commit("setItem", { keyboardLock: true });
       this.editFramesModal.show()
     },
     addFrame(newFrame) {
-      this.$store.commit("addFrame", newFrame)
+      this.editFrames.push({ frame: newFrame });
       this.$store.commit("toggleFrame", newFrame)
       this.newFrame = null
     },
     removeFrame(i) {
-      let editFrames = this.$store.state.editFrames;
-      this.$store.commit("toggleFrame", editFrames[i].frame)
-      editFrames.splice(i, 1);
-      this.$store.commit("setItem", {editFrames})
+      this.$store.commit("toggleFrame", this.editFrames[i].frame)
+      this.editFrames.splice(i, 1);
     },
     cancel() {
       this.$store.commit("setItem", { keyboardLock: false });

@@ -1,16 +1,28 @@
 // vue component in pug
 <template lang="pug">
-  .d-flex.flex-row.flex-wrap.text-wrap(
-    style="font-family: monospace; line-height: 1.1em; font-size: 15px;"
-  )
-    template(v-for="(key) in Object.keys($store.state.tags)")
-      span(style="color: #888") {{key}}:
-      | {{ $store.state.tags[key] }}&nbsp;
+  .d-flex.flex-row.justify-content-between.m-2(style="height: 50px")
 
-    span &nbsp;
+    // Home button
+    router-link.btn.btn-sm.btn-secondary.me-3(
+      to="/" tag="button" style="font-size: 1.5em; width: 50px; height: 100%;"
+    )
+      i.fas.fa-home
 
-    span.text-secondary(@click="openTagModal")
-      i.fas.fa-edit
+    // Tags display
+    .flex-grow-1.overflow-hidden.w-100(style="height: 50px")
+
+      //Tags
+      .d-flex.flex-row.flex-wrap.text-wrap(
+        style="font-family: monospace; line-height: 1.1em; font-size: 15px;"
+      )
+        template(v-for="(key) in Object.keys($store.state.tags)")
+          span(style="color: #888") {{key}}:
+          | {{ $store.state.tags[key] }}&nbsp;
+
+        span &nbsp;
+
+        span.text-secondary(@click="openTagModal")
+          i.fas.fa-edit
 
     #edit-tags-modal.modal.fade
       .modal-dialog
@@ -40,35 +52,28 @@ import * as bootstrap from "bootstrap";
 export default {
   data() {
     return {
+      editTags: []
     };
   },
-  computed: {
-    editTags() {
-      return this.$store.state.editTags
-    }
-  },
   mounted() {
-    this.editTagsModal = new bootstrap.Modal(document.getElementById("edit-tags-modal"));
   },
   methods: {
     async openTagModal() {
-      let editTags = [];
+      this.editTags = [];
       let tags = this.$store.state.tags;
       for (let key of Object.keys(tags)) {
-        editTags.push({ key: key, value: tags[key] });
+        this.editTags.push({ key: key, value: tags[key] });
       }
-      this.$store.commit("setItem", { editTags });
       this.$store.commit("setItem", { keyboardLock: true });
 
+      this.editTagsModal = new bootstrap.Modal(document.getElementById("edit-tags-modal"));
       this.editTagsModal.show();
     },
     addTag() {
-       this.$store.commit("addEditTag")
+      this.editTags.push({key: "", value: ""})
     },
     removeTag(iTag) {
-      let editTags = this.editTags;
-      editTags.splice(iTag, 1);
-      this.$store.commit("setItem", {editTags})
+      this.editTags.splice(iTag, 1);
     },
     async saveTags() {
       let tags = {};
@@ -78,15 +83,15 @@ export default {
         }
       }
       console.log("saveTags", _.cloneDeep(this.editTags), _.cloneDeep(tags));
+
       this.$store.commit("pushLoading")
-
       let response = await rpc.remote.set_tags(this.$store.state.foamId, tags);
-      this.$store.commit("setItem", {tags})
-
       this.$store.commit("popLoading")
 
+      this.$store.commit("setItem", {tags})
     },
     cancel() {
+      console.log("Cancel")
       this.$store.commit("setItem", { keyboardLock: false });
     }
   },

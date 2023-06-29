@@ -9,6 +9,7 @@
         .modal-content
           .modal-header
             h5.modal-title JSON Datasets
+            button.btn-close(data-bs-dismiss="modal")
           .modal-body
             .d-flex.flex-row(style="height: calc(var(--vh) - 220px)")
               .h-100.overflow-scroll
@@ -21,10 +22,6 @@
                     | {{ key }}
               .h-100.ms-2.p-2.overflow-scroll.bg-white.flex-grow-1
                   pre(style="user-select: text;") {{ content }}
-            button.mt-2.btn.btn-secondary(
-              data-bs-dismiss="modal" @click="close"
-            ) close
-
 </template>
 
 <script>
@@ -65,8 +62,6 @@ export default {
       }
       this.$store.commit("popLoading");
     },
-
-    close() {},
   },
 };
 </script>

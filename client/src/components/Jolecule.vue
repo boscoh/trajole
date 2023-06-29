@@ -1,287 +1,64 @@
 <template lang="pug">
-  .overflow-hidden(
-    :key="$route.params.id"
-    style="width: calc(100vw); height: calc(var(--vh));"
-  )
+  .d-flex.flex-row.h-100
 
-    #fail-modal.modal.fade
-      .modal-dialog
-        .modal-content
-          .modal-header
-            h5.modal-title ERROR: Loading trajectory {{ foamId }}
-            button.btn-close(data-bs-dismiss="modal")
-          .modal-body
-            pre {{ errorMsg }}
+      #fail-modal.modal.fade
+        .modal-dialog
+          .modal-content
+            .modal-header
+              h5.modal-title ERROR: Loading trajectory {{ foamId }}
+              button.btn-close(data-bs-dismiss="modal")
+            .modal-body
+              pre {{ errorMsg }}
 
-    #view-edit-modal.modal.fade
-      .modal-dialog
-        .modal-content
-          .modal-header
-            h5.modal-title Edit Text Description
-          .modal-body
-            .mb-3(style="font-size: 0.75em") URL: {{currentUrl}}?query={{ editViewId }}
-            textarea.form-control(v-model="editViewText" rows=4)
-          .modal-footer
-            button.btn.btn-secondary(data-bs-dismiss="modal" @click="clearKeyboardLock") Cancel
-            button.btn.btn-primary(data-bs-dismiss="modal" @click="saveViewText") Save
+      #matrix-widget.h-100(:style="matrixStyle" :key="forceMatrixKey")
+      #strip-widget.h-100(:style="stripStyle" :key="forceStripKey")
+      #table.p-2.me-2.overflow-scroll(:style="tableStyle")
+        ligand-table(ref="table")
 
-    // Main Page
-    .w-100.d-flex.flex-row.user-select-none(style="background-color: #CCC")
+      ///////////////////////
+      #jolecule-container.h-100(:style="joleculeStyle")
+      ///////////////////////
 
-      // Left Two Panels
-      .flex-grow-1.d-flex.flex-column.user-select-none(
-        style="background-color: #CCC; width: calc(100vw - 200px)"
-      )
-
-        // Top bar
-        .d-flex.flex-row.justify-content-between.m-2(style="height: 50px")
-
-          .flex-grow-1.d-flex.flex-row
-
-            // Home button
-            router-link.btn.btn-sm.btn-secondary.me-3(
-              to="/" tag="button" style="font-size: 1.5em; width: 50px; height: 50px;"
-            )
-              i.fas.fa-home
-
-            // Title tags, fits in space in toolbar
-            .flex-grow-1.overflow-hidden.w-100(style="height: 50px")
-              tags-block
-
-            // Dropdown for energy components
-            .ms-2(v-if="opt_keys.length")
-              select.form-select.form-select-sm(v-model="key" @change="selectOptKey(key)")
-                option(v-for="opt_key in opt_keys" :value="opt_key")
-                  | {{opt_key}}
-
-        // FES, strip & ligand table
-        .d-flex.flex-row(style="height: calc(var(--vh) - 60px)")
-
-          // The Free-Energy Surface
-          #matrix-widget.h-100(:style="matrixStyle" :key="forceMatrixKey")
-
-          // Traj Strip
-          #strip-widget.h-100(:style="stripStyle" :key="forceStripKey")
-
-          // Table of Ligands
-          #table.p-2.me-2.overflow-scroll(:style="tableStyle")
-            table.table(v-if="table" style="cursor: pointer")
-              thead(v-if="tableHeaders")
-                tr
-                  th(v-for="h in tableHeaders")
-                    .d-flex.flex-nowrap(@click="sortTable(h.iCol, h.status)")
-                      span.me-1 {{ h.value }}
-                      template(v-if="h.status === 'none'")
-                        span.text-muted &uarr;
-                        span.text-muted &darr;
-                      template(v-if="h.status==='up'")
-                        span &uarr;
-                        span.text-muted &darr;
-                      template(v-if="h.status==='down'")
-                        span.text-muted &uarr;
-                        span &darr;
-              tbody
-                tr(
-                  v-for="(row, i) in table"
-                  :key="i"
-                  :class="[isIFrameTrajSelected(row.iFrameTraj) ? 'bg-primary' : '']"
-                  @mousedown="e => downTableEntry(e, row)"
-                  @mouseup="e => upTableEntry(e, row)"
-                  @mousemove="e => moveTableEntry(e, row)"
-                )
-                  td(v-for="val in row.vals") {{val}}
-
-          // Jolecule
-          #jolecule-container.h-100(:style="joleculeStyle")
-
-      // Actions Strip
-      #view-container.h-100.me-2.d-flex.flex-column(:style="viewStyle")
-
-        // isLoading status button
-        .ps-2.my-2.w-100(style="z-index: 2002; height: 50px; position: relative")
-          button.border-0.flash-button.btn.h-100.w-100(
-            disabled=false
-            v-if="isLoading"
-          )
-            .d-flex.flex-row.justify-content-center.align-items-center
-              span.spinner-border.spinner-border-sm
-              .mx-2 Connecting...
-
-        div(:class="[isLoading ? 'overlay' : '']")
-
-        .ps-2
-          //////////////////////////////////
-          // Buttons on the side
-
-          frames-button
-
-          button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="toggleAsCommunities()")
-            span(v-if="isAsCommunities")
-              | AS Communities&nbsp;
-              i.fas.fa-check
-            template(v-else) AS Communities
-
-          button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="toggleAsPockets()")
-            span(v-if="isAsPockets")
-              | AS Pockets&nbsp;
-              i.fas.fa-check
-            template(v-else) AS Pockets
-
-          button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="downloadPdb")
-            | Download PDB
-
-          json-block
-
-          button-strip
-
-          button.mt-3.btn.btn-sm.w-100.btn-secondary(@click="saveView")
-            | Save View
-
-          .flex-grow-1.overflow-scroll.mt-1(style="height: calc(var(--vh) - 210px")
-            div
-              .w-100.mb-1.p-2.rounded(
-                style="background-color: #BBB"
-                v-for="view in views"
-              )
-                .d-flex.flex-row.w-100.mb-1.pt-2.pb-0.text-start(style="font-size:0.9em")
-                  button.btn.w-100.text-start.btn-sm.btn-secondary(
-                    v-if="view.id == viewId"
-                    @click="selectView(view)"
-                    :key="view.id"
-                  )
-                    .py-2(v-if="view.text")
-                      | {{ view.text }}
-                    .py-2(v-if="!view.text")
-                      | Click
-                      i.mx-2.far.fa-comment
-                      | to add text
-                  button.btn.w-100.text-start.btn-sm.btn-outline-secondary(
-                    @click="selectView(view)"
-                    v-else
-                  )
-                    .py-2
-                      template(v-if="view.text")
-                        | {{ view.text }}
-                      span.text-secondary(v-else)
-                        | Click
-                        i.mx-2.far.fa-comment
-                        | to add text
-                .d-flex.flex-row.justify-content-between
-                  .flex-start.flex-row
-                    button.btn.btn-sm.btn-outline-secondary.border-0(
-                      @click="openEditViewModal(view)"
-                    )
-                      i.far.fa-comment
-                    button.btn.btn-sm.btn-outline-secondary.border-0(
-                      @click="updateView(view)"
-                    )
-                      i.fas.fa-save
-                  .flex-end
-                    button.btn.btn-sm.btn-outline-secondary.border-0(
-                      @click="deleteView(view)"
-                    )
-                      i.fas.fa-trash
 </template>
-
-<style scoped>
-body {
-  overflow: hidden;
-}
-
-#jolecule-container {
-  min-height: 0;
-  min-width: 0;
-  flex: 1;
-  margin: 0;
-  padding: 0;
-}
-
-.overlay {
-  top: 0;
-  opacity: 0.6;
-  background: #aaa;
-  position: absolute;
-  height: 100%;
-  width: 100%;
-  pointer-events: visible;
-  display: block;
-  z-index: 1001;
-}
-
-@keyframes glowing {
-  0% {
-    background-color: #bbb;
-    box-shadow: 0 0 0;
-    border: 0;
-  }
-  50% {
-    background-color: #55b;
-    box-shadow: 0 0 0;
-    border: 0;
-  }
-  100% {
-    background-color: #bbb;
-    box-shadow: 0 0 0;
-    border: 0;
-  }
-}
-
-.flash-button {
-  color: white;
-  animation: glowing 2000ms infinite;
-}
-</style>
 
 <script>
 import "bootstrap/dist/css/bootstrap.min.css";
 import * as bootstrap from "bootstrap";
 import _ from "lodash";
 import { initEmbedJolecule } from "jolecule";
-import * as rpc from "../modules/rpc";
 import { MatrixWidget } from "../modules/matrixwidget";
-import { getFirstValue, inFrames, isSameVec } from "../modules/util";
-import { saveBlobFile, saveTextFile, getPdbText } from "../modules/util";
-
-import ButtonStrip from "./ButtonStrip.vue";
-import TagsBlock from "./TagsBlock.vue";
-import FramesButton from "./FramesButton.vue";
-import JsonBlock from "./JsonBlock.vue";
+import {
+  getFirstValue,
+  inFrames,
+  isSameVec,
+  saveBlobFile,
+  saveTextFile,
+  getPdbText,
+} from "../modules/util";
+import { aysnc_rpc } from "../modules/rpc";
+import LigandTable from "./LigandTable.vue";
 
 export default {
-  name: "Jolecule",
   components: {
-    ButtonStrip,
-    TagsBlock,
-    FramesButton,
-    JsonBlock,
+    LigandTable,
   },
   data() {
     return {
-      stripWidth: "70px",
-      viewWidth: "200px",
       forceMatrixKey: 1,
       forceStripKey: -1,
-      currentUrl: "",
-      views: [],
-      viewId: null,
       isAsCommunities: false,
       isAsPockets: false,
-      iFrameTrajList: [],
-      mode: "",
-      key: "",
-      opt_keys: [],
-      table: [],
-      tableHeaders: [],
+      displayMode: "", // "strip", "table", "matrix-strip", "matrix", "sparse-matrix"
       errorMsg: "",
-      editViewText: "",
-      editViewId: "",
+      joleculeStyle: "height: 100%",
+      tableStyle: "display: none",
+      stripStyle: "display: none",
+      matrixStyle: "display: none",
     };
   },
   async mounted() {
-    console.log(`mounted`);
-    this.pushLoading();
-
     document.oncontextmenu = _.noop;
+
     document.onkeydown = (e) => {
       this.onkeydown(e);
     };
@@ -303,105 +80,102 @@ export default {
     this.controller = this.jolecule.soupWidget.controller;
     this.soupView = this.jolecule.soupView;
 
-    // saves the PDB for every frame
-    this.cacheByiFrameTraj = {};
+    this.stripWidth = "70px";
+    this.actionsStripWidth = "200px";
 
-    // saves the alphaspace-PDB for every frame
-    this.cacheAsCommunitiesByiFrameTraj = {};
-    this.cacheAsPocketsByiFrameTraj = {};
+    this.errorModal = new bootstrap.Modal(
+      document.getElementById("fail-modal")
+    );
 
     window.addEventListener("beforeunload", (e) => this.close());
     window.addEventListener("resize", this.resize);
 
     this.resize();
 
-    // saves which structures belongs to a loaded frame on display
-    this.nStructureInFrameList = [];
-    this.handleNewUrl();
-
-    this.resize();
-    this.popLoading();
+    this.initRemoteRpc();
   },
   computed: {
-    selectFrame() {
-      return this.$store.state.selectFrame;
-    },
-
-    keyboardLock() {
-      return this.$store.state.keyboardLock;
-    },
-
-    joleculeStyle() {
-      if (this.mode === "strip") {
-        return `width: calc(100% - ${this.stripWidth})`;
-      }
-      return "width: calc(50vw)";
-    },
-
-    tableStyle() {
-      if (this.mode === "table") {
-        return `width: calc(50vw - ${this.viewWidth})`;
-      }
-      return "display: none";
-    },
-
-    stripStyle() {
-      if (this.mode === "matrix-strip" || this.mode === "strip") {
-        return `width: ${this.stripWidth}`;
-      }
-      return "display: none";
-    },
-
-    viewStyle() {
-      return `width: ${this.viewWidth}`;
-    },
-
-    matrixStyle() {
-      if (this.mode === "matrix-strip") {
-        return `width: calc(0.5*(100% - ${this.stripWidth} - ${this.viewWidth}))`;
-      } else if (this.mode === "matrix" || this.mode === "sparse-matrix") {
-        return `width: calc(0.5* (100% - ${this.viewWidth}))`;
-      }
-      return "display: none";
-    },
-
-    isLoading() {
-      let result = this.$store.getters.isLoading;
-      this.$forceUpdate();
-      return result;
-    },
-
     foamId() {
       return this.$store.state.foamId;
     },
+    selectFrame() {
+      return this.$store.state.selectFrame;
+    },
+    selectView() {
+      return this.$store.state.selectView;
+    },
+    iFrameTrajList() {
+      return this.$store.state.iFrameTrajList;
+    },
+    loadIFrameTraj() {
+      return this.$store.state.loadIFrameTraj;
+    },
+    dumpIFrameTraj() {
+      return this.$store.state.dumpIFrameTraj;
+    },
   },
   watch: {
-    $route(to, from) {
-      console.log(`watch new url`, to);
-      this.forceMatrixKey = Math.random();
-      this.forceStripKey = Math.random();
-      this.handleNewUrl();
-    },
     selectFrame(to, from) {
       if (!_.isNull(to)) {
         this.clickFrame(to, true);
-        this.$store.commit("setItem", { selectFrame: null });
+      }
+    },
+    selectView(to, from) {
+      if (!_.isNull(to)) {
+        this.loadView(to);
+      }
+    },
+    loadIFrameTraj(to, from) {
+      if (!_.isNull(to)) {
+        this.loadFrameIntoJolecule(to.iFrameTraj, to.thisFrameOnly);
+      }
+    },
+    dumpIFrameTraj(to, from) {
+      if (!_.isNull(to)) {
+        this.deleteIFrameTraj(to);
       }
     },
   },
   methods: {
-    resize() {
-      let vh = window.innerHeight;
-      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    initRemoteRpc() {
+      console.log(`initRemoteRpc`);
+      let _this = this;
 
+      class RemoteResultRpcProxy {
+        constructor() {
+          return new Proxy(this, {
+            get(target, prop) {
+              return async function () {
+                _this.pushLoading();
+
+                let response = await aysnc_rpc(prop, ...arguments);
+
+                let result = null;
+                if (!response.result) {
+                  _this.handleError(response);
+                } else {
+                  result = response.result;
+                }
+
+                _this.popLoading();
+
+                return result;
+              };
+            },
+          });
+        }
+      }
+
+      this.remote = new RemoteResultRpcProxy();
+    },
+
+    resize() {
       if (this.matrixWidget) {
         this.matrixWidget.resize();
       }
-
       if (this.stripWidget) {
         this.stripWidget.resize();
       }
-
       if (this.jolecule) {
         this.jolecule.resize();
       }
@@ -417,49 +191,34 @@ export default {
       this.$forceUpdate();
     },
 
-    openModal(elemId) {
-      let myModal = new bootstrap.Modal(document.getElementById(elemId));
-      myModal.show();
-      return myModal;
-    },
-
-    async clearKeyboardLock() {
-      this.$store.commit("setItem", { keyboardLock: false });
-    },
-
     handleError(response) {
-      if (response.error) {
-        this.openModal("fail-modal");
-        if (_.last(response.error.message).includes("FileNotFoundError")) {
-          this.errorMsg = `Trajectory #${this.foamId} is empty`;
-        } else {
-          this.errorMsg = JSON.stringify(response.error, null, 2);
-        }
-        this.$store.commit("setItem", {
-          tags: { Error: `loading FoamId=${this.foamId}` },
-        });
+      if (!response.error) {
+        return;
       }
+      this.errorModal.show();
+      if (_.last(response.error.message).includes("FileNotFoundError")) {
+        this.errorMsg = `Trajectory #${this.foamId} is empty`;
+      } else {
+        this.errorMsg = JSON.stringify(response.error, null, 2);
+      }
+      this.$store.commit("setItem", {
+        tags: { Error: `loading FoamId=${this.foamId}` },
+      });
     },
 
     async getConfig(key) {
-      this.pushLoading();
-      let response = await rpc.remote.get_config(this.foamId, key);
-      this.popLoading();
-      return response.result ? response.result : null;
+      return await this.remote.get_config(this.foamId, key);
     },
 
-    handleNewUrl() {
-      let frameQuery = this.$route.query.frame;
-      if (!frameQuery) {
-        frameQuery = "";
-      }
-      let frames = _.map(frameQuery.split(","), _.parseInt);
-      let viewId = this.$route.query.view;
-      let foamId = this.$route.params.foamId;
-      this.loadFoamId(foamId, frames, viewId);
+    resetWidgets() {
+      this.forceMatrixKey = Math.random();
+      this.forceStripKey = Math.random();
+      this.$forceUpdate();
     },
 
     async loadFoamId(foamId, frames, viewId) {
+      this.pushLoading();
+
       console.log("loadFoamId", foamId, frames, viewId);
 
       document.title = "#" + foamId;
@@ -472,8 +231,11 @@ export default {
       this.cacheAsCommunitiesByiFrameTraj = {};
       this.cacheAsPocketsByiFrameTraj = {};
       this.nStructureInFrameList = [];
-      this.iFrameTrajList = [];
+
       this.$store.commit("cleariFrameTrajList");
+
+      this.resetWidgets();
+
       if (this.matrixWidget) {
         this.matrixWidget.iFrameTrajs = [];
         this.matrixWidget.draw();
@@ -483,60 +245,102 @@ export default {
         this.stripWidget.draw();
       }
 
-      this.pushLoading();
+      let result;
 
-      let response;
-
-      response = await rpc.remote.reset_foam_id(this.foamId);
-
-      this.handleError(response);
-      if (response.result) {
-        this.$store.commit("setItem", { tags: response.result.title });
+      result = await this.remote.reset_foam_id(this.foamId);
+      if (result) {
+        this.$store.commit("setItem", { tags: result.title });
       }
 
-      this.mode = await this.getConfig("mode");
+      this.displayMode = await this.getConfig("mode");
+
+      if (!this.displayMode) {
+        result = `width: calc(100%);`;
+      } else {
+        result = `width: calc(50%);`;
+      }
+      this.joleculeStyle = result;
+
+      if (this.displayMode === "table") {
+        result = `width: calc(50%)`;
+      } else {
+        result = "display: none";
+      }
+      this.tableStyle = result;
+
+      if (this.displayMode === "matrix-strip" || this.displayMode === "strip") {
+        result = `width: ${this.stripWidth}`;
+      } else {
+        result = "display: none";
+      }
+      this.stripStyle = result;
+
+      if (this.displayMode === "matrix-strip") {
+        result = `width: calc(50% - ${this.stripWidth})`;
+      } else if (
+        this.displayMode === "matrix" ||
+        this.displayMode === "sparse-matrix"
+      ) {
+        result = `width: calc(50%)`;
+      } else {
+        result = "display: none";
+      }
+      this.matrixStyle = result;
+
+      this.$forceUpdate();
+
       this.key = await this.getConfig("key");
       this.opt_keys = await this.getConfig("opt_keys");
 
-      if (this.mode === "strip") {
+      if (this.displayMode === "strip") {
         await this.loadStrip();
-      } else if (this.mode === "sparse-matrix" || this.mode === "matrix") {
+      } else if (
+        this.displayMode === "sparse-matrix" ||
+        this.displayMode === "matrix"
+      ) {
         await this.loadMatrix();
-      } else if (this.mode.includes("matrix-strip")) {
+      } else if (this.displayMode.includes("matrix-strip")) {
         await this.loadStrip();
         await this.loadMatrix();
-      } else if (this.mode === "table") {
-        await this.loadTable();
-      } else if (this.mode === "frame") {
+      } else if (this.displayMode === "table") {
+        let iFrameTraj = await this.$refs.table.loadTable();
+        await this.loadFrameIntoJolecule(iFrameTraj);
+      } else if (this.displayMode === "frame") {
         await this.loadFrameIntoJolecule([0, 0], false);
       }
 
-      if (frames) {
-        let initIFrame = this.iFrameTrajList[0][0];
-        console.log("loading frames", frames);
-        for (let iFrame of frames) {
-          await this.clickFrame(iFrame);
+      if (this.matrixWidget || this.stripWidget) {
+        if (frames) {
+          let initIFrame = this.iFrameTrajList[0][0];
+          console.log("loading frames", frames);
+          for (let iFrame of frames) {
+            await this.clickFrame(iFrame);
+          }
+          await this.clickFrame(initIFrame);
         }
-        await this.clickFrame(initIFrame);
       }
 
-      response = await rpc.remote.get_views(this.foamId);
-      if (response.result) {
-        this.views = response.result;
-        console.log("loading view", this.queryView);
+      console.log("loadFoamId", this.foamId, this.iFrameTrajList);
+
+      result = await this.remote.get_views(this.foamId);
+      if (result) {
+        this.views = result;
+        this.$store.commit("setItem", { views: this.views });
+        console.log("loading view", viewId);
         if (viewId && this.views) {
           let view = _.find(this.views, (v) => v.id === viewId);
           if (view) {
-            await this.selectView(view);
+            await this.loadView(view);
           }
         }
       }
 
-      response = await rpc.remote.get_json_datasets(this.foamId);
-      if (response.result) {
-        this.$store.commit("setDatasets", response.result);
+      result = await this.remote.get_json_datasets(this.foamId);
+      if (result) {
+        this.$store.commit("setDatasets", result);
       }
 
+      this.resize();
       this.popLoading();
     },
 
@@ -546,7 +350,7 @@ export default {
         return;
       }
       let value = _.isNil(iFrameTraj) ? getFirstValue(matrix) : { iFrameTraj };
-      let isSparse = this.mode === "sparse-matrix";
+      let isSparse = this.displayMode === "sparse-matrix";
       this.matrixWidget = new MatrixWidget("#matrix-widget", matrix, isSparse);
       this.resize();
       this.matrixWidget.selectGridValue = this.selectMatrixGridValue;
@@ -630,80 +434,6 @@ export default {
       }
     },
 
-    async loadTable(iFrameTraj) {
-      this.table = await this.getConfig("table");
-      if (_.isEmpty(this.table)) {
-        ``;
-        return;
-      }
-      let headers = await this.getConfig("table_headers");
-      if (headers) {
-        this.tableHeaders = _.map(headers, (h, i) => ({
-          value: h,
-          status: "none",
-          iCol: i,
-        }));
-      }
-      let values = _.filter(_.flattenDeep(this.table), (v) =>
-        _.has(v, "iFrameTraj")
-      );
-      this.iFrameTraj = _.first(values).iFrameTraj;
-      await this.selectTableiFrameTraj(this.iFrameTraj);
-      this.resize();
-    },
-
-    async selectTableiFrameTraj(iFrameTraj, thisFrameOnly) {
-      await this.loadFrameIntoJolecule(iFrameTraj, thisFrameOnly);
-    },
-
-    async downTableEntry(event, row) {
-      this.mouseDownInTable = true;
-      if (event.shiftKey) {
-        if (inFrames(this.iFrameTrajList, row.iFrameTraj)) {
-          if (this.iFrameTrajList.length > 1) {
-            await this.deleteIFrameTraj(row.iFrameTraj);
-          }
-          return;
-        }
-      }
-      this.selectTableiFrameTraj(row.iFrameTraj, !event.shiftKey);
-    },
-
-    async moveTableEntry(event, row) {
-      if (this.mouseDownInTable) {
-        this.selectTableiFrameTraj(row.iFrameTraj, !event.shiftKey);
-      }
-    },
-
-    async upTableEntry(event, row) {
-      this.mouseDownInTable = false;
-    },
-
-    async sortTable(iCol, status) {
-      let newStatus = "up";
-      if (status === "up") {
-        newStatus = "down";
-      }
-      for (let iCol = 0; iCol < this.tableHeaders.length; iCol += 1) {
-        this.tableHeaders[iCol].status = "none";
-      }
-      this.tableHeaders[iCol].status = newStatus;
-      if (newStatus !== "none") {
-        if (iCol === 0) {
-          this.table = _.sortBy(this.table, (row) => row.vals[iCol]);
-          if (newStatus === "down") {
-            this.table = _.reverse(this.table);
-          }
-        } else {
-          let multiplier = newStatus === "up" ? 1 : -1;
-          this.table = _.sortBy(
-            this.table,
-            (row) => multiplier * row.vals[iCol]
-          );
-        }
-      }
-    },
-
     isIFrameTrajSelected(iFrameTraj) {
       return inFrames(this.iFrameTrajList, iFrameTraj);
     },
@@ -718,15 +448,13 @@ export default {
           );
           result = this.cacheAsCommunitiesByiFrameTraj[key];
         } else {
-          this.pushLoading();
-          let response = await rpc.remote.get_pdb_lines_with_as_communities(
+          let response = await this.remote.get_pdb_lines_with_as_communities(
             this.foamId,
             iFrameTraj
           );
-          this.popLoading();
-          if (response.result) {
-            this.cacheAsCommunitiesByiFrameTraj[key] = response.result;
-            result = response.result;
+          if (response) {
+            this.cacheAsCommunitiesByiFrameTraj[key] = response;
+            result = response;
           }
         }
       } else if (this.isAsPockets) {
@@ -734,15 +462,13 @@ export default {
           console.log(`getPdbLines from cacheAsPocketsByiFrameTraj[${key}]`);
           result = this.cacheAsPocketsByiFrameTraj[key];
         } else {
-          this.pushLoading();
-          let response = await rpc.remote.get_pdb_lines_with_as_pockets(
+          let response = await this.remote.get_pdb_lines_with_as_pockets(
             this.foamId,
             iFrameTraj
           );
-          this.popLoading();
-          if (response.result) {
-            this.cacheAsPocketsByiFrameTraj[key] = response.result;
-            result = response.result;
+          if (response) {
+            this.cacheAsPocketsByiFrameTraj[key] = response;
+            result = response;
           }
         }
       } else {
@@ -750,15 +476,13 @@ export default {
           console.log(`getPdbLines from cacheByiFrameTraj[${key}]`);
           result = this.cacheByiFrameTraj[key];
         } else {
-          this.pushLoading();
-          let response = await rpc.remote.get_pdb_lines(
+          let response = await this.remote.get_pdb_lines(
             this.foamId,
             iFrameTraj
           );
-          this.popLoading();
-          if (response.result) {
-            this.cacheByiFrameTraj[key] = response.result;
-            result = response.result;
+          if (response) {
+            this.cacheByiFrameTraj[key] = response;
+            result = response;
           }
         }
       }
@@ -785,12 +509,12 @@ export default {
       this.isFetching = true;
       let pdbLines = await this.getPdbLines(iFrameTraj);
       if (pdbLines) {
-        let saveView = null;
+        let saveCurrentView = null;
         let pdbId = `frame-${iFrameTraj}`.replace(",", "-");
         let soup = this.jolecule.soupWidget.soup;
         let nStructurePrev = soup.structureIds.length;
         if (nStructurePrev > 0) {
-          saveView = this.jolecule.soupView.getCurrentView();
+          saveCurrentView = this.jolecule.soupView.getCurrentView();
         }
         console.log(`loadFrameIntoJolecule load`, pdbId);
         await this.jolecule.asyncAddDataServer(
@@ -815,15 +539,14 @@ export default {
             this.jolecule.controller.deleteStructure(i);
           }
           this.nStructureInFrameList = [];
-          this.iFrameTrajList = [];
           this.$store.commit("cleariFrameTrajList");
         }
         this.nStructureInFrameList.push(nStructureInThisFrame);
-        this.iFrameTrajList.push(iFrameTraj);
         this.$store.commit("addIFrameTraj", iFrameTraj);
+        console.log(`loadFrameIntoJolecule`, this.iFrameTrajList);
 
-        if (saveView) {
-          this.jolecule.soupView.setHardCurrentView(saveView);
+        if (saveCurrentView) {
+          this.jolecule.soupView.setHardCurrentView(saveCurrentView);
         }
         this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame();
         if (!this.isAsCommunities && !this.isAsPockets) {
@@ -841,9 +564,10 @@ export default {
       }
       this.isFetching = true;
       let iFrameTraj = _.last(this.iFrameTrajList);
+      console.log(`reloadLastFrameOfJolecule`, this.iFrameTrajList, iFrameTraj);
       let pdbLines = await this.getPdbLines(iFrameTraj);
       if (pdbLines) {
-        let saveView = this.jolecule.soupView.getCurrentView();
+        let saveCurrentView = this.jolecule.soupView.getCurrentView();
 
         let pdbId = `frame-${iFrameTraj}`.replace(",", "-");
         let soup = this.jolecule.soup;
@@ -866,13 +590,11 @@ export default {
         let i = this.iFrameTrajList.length - 1;
         await this.deleteItemFromIFrameTrajList(i);
         this.nStructureInFrameList.splice(i, 1);
-        this.iFrameTrajList.splice(i, 1);
         this.$store.commit("deleteIFrameTraj", i);
         this.nStructureInFrameList.push(nStructure);
-        this.iFrameTrajList.push(iFrameTraj);
         this.$store.commit("addIFrameTraj", iFrameTraj);
 
-        this.jolecule.soupView.setHardCurrentView(saveView);
+        this.jolecule.soupView.setHardCurrentView(saveCurrentView);
         this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame();
         if (!this.isAsCommunities && !this.isAsPockets) {
           this.clearGridDisplay();
@@ -906,7 +628,6 @@ export default {
         nStructureToDelete -= 1;
       }
       this.jolecule.soupWidget.buildScene();
-      this.iFrameTrajList.splice(i, 1);
       this.$store.commit("deleteIFrameTraj", i);
       this.nStructureInFrameList.splice(i, 1);
     },
@@ -925,9 +646,7 @@ export default {
       saveTextFile(text, filename);
     },
 
-    async selectView(view) {
-      this.viewId = view.id;
-      console.log(`selectView`, _.cloneDeep(view));
+    async loadView(view) {
       if (_.has(view, "matrixWidgetValues")) {
         await this.matrixWidget.loadValues(view.matrixWidgetValues);
       }
@@ -938,14 +657,6 @@ export default {
       newView.setFromDict(view.viewDict);
       this.controller.setTargetView(newView);
       history.pushState({}, null, "#" + this.$route.path + "?view=" + view.id);
-    },
-
-    async openEditViewModal(view) {
-      this.$store.commit("setItem", { keyboardLock: true });
-      this.editViewText = view.text;
-      this.editViewId = view.id;
-      this.currentUrl = window.location.href.split("?")[0];
-      this.openModal("view-edit-modal");
     },
 
     async saveView() {
@@ -964,50 +675,7 @@ export default {
       if (this.stripWidget) {
         view.stripWidgetValues = this.stripWidget.values;
       }
-      console.log(`saveView`, _.cloneDeep(view));
-      // NOTE: reverse chronological order insert at top
-      this.views.unshift(view);
-      this.pushLoading();
-      await rpc.remote.add_view(this.foamId, view);
-      this.popLoading();
-      this.selectView(view);
-    },
-
-    async saveViewText() {
-      let view = _.find(this.views, { id: this.editViewId });
-      (view.foamId = this.foamId),
-        (view.timestamp = Math.floor(Date.now() / 1000)),
-        (view.text = this.editViewText);
-      this.pushLoading();
-      await rpc.remote.add_view(this.foamId, view);
-      this.popLoading();
-      this.$store.commit("setItem", { keyboardLock: false });
-    },
-
-    async updateView(view) {
-      view.viewDict = this.jolecule.soupView.getCurrentView().getDict();
-      if (this.matrixWidget) {
-        view.matrixWidgetValues = this.matrixWidget.values;
-      }
-      if (this.stripWidget) {
-        view.stripWidgetValues = this.stripWidget.values;
-      }
-      (view.foamId = this.foamId),
-        (view.timestamp = Math.floor(Date.now() / 1000)),
-        this.pushLoading();
-      await rpc.remote.add_view(this.foamId, view);
-      this.popLoading();
-      this.$forceUpdate();
-    },
-
-    async deleteView(view) {
-      let i = this.views.indexOf(view);
-      this.views.splice(i, 1);
-      this.pushLoading();
-      await rpc.remote.delete_view(this.foamId, view);
-      this.popLoading();
-      this.viewId = null;
-      history.pushState({}, null, "#" + this.$route.path);
+      this.$store.commit("setItem", { newView: view });
     },
 
     clearGridDisplay() {
@@ -1043,18 +711,22 @@ export default {
     async selectOptKey(key) {
       let iFrameTraj = _.last(this.iFrameTrajList);
       console.log("selectOptKey", key, iFrameTraj);
-      await rpc.remote.select_new_key(this.foamId, key);
-      this.forceMatrixKey = Math.random();
-      this.forceStripKey = Math.random();
+      await this.remote.select_new_key(this.foamId, key);
+      this.resetWidgets();
       await this.loadMatrix(iFrameTraj);
     },
 
     async close() {
-      await rpc.remote.kill();
+      await this.remote.kill();
     },
 
     onkeydown(event) {
-      if (this.keyboardLock || event.metaKey || event.ctrlKey) {
+      if (
+        this.$store.state.keyboardLock ||
+        window.keyboardLock ||
+        event.metaKey ||
+        event.ctrlKey
+      ) {
         return;
       }
       let c = String.fromCharCode(event.keyCode).toUpperCase();
@@ -1098,19 +770,15 @@ export default {
       }
     },
 
-    async openFramesModal(view) {
-      this.$store.commit("setEditFrames");
-      this.$store.commit("setItem", { keyboardLock: true });
-      this.openModal("frames-edit-modal");
-    },
-
     async clickFrame(iFrame, isShift = true) {
+      console.log(`clickFrame ${iFrame}`);
       let widget;
       if (this.matrixWidget) {
         widget = this.matrixWidget;
       } else if (this.stripWidget) {
         widget = this.stripWidget;
       } else {
+        this.loadFrameIntoJolecule([iFrame, 0]);
         return;
       }
       let getMatrixValue = (iFrameTraj) => {
@@ -1142,6 +810,7 @@ export default {
       if (!value) {
         return;
       }
+
       await widget.clickGridValue(value, isShift);
     },
   },
