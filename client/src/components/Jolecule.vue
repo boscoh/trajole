@@ -742,6 +742,8 @@ export default {
         this.controller.toggleShowOption("ribbon");
       } else if (c === "L") {
         this.controller.toggleShowOption("ligands");
+      } else if (c === "H") {
+        this.controller.toggleShowOption("hydrogen");
       } else if (c === "W") {
         this.controller.toggleShowOption("water");
       } else if (c === "T") {
