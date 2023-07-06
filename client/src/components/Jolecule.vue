@@ -255,10 +255,12 @@ export default {
 
       this.displayMode = await this.getConfig("mode");
 
-      if (!this.displayMode) {
+      if (!this.displayMode || this.displayMode === "frame") {
         result = `width: calc(100%);`;
+      } else if (this.displayMode === "strip") {
+        result = `width: calc(100% - ${this.stripWidth});`;
       } else {
-        result = `width: calc(50%);`;
+        result = `width: calc(50%)`;
       }
       this.joleculeStyle = result;
 
