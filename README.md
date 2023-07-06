@@ -174,8 +174,8 @@ Create `/etc/supervisor/conf.d/fastapi.conf`:
 ```
 [program:fastapi_app]
 directory=/home/bosco/rs/rshow/rshow/server/lounge
-environment=PYTHONPATH=/home/bosco/miniconda3/envs/rs/lib/python3.8/site-packages
-command=/home/bosco/miniconda3/envs/rs/bin/python serve.py
+environment=PYTHONPATH=/home/bosco/mambaforge/envs/rs/lib/python3.8/site-packages
+command=/home/bosco/mambaforge/envs/rs/bin/python serve.py
 autostart=true
 user=bosco
 autorestart=true
