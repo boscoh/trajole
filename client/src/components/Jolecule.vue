@@ -138,7 +138,6 @@ export default {
   },
   methods: {
     initRemoteRpc() {
-      console.log(`initRemoteRpc`);
       let _this = this;
 
       class RemoteResultRpcProxy {
@@ -219,7 +218,9 @@ export default {
     async loadFoamId(foamId, frames, viewId) {
       this.pushLoading();
 
-      console.log("loadFoamId", foamId, frames, viewId);
+      console.log(
+        `loadFoamId(foamId=${foamId}, frames=${frames}, viewId=${viewId})`
+      );
 
       document.title = "#" + foamId;
       this.$store.commit("setFoamId", foamId);
@@ -312,7 +313,6 @@ export default {
       if (this.matrixWidget || this.stripWidget) {
         if (frames) {
           let initIFrame = this.iFrameTrajList[0][0];
-          console.log("loading frames", frames);
           for (let iFrame of frames) {
             await this.clickFrame(iFrame);
           }
@@ -320,13 +320,10 @@ export default {
         }
       }
 
-      console.log("loadFoamId", this.foamId, this.iFrameTrajList);
-
       result = await this.remote.get_views(this.foamId);
       if (result) {
         this.views = result;
         this.$store.commit("setItem", { views: this.views });
-        console.log("loading view", viewId);
         if (viewId && this.views) {
           let view = _.find(this.views, (v) => v.id === viewId);
           if (view) {
@@ -543,7 +540,6 @@ export default {
         }
         this.nStructureInFrameList.push(nStructureInThisFrame);
         this.$store.commit("addIFrameTraj", iFrameTraj);
-        console.log(`loadFrameIntoJolecule`, this.iFrameTrajList);
 
         if (saveCurrentView) {
           this.jolecule.soupView.setHardCurrentView(saveCurrentView);

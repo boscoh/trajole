@@ -142,8 +142,12 @@ class TrajStream(RshowStreamMixin):
             atom_mask="",
         )
         self.config.update(config)
+        logger.info("config:")
+        pprint(self.config)
+
         self.i_frame_traj = None
         self.frame = None
+
         self.process_config()
 
     def get_atom_mask(self):

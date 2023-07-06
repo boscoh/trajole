@@ -3,9 +3,8 @@ import config from "../../../config/config.json";
 
 const defaultRemoteUrl = `${location.protocol}//${location.host}/rpc-run`;
 const remoteUrl = config.apiUrl;
-console.log(`config.apiUrl = ${config.apiUrl}`);
-console.log(`defaultRemoteUrl = ${defaultRemoteUrl}`);
-console.log(`rpc-run remoteUrl = ${remoteUrl}`);
+console.log(`rpc.defaultRemoteUrl=${defaultRemoteUrl}`);
+console.log(`rpc.remoteUrl=${remoteUrl}`);
 
 /**
  * RPC interface to talk to a function on a server.
@@ -38,7 +37,10 @@ console.log(`rpc-run remoteUrl = ${remoteUrl}`);
  *      }
  */
 async function aysnc_rpc(method, ...params) {
+  let startTime = new Date();
+
   const id = Math.random().toString(36).slice(-6);
+
   let s = `rpc.${method}(`;
   let n = params.length;
   for (let i = 0; i < n; i += 1) {
@@ -49,6 +51,7 @@ async function aysnc_rpc(method, ...params) {
   }
   s += ")";
   console.log(s);
+
   let response;
   try {
     const payload = { method, params, jsonrpc: "2.0", id };
@@ -62,21 +65,25 @@ async function aysnc_rpc(method, ...params) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       response = await fetchResponse.json();
+
+      let elapsed = new Date() - startTime;
       if (_.has(response, "result")) {
-        console.log(`rpc.result:`);
+        console.log(`rpc.result[${elapsed}ms]: ↓`);
         console.groupCollapsed();
         console.log(_.cloneDeep(response.result));
         console.groupEnd();
       } else {
-        console.log(`rpc.error:`, _.cloneDeep(response.error));
+        console.log(`rpc.error[${elapsed}ms]:`, _.cloneDeep(response.error));
         for (let line of response.error.message) {
           console.log(`!! ${line}`);
         }
       }
     }
   } catch (e) {
-    console.log(`rpc-run ${method} fail: ${e}`);
+    let elapsed = new Date() - startTime;
+    console.log(`rpc.fail[${elapsed}ms]: ${e}`);
     response = { error: { message: `${e}`, code: -32000 }, jsonrpc: "2.0", id };
   }
   return response;
