@@ -267,7 +267,7 @@ class FrameStream(TrajStream):
         self.config.title = self.config.pdb_or_parmed
         self.config.mode = "frame"
         fname = Path(self.config.pdb_or_parmed)
-        if fname.suffix == ".parmed":
+        if fname.ext == ".parmed":
             self.frame = get_traj_frame_from_parmed(Granary(fname).structure)
         else:
             self.frame = mdtraj.load_pdb(self.config.pdb_or_parmed)
