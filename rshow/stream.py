@@ -292,8 +292,6 @@ class FesStream(TrajStream):
     def process_config(self):
         self.config.title = "Free-energy surface of collective variables"
         self.config.mode = "sparse-matrix"
-        logger.info("config:")
-        pprint(self.config)
         fes_yaml = Path(self.config.metad_dir) / "fes.rshow.yaml"
         if fes_yaml.exists():
             logger.info(f"Loading {fes_yaml}")

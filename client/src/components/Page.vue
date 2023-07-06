@@ -139,7 +139,6 @@ export default {
       }
       let viewId = this.$route.query.view;
       let foamId = this.$route.params.foamId;
-      console.log(`Page.handleUrl`, foamId, frames, viewId);
       this.$refs.jolecule.loadFoamId(foamId, frames, viewId);
     },
     downloadPdb() {
