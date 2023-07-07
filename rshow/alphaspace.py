@@ -128,8 +128,6 @@ class AlphaSpace:
             community["key"] = sum(nonpolar_spaces)
         self.communities.sort(key=lambda c: -c["key"])
         for i_community, community in enumerate(self.communities):
-            if i_community >= len(self.elements):
-                break
             element = self.elements[i_community % len(self.elements)]
             i_pockets = community["core_pockets"] # + community["aux_pockets"]
             for i_pocket in i_pockets:
@@ -157,8 +155,6 @@ class AlphaSpace:
         i_res = len(list(self.mdtraj.top.residues))
         self.pockets.sort(key=lambda p: -p.nonpolar_space)
         for i_pocket, pocket in enumerate(self.pockets):
-            if i_pocket >= len(self.elements):
-                break
             element = self.elements[i_pocket % len(self.elements)]
             for alpha in pocket.alphas:
                 line = self.gen_pdb_line(
