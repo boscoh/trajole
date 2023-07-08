@@ -8,6 +8,7 @@ from addict import Dict
 from rich.pretty import pprint
 from rseed.formats.easyh5 import EasyTrajH5, EasyFoamTrajH5
 from rseed.granary import Granary
+from rseed.util.fs import tic, toc
 
 from rshow import stream
 from rshow.persist import PersistDictList
@@ -43,6 +44,7 @@ def get_tags(foam_id):
     from foamdb.client import PostgresClient
     from foamdb.config import Config
 
+    tic()
     if os.environ.get("HOME") is None:
         # when we are running under supervisord
         # in the lounge vm where there is no HOME
@@ -55,6 +57,8 @@ def get_tags(foam_id):
         traj = client.get_trajectory(foam_id)
         for k, v in traj["tags"].items():
             result[k] = v
+
+    logger.info(toc(f'reading tags'))
     return result
 
 
@@ -100,9 +104,6 @@ def init_traj_stream_from_config(in_config):
         return False
 
     global traj_stream, config
-
-    logger.info("config:")
-    pprint(in_config)
 
     foam_id = in_config.trajectories[0]
 

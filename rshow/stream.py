@@ -11,6 +11,8 @@ import parmed
 import pydash as py_
 from addict import Dict
 from rich.pretty import pprint, pretty_repr
+from rseed.util.fs import tic, toc
+
 
 from rseed.formats.easyh5 import EasyFoamTrajH5, EasyTrajH5
 from rseed.formats.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
@@ -131,6 +133,12 @@ def delete_view(views, to_delete_view):
     return views
 
 
+def repr_lines(o, prefix=""):
+    lines = pretty_repr(o).split("\n")
+    lines[0] = prefix + lines[0]
+    return lines
+
+
 class TrajStream(RshowStreamMixin):
     def __init__(self, config={}):
         self.config = Dict(
@@ -142,9 +150,7 @@ class TrajStream(RshowStreamMixin):
             atom_mask="",
         )
         self.config.update(config)
-        lines = pretty_repr(self.config).split("\n")
-        lines[0] = "config = " + lines[0]
-        for l in lines:
+        for l in repr_lines(self.config, "TrajStream.config = "):
             logger.info(l)
 
         self.i_frame_traj = None
@@ -235,12 +241,12 @@ class FoamTrajStream(TrajStream):
 
     def process_config(self):
         super().process_config()
-        from rseed.formats.easyh5 import EasyFoamTrajH5
-
+        tic()
         h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
         if h5.has_dataset("rshow_matrix"):
             self.config.matrix = h5.get_json_dataset("rshow_matrix")
             self.config.mode = "sparse-matrix"
+        logger.info(toc(f"loading matrix"))
 
     def get_views(self):
         h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
