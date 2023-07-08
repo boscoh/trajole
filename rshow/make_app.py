@@ -1,8 +1,9 @@
 import inspect
 import logging
+import time
 import traceback
 from io import BytesIO
-
+from rich.pretty import pretty_repr
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
@@ -25,25 +26,34 @@ def make_app(handlers, client_dir):
         job_id = data.get("id", None)
         method = data.get("method")
         params = data.get("params", [])
+        start_time = time.perf_counter_ns()
         try:
             if not hasattr(handlers, method):
                 raise Exception(f"rpc-run {method} is not found")
-            logger.info(f"rpc-run {method}")
+            lines = pretty_repr(params).split("\n")
+            lines[0] = f"rpc-run.{method}:start" + lines[0]
+            for l in lines:
+                logger.info(l)
             fn = getattr(handlers, method)
             if inspect.iscoroutinefunction(fn):
                 result = await fn(*params)
             else:
                 result = fn(*params)
-            return {"result": result, "jsonrpc": "2.0", "id": job_id}
+            result = {"result": result, "jsonrpc": "2.0", "id": job_id}
+            elapsed_ms = round((time.perf_counter_ns() - start_time) / 1e6)
+            logger.info(f"rpc-run.{method}:finished in {elapsed_ms}ms")
         except Exception as e:
+            elapsed_ms = round((time.perf_counter_ns() - start_time) / 1e6)
+            logger.info(f"rpc-run.{method}:error after {elapsed_ms}ms:")
             error_lines = str(traceback.format_exc()).splitlines()
             for line in error_lines:
-                logger.debug(line)
-            return {
+                logger.error(line)
+            result = {
                 "error": {"code": -1, "message": error_lines},
                 "jsonrpc": "2.0",
                 "id": job_id,
             }
+        return result
 
     @app.get("/parmed/{foam_id}")
     async def get_parmed(foam_id: str, i_frame: int = None):

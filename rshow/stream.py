@@ -10,7 +10,7 @@ import numpy as np
 import parmed
 import pydash as py_
 from addict import Dict
-from rich.pretty import pprint
+from rich.pretty import pprint, pretty_repr
 
 from rseed.formats.easyh5 import EasyFoamTrajH5, EasyTrajH5
 from rseed.formats.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
@@ -142,12 +142,13 @@ class TrajStream(RshowStreamMixin):
             atom_mask="",
         )
         self.config.update(config)
-        logger.info("config:")
-        pprint(self.config)
+        lines = pretty_repr(self.config).split("\n")
+        lines[0] = "config = " + lines[0]
+        for l in lines:
+            logger.info(l)
 
         self.i_frame_traj = None
         self.frame = None
-
         self.process_config()
 
     def get_atom_mask(self):
