@@ -145,7 +145,6 @@ class TrajStream(RshowStreamMixin):
             mode="strip",  # "strip", "matrix", "sparse-matrix", "matrix-strip", "table"
             strip=[],  # Dictionary of frame, traj, colours for use in rshow
             title="",  # Title for rshow
-            is_hydrogen=True,  # Keep hydrogen atoms
             is_solvent=True,
             atom_mask="",
         )
@@ -160,19 +159,15 @@ class TrajStream(RshowStreamMixin):
     def get_atom_mask(self):
         atom_mask = ""
         if not self.config.atom_mask:
-            if not self.config.is_solvent and not self.config.is_hydrogen:
-                atom_mask = "intersect {not {solvent}} {not {mdtraj element H}}"
-            elif not self.config.is_solvent:
+            if not self.config.is_solvent:
                 atom_mask = "not {solvent}"
-            elif not self.config.is_hydrogen:
-                atom_mask = "not {mdtraj element H}"
         else:
             atom_mask = self.config.atom_mask
         return atom_mask
 
     def get_traj_manager(self):
         return TrajectoryManager(
-            self.config.trajectories, atom_mask=self.get_atom_mask()
+            self.config.trajectories, atom_mask=self.get_atom_mask(), is_dry_cache=True
         )
 
     def get_title(self):
@@ -233,7 +228,7 @@ class FoamTrajStream(TrajStream):
     def get_traj_manager(self):
         mask = self.get_atom_mask()
         return StreamingTrajectoryManager(
-            self.config.trajectories, atom_mask=mask, is_foamdb=True
+            self.config.trajectories, atom_mask=mask, is_foamdb=True, is_dry_cache=True
         )
 
     def get_title(self):
@@ -311,7 +306,7 @@ class FesStream(TrajStream):
         self.config.matrix = data.matrix
         self.config.trajectories = [fes_yaml.parent / t for t in data.trajectories]
         self.traj_manager = TrajectoryManager(
-            self.config.trajectories, atom_mask=self.get_atom_mask()
+            self.config.trajectories, atom_mask=self.get_atom_mask(), is_dry_cache=True
         )
         self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
 
@@ -330,7 +325,7 @@ class MatrixStream(TrajStream):
             self.config.mode = "matrix-strip"
         os.chdir(parent_dir)
         self.traj_manager = TrajectoryManager(
-            self.config.trajectories, atom_mask=self.get_atom_mask()
+            self.config.trajectories, atom_mask=self.get_atom_mask(), is_dry_cache=True
         )
         self.views_yaml = fname.with_suffix(".views.yaml")
 
@@ -419,7 +414,9 @@ class ParallelStream(TrajStream):
             str(parent_dir / f"trajectory-{i}.h5") for i in range(n_replica)
         ]
         self.traj_manager = TrajectoryManager(
-            trajectories=self.config.trajectories, atom_mask=self.get_atom_mask()
+            trajectories=self.config.trajectories,
+            atom_mask=self.get_atom_mask(),
+            is_dry_cache=True,
         )
         self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
 

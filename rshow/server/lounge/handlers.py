@@ -16,7 +16,7 @@ from rshow.stream import TrajStream
 
 logger = logging.getLogger(__name__)
 
-config = Dict(is_solvent=False, is_hydrogen=True)
+config = Dict(is_solvent=False)
 
 traj_stream = None
 traj_stream_by_foam_id = OrderedDict()
@@ -58,7 +58,7 @@ def get_tags(foam_id):
         for k, v in traj["tags"].items():
             result[k] = v
 
-    logger.info(toc(f'reading tags'))
+    logger.info(toc(f"reading tags"))
     return result
 
 
@@ -84,7 +84,6 @@ def reset_foam_id(foam_id):
     new_config = Dict()
     logger.info(f"reset_foam_id {foam_id}")
     new_config.is_solvent = config.is_solvent
-    new_config.is_hydrogen = config.is_hydrogen
     new_config.is_dev = config.is_dev
     new_config.command = "FoamTrajStream"
     new_config.trajectories = [foam_id]
