@@ -236,12 +236,18 @@ class FoamTrajStream(TrajStream):
 
     def process_config(self):
         super().process_config()
-        tic()
         h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
         if h5.has_dataset("rshow_matrix"):
-            self.config.matrix = h5.get_json_dataset("rshow_matrix")
             self.config.mode = "sparse-matrix"
-        logger.info(toc(f"loading matrix"))
+
+    def get_config(self, k):
+        if k == "matrix":
+            if not self.config.matrix:
+                tic()
+                h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
+                self.config.matrix = h5.get_json_dataset("rshow_matrix")
+                logger.info(toc(f"loading rshow-matrix"))
+        return self.config[k]
 
     def get_views(self):
         h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)

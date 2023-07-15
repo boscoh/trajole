@@ -124,7 +124,7 @@ def kill():
 
 
 def get_config(foam_id, key):
-    return traj_stream_by_foam_id[foam_id].config[key]
+    return traj_stream_by_foam_id[foam_id].get_config(key)
 
 
 def get_pdb_lines(foam_id, i_frame_traj):
