@@ -15,9 +15,9 @@
       .d-flex.flex-row.flex-wrap.text-wrap(
         style="font-family: monospace; line-height: 1.1em; font-size: 15px;"
       )
-        template(v-for="(key) in Object.keys($store.state.tags)")
+        template(v-for="(key) in Object.keys(tags)")
           span(style="color: #888") {{key}}:
-          | {{ $store.state.tags[key] }}&nbsp;
+          | {{ tags[key] }}&nbsp;
 
         span &nbsp;
 
@@ -56,6 +56,11 @@ export default {
     };
   },
   mounted() {
+  },
+  computed: {
+    tags() {
+      return this.$store.state.tags;
+    }
   },
   methods: {
     async openTagModal() {

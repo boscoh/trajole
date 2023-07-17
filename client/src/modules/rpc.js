@@ -41,7 +41,7 @@ async function aysnc_rpc(method, ...params) {
 
   const id = Math.random().toString(36).slice(-6);
 
-  let s = `rpc.${method}(`;
+  let s = `rpc.${method}.start(`;
   let n = params.length;
   for (let i = 0; i < n; i += 1) {
     s += JSON.stringify(_.cloneDeep(params[i]));
@@ -70,12 +70,15 @@ async function aysnc_rpc(method, ...params) {
 
       let elapsed = new Date() - startTime;
       if (_.has(response, "result")) {
-        console.log(`rpc.result[${elapsed}ms]: ↓`);
+        console.log(`rpc.${method}.result[${elapsed}ms]: ↓`);
         console.groupCollapsed();
         console.log(_.cloneDeep(response.result));
         console.groupEnd();
       } else {
-        console.log(`rpc.error[${elapsed}ms]:`, _.cloneDeep(response.error));
+        console.log(
+          `rpc.${method}.error[${elapsed}ms]:`,
+          _.cloneDeep(response.error)
+        );
         for (let line of response.error.message) {
           console.log(`!! ${line}`);
         }
@@ -83,7 +86,7 @@ async function aysnc_rpc(method, ...params) {
     }
   } catch (e) {
     let elapsed = new Date() - startTime;
-    console.log(`rpc.fail[${elapsed}ms]: ${e}`);
+    console.log(`rpc.${method}.fail[${elapsed}ms]: ${e}`);
     response = { error: { message: `${e}`, code: -32000 }, jsonrpc: "2.0", id };
   }
   return response;

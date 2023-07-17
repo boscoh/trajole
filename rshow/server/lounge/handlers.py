@@ -10,16 +10,16 @@ from rseed.formats.easyh5 import EasyTrajH5, EasyFoamTrajH5
 from rseed.granary import Granary
 from rseed.util.fs import tic, toc
 
-from rshow import stream
+from rshow import readers
 from rshow.persist import PersistDictList
-from rshow.stream import TrajStream
+from rshow.readers import RshowReaderMixin
 
 logger = logging.getLogger(__name__)
 
 config = Dict(is_solvent=False)
 
-traj_stream = None
-traj_stream_by_foam_id = OrderedDict()
+traj_reader = None
+traj_reader_by_foam_id = OrderedDict()
 
 
 views_yaml = Path(__file__).abspath().parent / "last_views.yaml"
@@ -27,9 +27,9 @@ last_foam_id_views = PersistDictList(views_yaml, key="id")
 
 
 def select_new_key(foam_id, key):
-    selectable_classes = ["ParallelStream", "ParallelDockStream"]
-    traj_stream = traj_stream_by_foam_id[foam_id]
-    if not traj_stream or traj_stream.__class__.__name__ not in selectable_classes:
+    selectable_classes = ["ParallelTrajReader", "ParalleFixedReceptorLigandTrajReader"]
+    traj_reader = traj_reader_by_foam_id[foam_id]
+    if not traj_reader or traj_reader.__class__.__name__ not in selectable_classes:
         return
     logger.info(f"select_new_key {key}")
     global config
@@ -85,38 +85,35 @@ def reset_foam_id(foam_id):
     logger.info(f"reset_foam_id {foam_id}")
     new_config.is_solvent = config.is_solvent
     new_config.is_dev = config.is_dev
-    new_config.command = "FoamTrajStream"
+    new_config.command = "FoamTrajReader"
     new_config.trajectories = [foam_id]
     new_config.foam_id = foam_id
     init_traj_stream_from_config(new_config)
-    tags = get_tags(foam_id)
-    pieces = [f"{k}={v}" for k, v in tags.items()]
-    title = " ".join(pieces)
-    return {"title": tags}
+    return {"success": True}
 
 
 def init_traj_stream_from_config(in_config):
     """
     Entry point of app from server
     """
-    if not hasattr(stream, in_config.command):
+    if not hasattr(readers, in_config.command):
         return False
 
-    global traj_stream, config
+    global traj_reader, config
 
     foam_id = in_config.trajectories[0]
 
-    if foam_id in traj_stream_by_foam_id:
-        traj_stream = traj_stream_by_foam_id[foam_id]
+    if foam_id in traj_reader_by_foam_id:
+        traj_reader = traj_reader_by_foam_id[foam_id]
     else:
-        StreamingTrajectoryClass = getattr(stream, in_config.command)
-        traj_stream = StreamingTrajectoryClass(in_config)
-        traj_stream_by_foam_id[foam_id] = traj_stream
+        StreamingTrajectoryClass = getattr(readers, in_config.command)
+        traj_reader = StreamingTrajectoryClass(in_config)
+        traj_reader_by_foam_id[foam_id] = traj_reader
         # ensure the object stays small
-        while len(traj_stream_by_foam_id) > 128:
-            traj_stream_by_foam_id.popitem(last=False)
+        while len(traj_reader_by_foam_id) > 128:
+            traj_reader_by_foam_id.popitem(last=False)
 
-    config = Dict(traj_stream.config)
+    config = Dict(traj_reader.config)
 
 
 def kill():
@@ -124,23 +121,23 @@ def kill():
 
 
 def get_config(foam_id, key):
-    return traj_stream_by_foam_id[foam_id].get_config(key)
+    return traj_reader_by_foam_id[foam_id].get_config(key)
 
 
 def get_pdb_lines(foam_id, i_frame_traj):
-    return traj_stream_by_foam_id[foam_id].get_pdb_lines(i_frame_traj)
+    return traj_reader_by_foam_id[foam_id].get_pdb_lines(i_frame_traj)
 
 
 def get_pdb_lines_with_as_communities(foam_id, i_frame):
-    return traj_stream_by_foam_id[foam_id].get_pdb_lines_with_as_communities(i_frame)
+    return traj_reader_by_foam_id[foam_id].get_pdb_lines_with_as_communities(i_frame)
 
 
 def get_pdb_lines_with_as_pockets(foam_id, i_frame):
-    return traj_stream_by_foam_id[foam_id].get_pdb_lines_with_as_pockets(i_frame)
+    return traj_reader_by_foam_id[foam_id].get_pdb_lines_with_as_pockets(i_frame)
 
 
 def get_views(foam_id):
-    return traj_stream_by_foam_id[foam_id].get_views()
+    return traj_reader_by_foam_id[foam_id].get_views()
 
 
 def get_last_foamid_views(n=10):
@@ -153,17 +150,17 @@ def update_view(foam_id, view):
     view["timestamp"] = int(time.time())
     last_foam_id_views.append(view)
     logger.info(f"update_view {view}")
-    return traj_stream_by_foam_id[foam_id].update_view(view)
+    return traj_reader_by_foam_id[foam_id].update_view(view)
 
 
 def delete_view(foam_id, view):
     logger.info(f"delete_view {view}")
-    return traj_stream_by_foam_id[foam_id].delete_view(view)
+    return traj_reader_by_foam_id[foam_id].delete_view(view)
 
 
 def get_h5(foam_id):
-    traj_stream: TrajStream = traj_stream_by_foam_id[foam_id]
-    traj_manager = traj_stream.traj_manager
+    traj_reader: RshowReaderMixin = traj_reader_by_foam_id[foam_id]
+    traj_manager = traj_reader.traj_manager
     return traj_manager.get_h5(0)
 
 

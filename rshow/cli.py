@@ -13,7 +13,7 @@ from rseed.util.fs import dump_yaml
 import rshow.openurl
 from rshow.server.local import handlers
 from rshow.make_app import make_app
-from rshow.stream import init_logging
+from rshow.log import init_logging
 import uvicorn
 
 
@@ -77,7 +77,7 @@ def traj(h5):
     """
     MD Trajectory
     """
-    config.stream_class = "TrajStream"
+    config.stream_class = "TrajReader"
     config.trajectories = [h5]
     run()
 
@@ -88,7 +88,7 @@ def fes(metad_dir):
     """
     Integrated MD traj w/Free-Energy Surface of CV
     """
-    config.stream_class = "FesStream"
+    config.stream_class = "FesMatrixTrajReader"
     config.metad_dir = metad_dir
     run()
 
@@ -99,7 +99,7 @@ def traj_foam(foam_id):
     """
     MD trajectory stored on FoamDB
     """
-    config.stream_class = "FoamTrajStream"
+    config.stream_class = "FoamTrajReader"
     config.trajectories = [foam_id]
     run()
 
@@ -111,7 +111,7 @@ def matrix(matrix_yaml, mode):
     """
     Generic 2D surface linked to a set of MD trajs
     """
-    config.stream_class = "MatrixStream"
+    config.stream_class = "MatrixTrajReader"
     config.matrix_yaml = matrix_yaml
     config.mode = mode
     run()
@@ -124,7 +124,7 @@ def re(re_dir, key):
     """
     Multiple replicas in a replica-exchange
     """
-    config.stream_class = "ParallelStream"
+    config.stream_class = "ParallelTrajReader"
     config.re_dir = re_dir
     config.key = key
     run()
@@ -137,7 +137,7 @@ def re_dock(re_dir, key):
     """
     Multiple replicas in a replica-exchange w/fixed receptor
     """
-    config.stream_class = "ParallelDockStream"
+    config.stream_class = "ParalleFixedReceptorLigandTrajReader"
     config.re_dir = re_dir
     config.key = key
     run()
@@ -151,7 +151,7 @@ def ligands(pdb, sdf, csv):
     """
     Multiple ligands in single receptor
     """
-    config.stream_class = "LigandsStream"
+    config.stream_class = "LigandsReceptorReader"
     config.pdb = pdb
     config.ligands = sdf
     config.csv = csv
@@ -164,7 +164,7 @@ def frame(pdb):
     """
     Single frame of PDB or PARMED file
     """
-    config.stream_class = "FrameStream"
+    config.stream_class = "FrameReader"
     config.pdb_or_parmed = pdb
     run()
 

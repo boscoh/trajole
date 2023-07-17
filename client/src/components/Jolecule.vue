@@ -292,8 +292,20 @@ export default {
 
       this.$forceUpdate();
 
-      this.key = await this.getConfig("key");
-      this.opt_keys = await this.getConfig("opt_keys");
+      this.loadOther();
+
+      result = await this.remote.get_views(this.foamId);
+      let initView = null;
+      if (result) {
+        this.views = result;
+        this.$store.commit("setItem", { views: this.views });
+        if (viewId && this.views) {
+          let view = _.find(this.views, (v) => v.id === viewId);
+          if (view) {
+            initView = view;
+          }
+        }
+      }
 
       if (this.displayMode === "strip") {
         await this.loadStrip();
@@ -312,34 +324,36 @@ export default {
         await this.loadFrameIntoJolecule([0, 0], false);
       }
 
-      if (this.matrixWidget || this.stripWidget) {
-        if (frames) {
-          let initIFrame = this.iFrameTrajList[0][0];
-          for (let iFrame of frames) {
-            await this.clickFrame(iFrame);
-          }
-          await this.clickFrame(initIFrame);
-        }
-      }
-
-      result = await this.remote.get_views(this.foamId);
-      if (result) {
-        this.views = result;
-        this.$store.commit("setItem", { views: this.views });
-        if (viewId && this.views) {
-          let view = _.find(this.views, (v) => v.id === viewId);
-          if (view) {
-            await this.loadView(view);
+      if (initView) {
+        await this.loadView(initView);
+      } else {
+        if (this.matrixWidget || this.stripWidget) {
+          if (frames) {
+            // this will clear previous initIFrameTraj
+            await this.clickFrame(frames[0], false);
+            for (let i = 1; i < frames.length; i += 1) {
+              await this.clickFrame(frames[i], true);
+            }
           }
         }
-      }
-
-      result = await this.remote.get_json_datasets(this.foamId);
-      if (result) {
-        this.$store.commit("setDatasets", result);
       }
 
       this.resize();
+      this.popLoading();
+    },
+
+    async loadOther() {
+      this.pushLoading();
+      this.key = await this.getConfig("key");
+      this.opt_keys = await this.getConfig("opt_keys");
+      let datasets = await this.remote.get_json_datasets(this.foamId);
+      if (datasets) {
+        this.$store.commit("setDatasets", datasets);
+      }
+      let tags = await this.remote.get_tags(this.foamId);
+      if (tags) {
+        this.$store.commit("setItem", { tags });
+      }
       this.popLoading();
     },
 

@@ -2,7 +2,7 @@ import os
 from path import Path
 from rseed.util.fs import load_yaml_dict
 from rshow.make_app import make_app
-from rshow.stream import init_logging
+from rshow.log import init_logging
 
 init_logging()
 
@@ -20,7 +20,6 @@ if config.server == "local":
     handlers.init_traj_stream_from_config(config)
 
 elif config.server == "lounge":
-
     from rshow.server.lounge import handlers
 
 else:

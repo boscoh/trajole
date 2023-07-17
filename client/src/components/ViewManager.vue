@@ -1,6 +1,6 @@
 // vue component in pug
 <template lang="pug">
-  .flex-grow-1.overflow-scroll.mt-1(style="height: calc(var(--vh) - 400px")
+  .flex-grow-1.overflow-scroll.mt-1(style="height: calc(var(--vh) - 380px")
 
     #edit-view-text-modal.modal.fade
       .modal-dialog
