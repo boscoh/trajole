@@ -106,8 +106,8 @@ def init_traj_stream_from_config(in_config):
     if foam_id in traj_reader_by_foam_id:
         traj_reader = traj_reader_by_foam_id[foam_id]
     else:
-        StreamingTrajectoryClass = getattr(readers, in_config.command)
-        traj_reader = StreamingTrajectoryClass(in_config)
+        TrajReaderClass = getattr(readers, in_config.command)
+        traj_reader = TrajReaderClass(in_config)
         traj_reader_by_foam_id[foam_id] = traj_reader
         # ensure the object stays small
         while len(traj_reader_by_foam_id) > 128:
