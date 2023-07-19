@@ -27,7 +27,7 @@ elif [ "$1" == "frame" ]; then
 elif [ "$1" == "ligands" ]; then
     ttab "cd examples/ligands; rshow --dev ligands 2vuk_220C.pdb 2vuk.oeb 2vuk.csv"
 else
-    echo "Didn't recognize $1"
+    echo "Didn't recognize $1: traj foam matrix fes scan1 temper frame ligands"
     exit 1
 fi
 

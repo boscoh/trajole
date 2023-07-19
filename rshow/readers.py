@@ -154,7 +154,7 @@ class TrajReader(RshowReaderMixin):
             atom_mask="",
         )
         self.config.update(config)
-        for l in repr_lines(self.config, "TrajReader.config = "):
+        for l in repr_lines(self.config, f"{self.__class__.__name__}.config = "):
             logger.info(l)
 
         self.i_frame_traj = None

@@ -1,7 +1,7 @@
 // vue component in pug
 <template lang="pug">
-  div
-    button.mb-1.btn.btn-sm.w-100.btn-secondary(
+  .w-100
+    button.w-100.btn.btn-sm.btn-secondary(
       @click="openFramesModal"
     )
       | {{ frameStr }}

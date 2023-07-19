@@ -1,6 +1,6 @@
 // vue component in pug
 <template lang="pug">
-  button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="submit")
+  button.btn.btn-sm.btn-secondary(@click="submit")
     span
       span(v-if="flag")
         slot
@@ -15,9 +15,8 @@ export default {
   props: ["flag"],
   methods: {
     submit() {
-      this.$emit('click')
-    }
-  }
-
+      this.$emit("click");
+    },
+  },
 };
 </script>

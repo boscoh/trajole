@@ -1,6 +1,6 @@
 <template lang="pug">
-  div
-    button.mb-1.btn.btn-sm.w-100.btn-secondary(
+  .w-100
+    button.w-100.btn.btn-sm.btn-secondary(
       @click="openJsonModal"
     ) JSON
 
@@ -11,7 +11,7 @@
             h5.modal-title JSON Datasets
             button.btn-close(data-bs-dismiss="modal")
           .modal-body
-            .d-flex.flex-row(style="height: calc(var(--vh) - 220px)")
+            .d-flex.flex-row(style="height: calc(100vh - 220px)")
               .h-100.overflow-scroll
                 ul.list-group.justify-content-between(v-for="key in keys")
                   li.list-group-item(

@@ -37,8 +37,8 @@
       // Example Trajectories
       .mt-5 Example Trajectories
       .d-flex.justify-content-center(v-for="example in examples")
-        router-link.btn.btn-light.mb-1(
-          :to="'/foamtraj/' + example.foamId"
+        a.btn.btn-light.mb-1(
+          :href="'/#/foamtraj/' + example.foamId"
           tag="button"
           style="width: 250px"
         )
@@ -51,9 +51,8 @@
       template(v-if="lastFoamIdViews.length > 0")
         .mt-5 Last views updated
         .d-flex.justify-content-center(v-for="v in lastFoamIdViews")
-          router-link.btn.btn-light.mt-1(
-            :to="'/foamtraj/' + v.foamId + '?view=' + v.id"
-            tag="button"
+          a.btn.btn-light.mt-1(
+            :href="'/#/foamtraj/' + v.foamId + '?view=' + v.id"
             style="width: 250px"
           )
             | FoamId:{{v.foamId}}:{{v.id}}
@@ -66,43 +65,43 @@
 </template>
 
 <script>
-import * as rpc from '../modules/rpc'
-import * as _ from 'lodash'
+import * as rpc from "../modules/rpc";
+import * as _ from "lodash";
 
 export default {
-  name: 'Home',
-  data () {
+  name: "Home",
+  data() {
     return {
-      foamId: '',
+      foamId: "",
       examples: [
-        { foamId: 23, name: 'FES for HSP 90' },
-        { foamId: 17, name: 'Alanine Dipeptide' }
+        { foamId: 23, name: "FES for HSP 90" },
+        { foamId: 17, name: "Alanine Dipeptide" },
       ],
-      lastFoamIdViews: []
-    }
+      lastFoamIdViews: [],
+    };
   },
   watch: {
-    async $route (to, from) {
-      console.log('route changed', to, from)
-      await this.restart()
-    }
+    async $route(to, from) {
+      console.log("route changed", to, from);
+      await this.restart();
+    },
   },
-  async mounted () {
-    await this.restart()
+  async mounted() {
+    await this.restart();
   },
   methods: {
-    async restart () {
-      document.title = 'R_S Lounge'
-      let response = await rpc.remote.get_last_foamid_views(100)
+    async restart() {
+      document.title = "R_S Lounge";
+      let response = await rpc.remote.get_last_foamid_views(100);
       if (response.result) {
-        this.lastFoamIdViews = response.result.reverse()
+        this.lastFoamIdViews = response.result.reverse();
       }
-      console.log('restart', _.cloneDeep(this.lastFoamIdViews))
+      console.log("restart", _.cloneDeep(this.lastFoamIdViews));
     },
-    changeFoamId (event) {
-      console.log(this.foamId)
-      this.$router.push(`/foamtraj/${this.foamId}`)
-    }
-  }
-}
+    changeFoamId(event) {
+      console.log(this.foamId);
+      this.$router.push(`/foamtraj/${this.foamId}`);
+    },
+  },
+};
 </script>

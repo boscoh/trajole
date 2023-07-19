@@ -6,6 +6,7 @@ export default {
       foamId: "",
       tags: {},
       nLoaders: 0,
+      loadingMsg: "Connecting...",
       keyboardLock: false,
       datasets: [],
       views: [],
@@ -16,6 +17,7 @@ export default {
       selectFrame: null,
       loadIFrameTraj: null,
       dumpIFrameTraj: null,
+      forceRedrawKey: "",
     };
   },
   getters: {

@@ -3,8 +3,8 @@
   .d-flex.flex-row.justify-content-between.m-2(style="height: 50px")
 
     // Home button
-    router-link.btn.btn-sm.btn-secondary.me-3(
-      to="/" tag="button" style="font-size: 1.5em; width: 50px; height: 100%;"
+    a.btn.btn-sm.btn-secondary.me-3(
+      href="/#/" style="font-size: 1.5em; width: 50px; height: 100%;"
     )
       i.fas.fa-home
 
@@ -52,15 +52,17 @@ import * as bootstrap from "bootstrap";
 export default {
   data() {
     return {
-      editTags: []
+      editTags: [],
     };
   },
-  mounted() {
-  },
+  mounted() {},
   computed: {
     tags() {
+      if (!this.$store.state.tags) {
+        return {};
+      }
       return this.$store.state.tags;
-    }
+    },
   },
   methods: {
     async openTagModal() {
@@ -71,11 +73,13 @@ export default {
       }
       this.$store.commit("setItem", { keyboardLock: true });
 
-      this.editTagsModal = new bootstrap.Modal(document.getElementById("edit-tags-modal"));
+      this.editTagsModal = new bootstrap.Modal(
+        document.getElementById("edit-tags-modal")
+      );
       this.editTagsModal.show();
     },
     addTag() {
-      this.editTags.push({key: "", value: ""})
+      this.editTags.push({ key: "", value: "" });
     },
     removeTag(iTag) {
       this.editTags.splice(iTag, 1);
@@ -89,16 +93,16 @@ export default {
       }
       console.log("saveTags", _.cloneDeep(this.editTags), _.cloneDeep(tags));
 
-      this.$store.commit("pushLoading")
+      this.$store.commit("pushLoading");
       let response = await rpc.remote.set_tags(this.$store.state.foamId, tags);
-      this.$store.commit("popLoading")
+      this.$store.commit("popLoading");
 
-      this.$store.commit("setItem", {tags})
+      this.$store.commit("setItem", { tags });
     },
     cancel() {
-      console.log("Cancel")
+      console.log("Cancel");
       this.$store.commit("setItem", { keyboardLock: false });
-    }
+    },
   },
 };
 </script>

@@ -180,13 +180,19 @@ export default {
       }
     },
 
-    pushLoading() {
+    pushLoading(loadingMsg = null) {
       this.$store.commit("pushLoading");
+      if (!_.isNull(loadingMsg)) {
+        this.$store.commit("setItem", { loadingMsg });
+      }
       this.$forceUpdate();
     },
 
-    popLoading() {
+    popLoading(loadingMsg = null) {
       this.$store.commit("popLoading");
+      if (!_.isNull(loadingMsg)) {
+        this.$store.commit("setItem", { loadingMsg });
+      }
       this.$forceUpdate();
     },
 
@@ -358,7 +364,9 @@ export default {
     },
 
     async loadMatrix(iFrameTraj) {
+      this.pushLoading("Matrix...");
       let matrix = await this.getConfig("matrix");
+      this.popLoading("Connecting...");
       if (_.isEmpty(matrix)) {
         return;
       }
@@ -452,6 +460,7 @@ export default {
     },
 
     async getPdbLines(iFrameTraj) {
+      this.pushLoading("Frames...");
       let key = `${iFrameTraj[0]}-${iFrameTraj[1]}`;
       let result = [];
       if (this.isAsCommunities) {
@@ -499,6 +508,7 @@ export default {
           }
         }
       }
+      this.popLoading("Connecting...");
       return result;
     },
 

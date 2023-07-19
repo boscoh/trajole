@@ -1,12 +1,13 @@
 // vue component in pug
 <template lang="pug">
+div(style="height: 50px")
   button.border-0.flash-button.btn.h-100.w-100(
     disabled=false
     v-if="$store.getters.isLoading"
   )
     .d-flex.flex-row.justify-content-center.align-items-center
       span.spinner-border.spinner-border-sm
-      .mx-2 Connecting...
+      .mx-2 {{$store.state.loadingMsg}}
 </template>
 
 <style scoped>

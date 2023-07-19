@@ -7,51 +7,57 @@
     .flex-grow-1.d-flex.flex-column.user-select-none
       nav-bar
 
-      .flex-grow-1(style="height: calc(var(--vh) - 65px)")
-        jolecule(ref="jolecule" :style="joleculeStyle")
+      .flex-grow-1(style="height: calc(100vh - 65px)")
+        jolecule(ref="jolecule" style="width: calc(100vw - 200px)")
 
     // Auxillary right action panel
-    .me-2.d-flex.flex-column(:style="actionsStripStyle")
+    .me-2.ps-2.d-flex.flex-column(
+      style="width: 200px; height: calc(100vh);"
+    )
 
       div(:class="[isLoading ? 'overlay' : '']")
 
-      .ps-2
+      .ps-2.my-2.w-100(style="z-index: 2002")
+        loading-button
 
-        .my-2(style="z-index: 2002; height: 50px; position: relative")
-          loading-button
-
+      .ms-2.mb-1
         frames-button
 
-        // Dropdown for energy components
-        select.ms-2.form-select.form-select-sm(
-          v-if="opt_keys.length" v-model="key" @change="selectKey(key)"
-        )
-          option(v-for="k in opt_keys" :value="k") {{k}}
+      // Dropdown for energy components
+      select.ms-2.mb-1.form-select.form-select-sm(
+        v-if="opt_keys.length" v-model="key" @change="selectKey(key)"
+      )
+        option(v-for="k in opt_keys" :value="k") {{k}}
 
-        toggle-text(:flag="isAsCommunities" @click="toggleAsCommunities()")
-          | ASCommunities
+      toggle-text.ms-2.mb-1(:flag="isAsCommunities" @click="toggleAsCommunities()")
+        | ASCommunities
 
-        toggle-text(:flag="isAsPockets" @click="toggleAsPockets()")
-          | ASPockets
+      toggle-text.ms-2.mb-1(:flag="isAsPockets" @click="toggleAsPockets()")
+        | ASPockets
 
-        button.mb-1.btn.btn-sm.w-100.btn-secondary(@click="downloadPdb")
-          | Download PDB
+      .ms-2.mb-1
+        pocket-button(ref="pocketButton")
 
+      button.ms-2.mb-1.btn.btn-sm.btn-secondary(@click="downloadPdb")
+        | Download PDB
+
+      .ms-2.mb-1
         json-button
 
-        button.mb-1.btn.btn-sm.w-100.btn-secondary(
-          v-if="hasParmed" @click="downloadParmed()"
-        ) Download Parmed
+      button.ms-2.mb-1.btn.btn-sm.btn-secondary(
+        v-if="hasParmed" @click="downloadParmed()"
+      ) Download Parmed
 
-        button.mb-1.btn.btn-sm.w-100.btn-secondary(
-          v-if="hasMin" @click="selectFesMinFrame()"
-        ) FES Min
+      button.ms-2.mb-1.btn.btn-sm.btn-secondary(
+        v-if="hasMin" @click="selectFesMinFrame()"
+      ) FES Min
 
+      .ps-2
         button.mt-3.btn.btn-sm.w-100.btn-secondary(
           @click="saveView"
         ) Save View
 
-        view-manager
+      view-manager.ms-2
 
 </template>
 
@@ -73,13 +79,14 @@
 import _ from "lodash";
 import { saveBlobFile } from "../modules/util";
 import * as rpc from "../modules/rpc";
-import Jolecule from "./Jolecule.vue";
-import FramesButton from "./FramesButton.vue";
-import JsonButton from "./JsonButton.vue";
-import ViewManager from "./ViewManager.vue";
-import LoadingButton from "./LoadingButton.vue";
-import ToggleText from "./ToggleText.vue";
-import NavBar from "./NavBar.vue";
+import Jolecule from "../components/JoleculeMatrixPanels.vue";
+import FramesButton from "../components/FramesButton.vue";
+import JsonButton from "../components/JsonButton.vue";
+import PocketButton from "../components/PocketsPanel.vue";
+import ViewManager from "../components/ViewManager.vue";
+import LoadingButton from "../components/LoadingButton.vue";
+import ToggleText from "../components/ToggleText.vue";
+import NavBar from "../components/NavBar.vue";
 
 export default {
   data() {
@@ -92,13 +99,14 @@ export default {
     };
   },
   components: {
+    NavBar,
     Jolecule,
     FramesButton,
     JsonButton,
+    PocketButton,
     ViewManager,
     LoadingButton,
     ToggleText,
-    NavBar,
   },
   watch: {
     $route(to, from) {
@@ -106,19 +114,14 @@ export default {
     },
   },
   mounted() {
-    window.addEventListener("resize", this.resize);
-
     this.handleUrl();
+    console.log("page.jolecule", this.$refs.jolecule.jolecule);
+    console.log("page.pocketButton", this.$refs.pocketButton);
+    this.$refs.pocketButton.setJolecule(this.$refs.jolecule.jolecule);
   },
   computed: {
     isLoading() {
       return this.$store.getters.isLoading;
-    },
-    joleculeStyle() {
-      return `width: calc(100vw - ${this.actionWidth});`;
-    },
-    actionsStripStyle() {
-      return `width: ${this.actionWidth}`;
     },
     hasParmed() {
       return this.$store.state.datasets.includes("parmed");
@@ -128,10 +131,6 @@ export default {
     },
   },
   methods: {
-    resize() {
-      let vh = window.innerHeight;
-      document.documentElement.style.setProperty("--vh", `${vh}px`);
-    },
     handleUrl() {
       let frames = this.$route.query.frame;
       if (frames) {

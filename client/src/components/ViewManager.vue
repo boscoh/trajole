@@ -1,6 +1,6 @@
 // vue component in pug
 <template lang="pug">
-  .flex-grow-1.overflow-scroll.mt-1(style="height: calc(var(--vh) - 380px")
+.flex-grow-1.overflow-scroll.mt-1
 
     #edit-view-text-modal.modal.fade
       .modal-dialog
@@ -17,6 +17,7 @@
     .w-100.mb-1.p-2.rounded(
       style="background-color: #BBB"
       v-for="view in views"
+      :key="view.id"
     )
       .d-flex.flex-row.w-100.mb-1.pt-2.pb-0.text-start(style="font-size:0.9em")
         button.btn.w-100.text-start.btn-sm.btn-secondary(

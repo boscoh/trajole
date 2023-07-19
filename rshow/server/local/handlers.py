@@ -35,8 +35,8 @@ def init_traj_stream_from_config(in_config):
         os.chdir(in_config["work_dir"])
 
     global traj_reader
-    StreamingTrajectoryClass = getattr(readers, in_config.stream_class)
-    traj_reader = StreamingTrajectoryClass(in_config)
+    TrajReaderClass = getattr(readers, in_config.stream_class)
+    traj_reader = TrajReaderClass(in_config)
 
 
 def reset_foam_id(foam_id):
