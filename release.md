@@ -1,0 +1,26 @@
+# Release Notes
+- 1.4
+  - dry_topology streaming
+  - reworked async calls
+  - Alphaspace Radius UX - pockets panel
+  - refactored Vue components
+  - Vuex for state
+  - hydrogen on/off option
+  - profiling logging output
+- 1.3.4
+  - logging
+- 1.3.3
+  - removed FES remapper
+- 1.3.2
+  - deprecated FreeEnergySurface
+- 1.3.1
+  - removed foamdb as dep (creates pip install issues)
+- 1.3
+  - AS Communities
+  - compatible with RSeed 2.2
+- 1.2
+    - frames in url query
+- 1.1
+  - alphaspace frame bug fix
+- 1.0
+  - firs release

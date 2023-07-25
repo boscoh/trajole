@@ -8,7 +8,7 @@
       nav-bar
 
       .flex-grow-1(style="height: calc(100vh - 65px)")
-        jolecule(ref="jolecule" style="width: calc(100vw - 200px)")
+        jolecule-matrix-panels(ref="joleculeMatrix" style="width: calc(100vw - 200px)")
 
     // Auxillary right action panel
     .me-2.ps-2.d-flex.flex-column(
@@ -35,8 +35,10 @@
       toggle-text.ms-2.mb-1(:flag="isAsPockets" @click="toggleAsPockets()")
         | ASPockets
 
-      .ms-2.mb-1
-        pocket-button(ref="pocketButton")
+      .ms-2.mb-1(v-show="isAsPockets || isAsCommunities")
+        pockets-panel(
+          ref="pocketsPanel"
+        )
 
       button.ms-2.mb-1.btn.btn-sm.btn-secondary(@click="downloadPdb")
         | Download PDB
@@ -79,10 +81,10 @@
 import _ from "lodash";
 import { saveBlobFile } from "../modules/util";
 import * as rpc from "../modules/rpc";
-import Jolecule from "../components/JoleculeMatrixPanels.vue";
+import JoleculeMatrixPanels from "../components/JoleculeMatrixPanels.vue";
 import FramesButton from "../components/FramesButton.vue";
 import JsonButton from "../components/JsonButton.vue";
-import PocketButton from "../components/PocketsPanel.vue";
+import PocketsPanel from "../components/PocketsPanel.vue";
 import ViewManager from "../components/ViewManager.vue";
 import LoadingButton from "../components/LoadingButton.vue";
 import ToggleText from "../components/ToggleText.vue";
@@ -91,8 +93,8 @@ import NavBar from "../components/NavBar.vue";
 export default {
   data() {
     return {
-      isAsCommunities: false,
       isAsPockets: false,
+      isAsCommunities: false,
       actionWidth: `200px`,
       key: "",
       opt_keys: [],
@@ -100,10 +102,10 @@ export default {
   },
   components: {
     NavBar,
-    Jolecule,
+    JoleculeMatrixPanels,
     FramesButton,
     JsonButton,
-    PocketButton,
+    PocketsPanel,
     ViewManager,
     LoadingButton,
     ToggleText,
@@ -115,9 +117,10 @@ export default {
   },
   mounted() {
     this.handleUrl();
-    console.log("page.jolecule", this.$refs.jolecule.jolecule);
-    console.log("page.pocketButton", this.$refs.pocketButton);
-    this.$refs.pocketButton.setJolecule(this.$refs.jolecule.jolecule);
+    this.$refs.pocketsPanel.setJolecule(this.$refs.joleculeMatrix.jolecule);
+    window.addEventListener("keypress", (e) => {
+      this.onkeydown(e);
+    });
   },
   computed: {
     isLoading() {
@@ -138,13 +141,13 @@ export default {
       }
       let viewId = this.$route.query.view;
       let foamId = this.$route.params.foamId;
-      this.$refs.jolecule.loadFoamId(foamId, frames, viewId);
+      this.$refs.joleculeMatrix.loadFoamId(foamId, frames, viewId);
     },
     downloadPdb() {
-      this.$refs.jolecule.downloadPdb();
+      this.$refs.joleculeMatrix.downloadPdb();
     },
     saveView() {
-      this.$refs.jolecule.saveView();
+      this.$refs.joleculeMatrix.saveView();
     },
     async selectFesMinFrame() {
       let foamId = this.$store.state.foamId;
@@ -178,17 +181,33 @@ export default {
       this.$store.commit("popLoading");
     },
     selectKey(key) {
-      this.$refs.jolecule.selectOptKey(key);
+      this.$refs.joleculeMatrix.selectOptKey(key);
     },
     toggleAsCommunities() {
-      this.$refs.jolecule.toggleAsCommunities();
-      this.isAsPockets = this.$refs.jolecule.isAsPockets;
-      this.isAsCommunities = this.$refs.jolecule.isAsCommunities;
+      this.$refs.joleculeMatrix.toggleAsCommunities();
+      this.isAsPockets = this.$refs.joleculeMatrix.isAsPockets;
+      this.isAsCommunities = this.$refs.joleculeMatrix.isAsCommunities;
     },
     toggleAsPockets() {
-      this.$refs.jolecule.toggleAsPockets();
-      this.isAsPockets = this.$refs.jolecule.isAsPockets;
-      this.isAsCommunities = this.$refs.jolecule.isAsCommunities;
+      this.$refs.joleculeMatrix.toggleAsPockets();
+      this.isAsPockets = this.$refs.joleculeMatrix.isAsPockets;
+      this.isAsCommunities = this.$refs.joleculeMatrix.isAsCommunities;
+    },
+    onkeydown() {
+      if (
+        this.$store.state.keyboardLock ||
+        window.keyboardLock ||
+        event.metaKey ||
+        event.ctrlKey
+      ) {
+        return;
+      }
+      let c = String.fromCharCode(event.keyCode).toUpperCase();
+      if (c === "P") {
+        this.toggleAsPockets();
+      } else if (c === "A") {
+        this.toggleAsCommunities();
+      }
     },
   },
 };

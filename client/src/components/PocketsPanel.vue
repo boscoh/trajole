@@ -11,11 +11,14 @@
           h5.modal-title Pockets
           button.btn-close(data-bs-dismiss="modal")
         .modal-body
-          .mb-1.d-flex.flex-row.flex-wrap
-            button.mb-1.me-1.btn.btn-small.btn-secondary(
-              @click="toggleAll()"
+          .mb-2.d-flex.flex-row.align-items-center
+            | Radius &angst;
+            input.ms-2.form-control(
+              style="width: 8em"
+              type="number"
+              v-model="radius"
+              @input="changeRadius"
             )
-              | Toggle All
           .mb-1.d-flex.flex-row.flex-wrap
             button.mb-1.me-1.btn.btn-small(
               v-for="(pocket, i) in pockets"
@@ -28,11 +31,13 @@
 <script>
 import * as bootstrap from "bootstrap";
 import * as _ from "lodash";
+import { v3 } from "jolecule";
 
 export default {
   data() {
     return {
       pockets: [],
+      radius: null,
     };
   },
   mounted() {
@@ -44,58 +49,86 @@ export default {
   methods: {
     setJolecule(jolecule) {
       this.jolecule = jolecule;
+      this.radius = _.get(this.jolecule, "soupView.soup.grid.radiusToCenter");
+    },
+    changeRadius() {
+      let soupView = this.jolecule.soupView;
+      let soup = soupView.soup;
+      soup.grid.radiusToCenter = this.radius;
+
+      soup.grid.isChanged = true;
+      soupView.isChanged = true;
+      soupView.isUpdateObservers = true;
+      soupView.isUpdateColors = true;
+      this.buildPocketLabels();
     },
     buttonStyle(elem) {
       let soup = this.jolecule.soupView.soup;
-      if (!soup.grid.isElem[elem]) {
+      if (!this.isElemInRadius(elem)) {
         return "";
       } else {
         let colorHexStr = soup.getElemColorStr(elem);
-        console.log("pocket elem color", elem, colorHexStr);
         return `background-color: ${colorHexStr}`;
       }
     },
-    buildPockets() {
+    isElemInRadius(elem) {
       let soup = this.jolecule.soupView.soup;
       let controller = this.jolecule.controller;
       let soupView = this.jolecule.soupView;
       let grid = this.jolecule.soupView.soup.grid;
 
+      let residue = soup.getResidueProxy();
+      let atom = soup.getAtomProxy();
+      for (let iRes of _.range(soup.getResidueCount())) {
+        residue.iRes = iRes;
+        if (residue.ss === "G") {
+          for (let iAtom of residue.getAtomIndices()) {
+            atom.iAtom = iAtom;
+            let dist = v3.distance(atom.pos, grid.center);
+            if (dist > grid.radiusToCenter) {
+              continue;
+            }
+            if (atom.atomType == elem) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    },
+    buildPocketLabels() {
+      let grid = this.jolecule.soupView.soup.grid;
       this.pockets = [];
       for (let elem of _.keys(grid.isElem)) {
         this.pockets.push({ elem: elem });
       }
-
-      grid.isChanged = true;
-      soupView.currentView.grid.isElem = _.cloneDeep(grid.isElem);
-      soupView.isChanged = true;
-      soupView.isUpdateObservers = true;
-      soupView.isUpdateColors = true;
-    },
-    toggleAll() {
-      let soup = this.jolecule.soupView.soup;
-      let grid = soup.grid;
-      let values = _.values(grid.isElem);
-      let nAll = values.length;
-      let nSelected = _.filter(values).length;
-      if (nSelected === nAll) {
-        for (let key of _.keys(grid.isElem)) {
-          grid.isElem[key] = false;
-        }
-      } else {
-        for (let key of _.keys(grid.isElem)) {
-          grid.isElem[key] = true;
-        }
-      }
-      this.buildPockets();
     },
     clickPocket(elem) {
-      let grid = this.jolecule.soupView.soup.grid;
-      grid.isElem[elem] = !grid.isElem[elem];
-      this.buildPockets();
+      let soupView = this.jolecule.soupView;
+      let soup = soupView.soup;
+      let residue = soup.getResidueProxy();
+      let atom = soup.getAtomProxy();
+      for (let iRes of _.range(soup.getResidueCount())) {
+        residue.iRes = iRes;
+        if (residue.ss === "G") {
+          for (let iAtom of residue.getAtomIndices()) {
+            atom.iAtom = iAtom;
+            if (atom.atomType == elem) {
+              soupView.soup.grid.center = atom.pos;
+              this.jolecule.controller.setTargetViewByIAtom(iAtom);
+              soup.grid.isChanged = true;
+
+              soupView.isChanged = true;
+              soupView.isUpdateObservers = true;
+              soupView.isUpdateColors = true;
+            }
+          }
+        }
+      }
+      this.buildPocketLabels();
     },
     async openPocketsModal() {
-      this.buildPockets();
+      this.buildPocketLabels();
       this.pocketsModal.show();
     },
   },

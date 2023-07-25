@@ -59,9 +59,9 @@ export default {
   async mounted() {
     document.oncontextmenu = _.noop;
 
-    document.onkeydown = (e) => {
+    window.addEventListener("keydown", (e) => {
       this.onkeydown(e);
-    };
+    });
 
     this.jolecule = initEmbedJolecule({
       divTag: "#jolecule-container",
@@ -586,7 +586,16 @@ export default {
       }
       this.isFetching = true;
       let iFrameTraj = _.last(this.iFrameTrajList);
-      console.log(`reloadLastFrameOfJolecule`, this.iFrameTrajList, iFrameTraj);
+
+      console.log(
+        "reloadLastFrameOfJolecule before grid",
+        _.keys(this.jolecule.soup.grid.isElem).length
+      );
+      console.log(
+        "reloadLastFrameOfJolecule before view.grid",
+        _.keys(this.jolecule.soupView.currentView.grid.isElem).length
+      );
+
       let pdbLines = await this.getPdbLines(iFrameTraj);
       if (pdbLines) {
         let saveCurrentView = this.jolecule.soupView.getCurrentView();
@@ -611,6 +620,11 @@ export default {
         let nStructure = _.last(this.nStructureInFrameList);
         let i = this.iFrameTrajList.length - 1;
         await this.deleteItemFromIFrameTrajList(i);
+
+        // recount the grids after removing the grids from
+        // the deleted frame
+        soup.findGridLimits();
+
         this.nStructureInFrameList.splice(i, 1);
         this.$store.commit("deleteIFrameTraj", i);
         this.nStructureInFrameList.push(nStructure);
@@ -623,6 +637,16 @@ export default {
         }
         this.jolecule.soupWidget.buildScene();
       }
+
+      console.log(
+        "reloadLastFrameOfJolecule after grid",
+        _.keys(this.jolecule.soup.grid.isElem).length
+      );
+      console.log(
+        "reloadLastFrameOfJolecule after view.grid",
+        _.keys(this.jolecule.soupView.currentView.grid.isElem).length
+      );
+
       this.isFetching = false;
     },
 
@@ -701,33 +725,33 @@ export default {
     },
 
     clearGridDisplay() {
+      this.jolecule.soupView.currentView.grid.isElem = {};
       let grid = this.jolecule.soupView.soup.grid;
       grid.isElem = {};
       grid.isChanged = true;
       this.jolecule.soupView.isUpdateColors = true;
       this.jolecule.soupWidget.buildScene();
+      console.log("clearGridDisplay grid", grid.isElem);
     },
 
     async toggleAsCommunities() {
       this.isAsCommunities = !this.isAsCommunities;
-      this.$forceUpdate();
-      if (!this.isAsCommunities) {
-        this.clearGridDisplay();
-      } else {
+      this.clearGridDisplay();
+      if (this.isAsCommunities) {
         this.isAsPockets = false;
       }
       this.reloadLastFrameOfJolecule();
+      this.$forceUpdate();
     },
 
     async toggleAsPockets() {
       this.isAsPockets = !this.isAsPockets;
-      this.$forceUpdate();
-      if (!this.isAsPockets) {
-        this.clearGridDisplay();
-      } else {
+      this.clearGridDisplay();
+      if (this.isAsPockets) {
         this.isAsCommunities = false;
       }
       this.reloadLastFrameOfJolecule();
+      this.$forceUpdate();
     },
 
     async selectOptKey(key) {
@@ -782,9 +806,6 @@ export default {
           let atom = this.soupView.soup.getAtomProxy(iAtom);
           this.controller.selectResidue(atom.iRes);
         }
-      } else if (c === "A") {
-        this.toggleAsCommunities();
-        event.preventDefault();
       } else if (event.keyCode === 27) {
         this.controller.clear();
       } else if (c === "Z" || event.keyCode === 13) {

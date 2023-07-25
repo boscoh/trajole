@@ -7,13 +7,13 @@ import Vuex from "vuex";
 import mystore from "./store.js";
 
 import App from "./App.vue";
-import Page from "./views/PageView.vue";
-import Home from "./views/HomeView.vue";
+import PageView from "./views/PageView.vue";
+import HomeView from "./views/HomeView.vue";
 
 Vue.use(VueRouter);
 const routes = [
-  { path: "/", component: Home },
-  { path: "/foamtraj/:foamId", component: Page },
+  { path: "/", component: HomeView },
+  { path: "/foamtraj/:foamId", component: PageView },
 ];
 const router = new VueRouter({
   routes,
