@@ -248,10 +248,10 @@ class FoamTrajReader(TrajReader):
     def get_config(self, k):
         if k == "matrix":
             if not self.config.matrix:
-                tic()
+                logger.info(tic(f"loading rshow-matrix"))
                 h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
                 self.config.matrix = h5.get_json_dataset("rshow_matrix")
-                logger.info(toc(f"loading rshow-matrix"))
+                logger.info(toc())
         return self.config[k]
 
     def get_views(self):

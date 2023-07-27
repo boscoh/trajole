@@ -111,7 +111,8 @@ def init_traj_stream_from_config(in_config):
         traj_reader_by_foam_id[foam_id] = traj_reader
         # ensure the object stays small
         while len(traj_reader_by_foam_id) > 128:
-            traj_reader_by_foam_id.popitem(last=False)
+            foam_id, traj_reader = traj_reader_by_foam_id.popitem(last=False)
+            del traj_reader
 
     config = Dict(traj_reader.config)
 

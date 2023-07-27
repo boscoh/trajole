@@ -381,7 +381,7 @@ export default {
 
     async selectMatrixGridValue(value, thisFrameOnly = false) {
       let iFrameTraj;
-      if (_.has(value, "iFrameTrajs")) {
+      if (this.stripWidget && _.has(value, "iFrameTrajs")) {
         let label = value.label;
         let n = value.iFrameTrajs.length;
         let grid = [

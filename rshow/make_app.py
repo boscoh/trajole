@@ -30,8 +30,8 @@ def make_app(handlers, client_dir):
         try:
             if not hasattr(handlers, method):
                 raise Exception(f"rpc-run {method} is not found")
-            lines = pretty_repr(params).split("\n")
-            lines[0] = f"rpc-run.{method}:start" + lines[0]
+            lines = pretty_repr(tuple(params)).split("\n")
+            lines[0] = f"rpc-run.{method}" + lines[0] + ":started..."
             for l in lines:
                 logger.info(l)
             fn = getattr(handlers, method)
