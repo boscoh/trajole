@@ -5,7 +5,7 @@
   )
     | Pockets Panel
   #pockets-modal.modal.fade
-    .modal-dialog
+    .modal-dialog.ms-5.me-0
       .modal-content
         .modal-header
           h5.modal-title Pockets
