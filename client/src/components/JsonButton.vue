@@ -41,7 +41,10 @@ export default {
   },
   computed: {
     keys() {
-      return _.filter(this.$store.state.datasets, (k) => k.includes("json"));
+      return _.filter(
+        this.$store.state.datasets,
+        (k) => k.includes("json") || k.includes("rshow")
+      );
     },
   },
   methods: {

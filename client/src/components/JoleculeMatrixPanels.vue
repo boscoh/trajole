@@ -27,6 +27,7 @@ import * as bootstrap from "bootstrap";
 import _ from "lodash";
 import { initEmbedJolecule } from "jolecule";
 import { MatrixWidget } from "../modules/matrixwidget";
+import { v3 } from "jolecule";
 import {
   getFirstValue,
   inFrames,
@@ -37,6 +38,7 @@ import {
 } from "../modules/util";
 import { aysnc_rpc } from "../modules/rpc";
 import LigandTable from "./LigandTable.vue";
+import * as rpc from "../modules/rpc";
 
 export default {
   components: {
@@ -98,8 +100,8 @@ export default {
     foamId() {
       return this.$store.state.foamId;
     },
-    selectFrame() {
-      return this.$store.state.selectFrame;
+    toClickFrame() {
+      return this.$store.state.toClickFrame;
     },
     selectView() {
       return this.$store.state.selectView;
@@ -115,10 +117,11 @@ export default {
     },
   },
   watch: {
-    selectFrame(to, from) {
+    toClickFrame(to, from) {
       if (!_.isNull(to)) {
         this.clickFrame(to, true);
       }
+      this.$store.commit("selectFrame", null);
     },
     selectView(to, from) {
       if (!_.isNull(to)) {
@@ -230,19 +233,18 @@ export default {
 
       document.title = "#" + foamId;
       this.$store.commit("setFoamId", foamId);
+      this.$store.commit("cleariFrameTrajList");
+      this.$store.commit("setItem", { minFrame: null });
+      this.$store.commit("setDatasets", []);
+      this.$store.commit("setItem", { tags: {} });
 
       // Clear all widgets
-      this.$store.commit("setItem", { tags: {} });
       this.jolecule.clear();
       this.cacheByiFrameTraj = {};
       this.cacheAsCommunitiesByiFrameTraj = {};
       this.cacheAsPocketsByiFrameTraj = {};
       this.nStructureInFrameList = [];
-
-      this.$store.commit("cleariFrameTrajList");
-
       this.resetWidgets();
-
       if (this.matrixWidget) {
         this.matrixWidget.iFrameTrajs = [];
         this.matrixWidget.draw();
@@ -298,7 +300,7 @@ export default {
 
       this.$forceUpdate();
 
-      this.loadOther();
+      this.loadOtherData();
 
       result = await this.remote.get_views(this.foamId);
       let initView = null;
@@ -330,8 +332,10 @@ export default {
         await this.loadFrameIntoJolecule([0, 0], false);
       }
 
+      let isInit = false;
       if (initView) {
         await this.loadView(initView);
+        isInit = true;
       } else {
         if (this.matrixWidget || this.stripWidget) {
           if (frames) {
@@ -344,11 +348,62 @@ export default {
         }
       }
 
+      if (!isInit) {
+        this.selectLigand();
+      }
+
       this.resize();
       this.popLoading();
     },
 
-    async loadOther() {
+    selectLigand() {
+      let soup = this.jolecule.soup;
+      let residue = soup.getResidueProxy();
+      for (let i = 0; i < soup.getResidueCount(); i += 1) {
+        residue.iRes = i;
+        if (residue.resType === "LIG" || residue.resType === "UNK") {
+          let atomIndices = residue.getAtomIndices();
+          let ligandCenter = soup.getCenter(atomIndices);
+
+          let maxDist = 0;
+          let maxPos = v3.create(0, 0, 0);
+          let atom = soup.getAtomProxy();
+          for (let iAtom of atomIndices) {
+            let pos = atom.load(iAtom).pos;
+            let dist = v3.distance(ligandCenter, pos);
+            if (dist > maxDist) {
+              maxPos = pos;
+              maxDist = dist;
+            }
+          }
+
+          let systemCenter = soup.getCenter(_.range(soup.getAtomCount()));
+
+          let zoom = Math.abs(soup.maxLength) * 1.2;
+          let inVec = v3
+            .diff(systemCenter, ligandCenter)
+            .normalize()
+            .multiplyScalar(zoom);
+          let maxVec = v3.diff(maxPos, ligandCenter);
+          let upVec = v3.perpendicular(maxVec, inVec).normalize();
+
+          let soupView = this.jolecule.soupView;
+          let view = soupView.getCurrentView();
+          view.cameraParams.focus = ligandCenter;
+          view.cameraParams.position = ligandCenter.clone().sub(inVec);
+          view.cameraParams.up = upVec;
+          view.cameraParams.zFront = -soup.maxLength / 2;
+          view.cameraParams.zBack = soup.maxLength / 2;
+          view.cameraParams.zoom = zoom;
+
+          console.log(`isInit view`, _.cloneDeep(view));
+          this.jolecule.controller.setTargetView(view);
+          break;
+        }
+      }
+    },
+
+    async loadOtherData() {
       this.pushLoading();
       this.key = await this.getConfig("key");
       this.opt_keys = await this.getConfig("opt_keys");
@@ -359,6 +414,11 @@ export default {
       let tags = await this.remote.get_tags(this.foamId);
       if (tags) {
         this.$store.commit("setItem", { tags });
+      }
+      let minFrame = await this.remote.get_min_frame(this.foamId);
+      if (!_.isNull(minFrame)) {
+        this.$store.commit("setItem", { minFrame });
+        console.log("minFrame", minFrame);
       }
       this.popLoading();
     },
@@ -810,7 +870,7 @@ export default {
         this.controller.clear();
       } else if (c === "Z" || event.keyCode === 13) {
         this.controller.zoomToSelection();
-      } else if (event.key == "Escape") {
+      } else if (event.key === "Escape") {
         this.controller.clear();
       }
     },
@@ -840,8 +900,8 @@ export default {
             }
             let iFrameTrajCell = grid[i][j].iFrameTraj;
             let thisMatch =
-              iFrameTraj[0] == iFrameTrajCell[0] &&
-              iFrameTraj[1] == iFrameTrajCell[1];
+              iFrameTraj[0] === iFrameTrajCell[0] &&
+              iFrameTraj[1] === iFrameTrajCell[1];
             if (thisMatch) {
               return gridValue;
             }

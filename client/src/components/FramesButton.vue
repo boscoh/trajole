@@ -57,19 +57,21 @@ export default {
   data() {
     return {
       newFrame: null,
-      editFrames: []
+      editFrames: [],
     };
   },
   computed: {
     frameStr() {
-      return this.$store.getters.frameStr
+      return this.$store.getters.frameStr;
     },
     iFrameTrajList() {
-      return this.$store.state.iFrameTrajList
-    }
+      return this.$store.state.iFrameTrajList;
+    },
   },
   mounted() {
-    this.editFramesModal = new bootstrap.Modal(document.getElementById("edit-frames-modal"));
+    this.editFramesModal = new bootstrap.Modal(
+      document.getElementById("edit-frames-modal")
+    );
   },
   methods: {
     buildEditFrames() {
@@ -79,17 +81,17 @@ export default {
       }
     },
     async openFramesModal() {
-      this.buildEditFrames()
+      this.buildEditFrames();
       this.$store.commit("setItem", { keyboardLock: true });
-      this.editFramesModal.show()
+      this.editFramesModal.show();
     },
     addFrame(newFrame) {
       this.editFrames.push({ frame: newFrame });
-      this.$store.commit("toggleFrame", newFrame)
-      this.newFrame = null
+      this.$store.commit("selectFrame", newFrame);
+      this.newFrame = null;
     },
     removeFrame(i) {
-      this.$store.commit("toggleFrame", this.editFrames[i].frame)
+      this.$store.commit("selectFrame", this.editFrames[i].frame);
       this.editFrames.splice(i, 1);
     },
     cancel() {

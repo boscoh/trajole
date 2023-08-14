@@ -14,10 +14,11 @@ export default {
       newView: null,
       selectView: null,
       iFrameTrajList: [],
-      selectFrame: null,
+      toClickFrame: null,
       loadIFrameTraj: null,
       dumpIFrameTraj: null,
       forceRedrawKey: "",
+      minFrame: null,
     };
   },
   getters: {
@@ -59,8 +60,8 @@ export default {
       state.iFrameTrajList = [];
     },
 
-    toggleFrame(state, iFrameTraj) {
-      state.selectFrame = iFrameTraj;
+    selectFrame(state, iFrame) {
+      state.toClickFrame = iFrame;
     },
 
     pushLoading(state) {

@@ -48,7 +48,7 @@ def run():
             f"http://localhost:{config.port}/#/foamtraj/0"
         )
 
-        handlers.init_traj_stream_from_config(config)
+        handlers.init_traj_reader(config)
         client_dir = this_dir / "server/local/client"
 
         app = make_app(handlers, client_dir)

@@ -17,7 +17,7 @@ if config.server == "local":
     if "work_dir" in config:
         os.chdir(config.work_dir)
 
-    handlers.init_traj_stream_from_config(config)
+    handlers.init_traj_reader(config)
 
 elif config.server == "lounge":
     from rshow.server.lounge import handlers

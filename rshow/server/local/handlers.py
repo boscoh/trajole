@@ -4,8 +4,8 @@ from typing import Optional
 
 import psutil
 from path import Path
-from pydash import py_
-from rseed.util.fs import load_yaml_dict
+from rseed.util.fs import load_yaml_dict, dump_yaml
+from rseed.analysis.fes import get_i_frame_min
 from rshow import readers
 
 traj_reader: Optional[readers.RshowReaderMixin] = None
@@ -18,10 +18,10 @@ def select_new_key(foam_id, key):
     if traj_reader and traj_reader.__class__.__name__ in selectable_classes:
         config = traj_reader.config
         config.key = key
-        init_traj_stream_from_config(config)
+        init_traj_reader(config)
 
 
-def init_traj_stream_from_config(in_config):
+def init_traj_reader(in_config):
     """
     Entry point of app from server, and will setup depending on the config options
     in the config dictionary.
@@ -80,17 +80,12 @@ def delete_view(foam_id, view):
     return traj_reader.delete_view(view)
 
 
-def get_h5(foam_id):
-    traj_manager = traj_reader.traj_manager
-    return traj_manager.get_h5(0)
-
-
 def get_json_datasets(foam_id):
-    return ["json_min"]
+    return []
 
 
 def get_json(foam_id, key):
-    return get_h5(foam_id).get_json_dataset(key)
+    return {}
 
 
 def get_parmed_blob(foam_id, i_frame=None):
@@ -98,13 +93,23 @@ def get_parmed_blob(foam_id, i_frame=None):
 
 
 def get_min_frame(foam_id):
-    if hasattr(traj_reader, "config"):
-        config = traj_reader.config
-        print_config = py_.clone(config)
-        py_.unset(print_config, "matrix")
-        if hasattr(config, "metad_dir"):
-            min_yaml = Path(traj_reader.config["metad_dir"]) / "min.yaml"
-            data = load_yaml_dict(min_yaml)
-            logger.info(f"get_min_frame {data}")
-            return data["frame"]
-    return None
+
+    if not hasattr(traj_reader, "config"):
+        return None
+    config = traj_reader.config
+    if not config.metad_dir:
+        return None
+
+    min_yaml = Path(config.metad_dir) / "min.yaml"
+    if min_yaml.exists():
+        min_frame = load_yaml_dict(min_yaml).get("iframe")
+        if min_frame is not None:
+            logger.info(f"read min_frame from {min_yaml}: {min_frame}")
+            return min_frame
+
+    min_frame = get_i_frame_min(config.matrix)
+    logger.info(f"min_frame {min_frame}")
+    dump_yaml({"iframe": min_frame}, min_yaml)
+
+    return min_frame
+

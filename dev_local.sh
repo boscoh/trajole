@@ -7,8 +7,6 @@ psword -k mambaforge
 psword -k rshow
 psword -k serve.py
 
-ttab "cd client; npm run dev "
-
 echo "$1"
 if [ "$1" == "traj" ]; then
     ttab "rshow --dev traj examples/trajectory.h5" ;
@@ -34,5 +32,7 @@ else
     echo "Didn't recognize $1: traj foam matrix fes scan1 temper frame ligands"
     exit 1
 fi
+
+ttab "cd client; npm run dev "
 
 rshow open-url http://localhost:9023 http://localhost:3333/#/foamtraj/0

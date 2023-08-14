@@ -114,6 +114,9 @@ class RshowReaderMixin(ABC):
     def delete_view(self, view):
         return {}
 
+    def close(self):
+        pass
+
 
 def get_i_view(views, test_view):
     for i, view in enumerate(views):
@@ -170,7 +173,7 @@ class TrajReader(RshowReaderMixin):
             atom_mask = self.config.atom_mask
         return atom_mask
 
-    def get_traj_manager(self):
+    def get_traj_manager(self) -> TrajectoryManager:
         return TrajectoryManager(
             self.config.trajectories, atom_mask=self.get_atom_mask(), is_dry_cache=True
         )
@@ -195,6 +198,10 @@ class TrajReader(RshowReaderMixin):
             self.config.strip.append(
                 [dict(iFrameTraj=[i, i_traj], p=i / n_frame) for i in range(n_frame)]
             )
+
+    def close(self):
+        if hasattr(self, "traj_manager"):
+            self.traj_manager.close()
 
     def get_config(self, k):
         return self.config[k]

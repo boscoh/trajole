@@ -51,8 +51,12 @@
       ) Download Parmed
 
       button.ms-2.mb-1.btn.btn-sm.btn-secondary(
-        v-if="hasMin" @click="selectFesMinFrame()"
-      ) FES Min
+        @click="selectLigand()"
+      ) Ligand
+
+      button.ms-2.mb-1.btn.btn-sm.btn-secondary(
+        v-if="minFrame !== null" @click="selectFesMinFrame()"
+      ) Min Frame: {{minFrame}}
 
       .ps-2
         button.mt-3.btn.btn-sm.w-100.btn-secondary(
@@ -129,8 +133,8 @@ export default {
     hasParmed() {
       return this.$store.state.datasets.includes("parmed");
     },
-    hasMin() {
-      return this.$store.state.datasets.includes("json_min");
+    minFrame() {
+      return this.$store.state.minFrame;
     },
   },
   methods: {
@@ -150,13 +154,10 @@ export default {
       this.$refs.joleculeMatrix.saveView();
     },
     async selectFesMinFrame() {
-      let foamId = this.$store.state.foamId;
-      let response = await rpc.remote.get_min_frame(foamId);
-      if (response.result) {
-        console.log(
-          `selectFesMinFrame foamId=${foamId} frame=${response.result}`
-        );
-        this.$store.commit("toggleFrame", response.result);
+      let minFrame = this.$store.state.minFrame;
+      if (!_.isNull(minFrame)) {
+        console.log(`selectFesMinFrame frame=${minFrame}`);
+        this.$store.commit("selectFrame", minFrame);
       }
     },
     async downloadParmed() {
@@ -192,6 +193,9 @@ export default {
       this.$refs.joleculeMatrix.toggleAsPockets();
       this.isAsPockets = this.$refs.joleculeMatrix.isAsPockets;
       this.isAsCommunities = this.$refs.joleculeMatrix.isAsCommunities;
+    },
+    selectLigand() {
+      this.$refs.joleculeMatrix.selectLigand();
     },
     onkeydown() {
       if (
