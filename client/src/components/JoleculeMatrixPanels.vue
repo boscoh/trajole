@@ -361,7 +361,7 @@ export default {
       let residue = soup.getResidueProxy();
       for (let i = 0; i < soup.getResidueCount(); i += 1) {
         residue.iRes = i;
-        if (residue.resType === "LIG" || residue.resType === "UNK") {
+        if (_.includes(["LIG", "UNK", "UNL"], residue.restype)) {
           let atomIndices = residue.getAtomIndices();
           let ligandCenter = soup.getCenter(atomIndices);
 
