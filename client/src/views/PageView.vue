@@ -23,6 +23,23 @@
       .ms-2.mb-1
         frames-button
 
+      .ms-2.mb-1
+        button.w-100.btn.btn-sm.btn-secondary( @click="openDistPlotModal")
+          | Distance Plot
+        #distance-plot-modal.modal.modal-xl.fade(style="width: calc(vw*.9)")
+          .modal-dialog.mx-auto(style="max-width: none; width: calc(100vw*.9)")
+            .modal-content(style="width: calc(100vw*.9)")
+              .modal-header
+                h5.modal-title Distance Plots (click on points)
+              .modal-body.w-90
+                .mb-1.d-flex.flex-row.align-items-center
+                  template(v-if="distances.length")
+                    #distance-plot(style="width: calc(100vw*.8); height: 400px")
+                  template(v-else)
+                    | Please select some distances
+              .modal-footer
+                button.btn.btn-secondary(data-bs-dismiss="modal" @click="cancel") Close
+
       // Dropdown for energy components
       select.ms-2.mb-1.form-select.form-select-sm(
         v-if="opt_keys.length" v-model="key" @change="selectKey(key)"
@@ -93,7 +110,7 @@ import ViewManager from "../components/ViewManager.vue";
 import LoadingButton from "../components/LoadingButton.vue";
 import ToggleText from "../components/ToggleText.vue";
 import NavBar from "../components/NavBar.vue";
-
+import * as bootstrap from "bootstrap";
 export default {
   data() {
     return {
@@ -102,6 +119,7 @@ export default {
       actionWidth: `200px`,
       key: "",
       opt_keys: [],
+      distances: [],
     };
   },
   components: {
@@ -197,7 +215,77 @@ export default {
     selectLigand() {
       this.$refs.joleculeMatrix.selectLigand();
     },
-    onkeydown() {
+    async openDistPlotModal() {
+      let joleculeMatrix = this.$refs.joleculeMatrix;
+      this.distances = joleculeMatrix.soupView.getCurrentView().distances;
+
+      let foamId = this.$store.state.foamId;
+      let remote = this.$refs.joleculeMatrix.remote;
+      this.distances = await remote.get_distances(foamId, this.distances);
+
+      let clickableFrames = [];
+      if (_.has(joleculeMatrix, "matrixWidget")) {
+        let grid = joleculeMatrix.matrixWidget.grid;
+        let values = _.flattenDepth(grid, 2);
+        for (let value of values) {
+          if (_.has(value, "iFrameTraj")) {
+            clickableFrames.push(value.iFrameTraj[0]);
+          }
+        }
+      }
+      if (this.distances.length) {
+        let data = [];
+        for (let distance of this.distances) {
+          let nFrame = distance.values.length;
+          let xValues = _.range(nFrame);
+          let hoverTexts = [];
+          for (let x of xValues) {
+            let s = "";
+            if (_.includes(clickableFrames, x)) {
+              s += `matrix(fr=${x}) `;
+            } else {
+              s += `fr=${x} `;
+            }
+            hoverTexts.push(s);
+          }
+          data.push({
+            x: xValues,
+            y: distance.values,
+            type: "lines+markers",
+            mode: "lines",
+            hovertemplate: "%{text}d=%{y:.1f}",
+            text: hoverTexts,
+            name: distance.label,
+          });
+        }
+        let layout = {
+          autosize: true,
+          showlegend: true,
+          title: `FoamID ${foamId}`,
+          xaxis: { title: "frame" },
+          yaxis: { title: "distance [Å]" },
+        };
+        let options = { responsive: true };
+        Plotly.newPlot("distance-plot", data, layout, options);
+        let myPlot = document.getElementById("distance-plot");
+        myPlot.on("plotly_click", function (data) {
+          for (let p of data.points) {
+            joleculeMatrix.clickFrame(p.x, false);
+          }
+        });
+      }
+
+      this.distancePlotModal = new bootstrap.Modal(
+        document.getElementById("distance-plot-modal")
+      );
+
+      this.$store.commit("setItem", { keyboardLock: true });
+      this.distancePlotModal.show();
+    },
+    cancel() {
+      this.$store.commit("setItem", { keyboardLock: false });
+    },
+    onkeydown(event) {
       if (
         this.$store.state.keyboardLock ||
         window.keyboardLock ||

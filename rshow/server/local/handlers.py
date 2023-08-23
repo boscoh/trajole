@@ -7,6 +7,7 @@ from path import Path
 from rseed.util.fs import load_yaml_dict, dump_yaml
 from rseed.analysis.fes import get_i_frame_min
 from rshow import readers
+from rshow.util import get_pair_distances
 
 traj_reader: Optional[readers.RshowReaderMixin] = None
 
@@ -93,7 +94,6 @@ def get_parmed_blob(foam_id, i_frame=None):
 
 
 def get_min_frame(foam_id):
-
     if not hasattr(traj_reader, "config"):
         return None
     config = traj_reader.config
@@ -113,3 +113,13 @@ def get_min_frame(foam_id):
 
     return min_frame
 
+
+def get_distances(foam_id, dpairs):
+    stream_manager = traj_reader.traj_manager.streams
+    h5 = stream_manager.get_h5(0)
+    atom_indices = stream_manager.i_atoms
+    if atom_indices is None:
+        top = h5.topology
+        atom_indices = list(range(top.n_atoms))
+    dpairs = get_pair_distances(dpairs, h5, atom_indices)
+    return dpairs

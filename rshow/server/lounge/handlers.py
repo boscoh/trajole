@@ -13,6 +13,7 @@ from rseed.analysis.fes import get_i_frame_min
 
 from rshow.persist import PersistDictList
 from rshow.readers import FoamTrajReader
+from rshow.util import get_pair_distances
 
 logger = logging.getLogger(__name__)
 traj_reader_by_foam_id = OrderedDict()
@@ -171,9 +172,19 @@ def get_min_frame(foam_id):
         return None
 
     traj_reader = get_traj_reader(foam_id)
-    matrix = traj_reader.get_config('matrix')
+    matrix = traj_reader.get_config("matrix")
     result = get_i_frame_min(matrix)
     h5.set_json_dataset("json_min", {"iframe_min": result})
     logger.info(f"get_min_frame from rshow_matrix: {result}")
 
     return result
+
+
+def get_distances(foam_id, dpairs):
+    traj_reader = get_traj_reader(foam_id)
+    stream_manager = traj_reader.get_traj_manager()
+    h5 = get_h5(foam_id)
+    atom_indices = stream_manager.i_atoms
+    if atom_indices is None:
+        atom_indices = list(range(h5.topology.n_atoms))
+    return get_pair_distances(dpairs, h5, atom_indices)
