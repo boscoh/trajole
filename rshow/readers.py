@@ -10,20 +10,16 @@ import numpy as np
 import parmed
 import pydash as py_
 from addict import Dict
-from rich.pretty import pretty_repr
-from rseed.util.fs import tic, toc
+from rich.pretty import pretty_repr, pprint
+from rseed.util.fs import tic, toc, load_json, load_yaml
 
 
 from rseed.formats.easyh5 import EasyFoamTrajH5, EasyTrajH5
 from rseed.formats.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
 from rseed.formats.stream import StreamingTrajectoryManager, TrajectoryManager
-
-try:
-    from rseed.freeenergy import FreeEnergySampler, get_matrix, sort_temperatures
-except:
-    from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
-    from rseed.analysis.fes import get_matrix_json as get_matrix
-    from rseed.analysis.fn import sort_temperatures
+from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
+from rseed.analysis.fes import get_matrix_json as get_matrix
+from rseed.analysis.fn import sort_temperatures
 from rseed.granary import Granary
 from rshow.alphaspace import AlphaSpace
 from rseed.util.fs import (
@@ -346,6 +342,110 @@ class MatrixTrajReader(TrajReader):
             self.config.trajectories, atom_mask=self.get_atom_mask(), is_dry_cache=True
         )
         self.views_yaml = fname.with_suffix(".views.yaml")
+
+
+
+class FoamEnsembleReader(RshowReaderMixin):
+    """
+    self.config
+        table
+            iFoamCol: int
+            iFrameCol: int
+            headers: [str]
+            rows:
+                - vals: [str]
+                  iFrameTraj: [int, int]
+    """
+
+    def __init__(self, config={}):
+        self.config = config
+        self.traj_manager = None
+        self.process_config()
+
+    def get_config(self, k) -> Any:
+        return None
+
+    def get_title(self) -> dict:
+        return {"csv": self.config.ensemble_id + ".csv"}
+
+    def get_frame(self, i_frame_traj: [int, int] = None) -> mdtraj.Trajectory:
+        pass
+
+    def process_config(self):
+        ensemble_id = self.config.ensemble_id
+        self.config.title = ensemble_id
+        self.config.mode = "table"
+
+        print(f"FoamEnsembleReader.process_config {self.config.csv}")
+        self.config.table = Dict(ensembe_id=ensemble_id, rows=[], headers=[])
+        with open(self.config.csv) as f:
+            i_frame_col = None
+            i_foam_col = None
+            for i, row in enumerate(csv.reader(f)):
+                j = i - 1
+                if i == 0:
+                    self.config.table.headers.extend(row)
+                    for label in ["foam_id", "foamid"]:
+                        if label in self.config.table.headers:
+                            i_foam_col = self.config.table.headers.index(label)
+                            self.config.table.iFoamCol = i_foam_col
+                            break
+                    for label in ["i_frame", "foam_frame_idx"]:
+                        if label in self.config.table.headers:
+                            i_frame_col = self.config.table.headers.index(label)
+                            self.config.table.iFrameCol = i_frame_col
+                            break
+                    logger.info(f"i_foam_col {i_foam_col} i_frame_col {i_frame_col}")
+                else:
+                    foam_id = row[i_foam_col]
+                    frame = row[i_frame_col] if i_frame_col is not None else -1
+                    result = {"vals": row}
+                    try:
+                        i_frame_traj = [int(frame), int(foam_id)]
+                        result["iFrameTraj"] = i_frame_traj
+                    except:
+                        logger.warning(f"couldn't find foam_id in row {j}")
+                    self.config.table.rows.append(result)
+
+    def add(self, foam_id, frame):
+        table = self.config.table
+        headers = table.headers
+        n = len(headers)
+        row = {"vals": [""] * n, "iFrameTraj": [int(frame), int(foam_id)]}
+        iFoamCol = table["iFoamCol"]
+        iFrameCol = table["iFrameCol"]
+        row["vals"][iFoamCol] = int(foam_id)
+        row["vals"][iFrameCol] = int(frame)
+        table["rows"].append(row)
+
+    def save(self):
+        with open(self.config.csv, 'w') as f:
+            writer = csv.writer(f)
+            table = self.config.table
+            writer.writerow(table.headers)
+            for row in table["rows"]:
+                writer.writerow(row["vals"])
+
+    def get_views(self):
+        views_yaml = Path(self.config.csv).parent / "views.yaml"
+        if views_yaml.exists():
+            return load_yaml(views_yaml)
+        return []
+
+    def save_views(self, views):
+        views_yaml = Path(self.config.csv).parent / "views.yaml"
+        dump_yaml(views, views_yaml)
+
+    def update_view(self, view):
+        views = self.get_views()
+        self.save_views(update_view(views, view))
+        return {"success": True}
+
+    def delete_view(self, to_delete_view):
+        views = self.get_views()
+        delete_view(views, to_delete_view)
+        self.save_views(views)
+
 
 
 class LigandsReceptorReader(TrajReader):

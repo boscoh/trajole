@@ -95,7 +95,7 @@ export default {
 
     async deleteIFrameTraj(iFrameTraj) {
       console.log("commit");
-      this.$store.commit("setItem", { dumpIFrameTraj: iFrameTraj });
+      this.$store.commit("setItem", { dumpIFrameTrajList: [iFrameTraj] });
     },
 
     async downTableEntry(event, row) {

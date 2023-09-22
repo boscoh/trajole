@@ -52,6 +52,7 @@
 
 <script>
 import * as bootstrap from "bootstrap";
+import * as _ from "lodash"
 
 export default {
   data() {
@@ -81,17 +82,20 @@ export default {
       }
     },
     async openFramesModal() {
+      if (this.$store.state.ensembleId) {
+        return
+      }
       this.buildEditFrames();
       this.$store.commit("setItem", { keyboardLock: true });
       this.editFramesModal.show();
     },
     addFrame(newFrame) {
       this.editFrames.push({ frame: newFrame });
-      this.$store.commit("selectFrame", newFrame);
+      this.$store.commit("addLoad", {iFrameTraj: [_.parseInt(newFrame), 0], thisFrameOnly: false});
       this.newFrame = null;
     },
     removeFrame(i) {
-      this.$store.commit("selectFrame", this.editFrames[i].frame);
+      this.$store.commit("addDumpIFrameTraj", [_.parseInt(this.editFrames[i].frame), 0]);
       this.editFrames.splice(i, 1);
     },
     cancel() {

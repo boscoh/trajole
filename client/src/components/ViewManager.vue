@@ -48,10 +48,6 @@
             @click="openEditViewModal(view)"
           )
             i.far.fa-comment
-          button.btn.btn-sm.btn-outline-secondary.border-0(
-            @click="updateView(view)"
-          )
-            i.fas.fa-save
         .flex-end
           button.btn.btn-sm.btn-outline-secondary.border-0(
             @click="deleteView(view)"
@@ -127,7 +123,7 @@ export default {
     },
 
     async addView(newView) {
-      console.log("adddView", _.cloneDeep(newView));
+      console.log("addView", _.cloneDeep(newView));
       await remote.update_view(this.foamId, newView);
       // NOTE: reverse chronological order insert at top
       let views = _.cloneDeep(this.views);
@@ -145,22 +141,6 @@ export default {
       await remote.update_view(this.foamId, view);
       this.popLoading();
       this.clearKeyboardLock();
-    },
-
-    async updateView(view) {
-      view.viewDict = this.jolecule.soupView.getCurrentView().getDict();
-      if (this.matrixWidget) {
-        view.matrixWidgetValues = this.matrixWidget.values;
-      }
-      if (this.stripWidget) {
-        view.stripWidgetValues = this.stripWidget.values;
-      }
-      view.foamId = this.foamId;
-      view.timestamp = Math.floor(Date.now() / 1000);
-      this.pushLoading();
-      await remote.update_view(this.foamId, view);
-      this.popLoading();
-      this.$forceUpdate();
     },
 
     async deleteView(view) {

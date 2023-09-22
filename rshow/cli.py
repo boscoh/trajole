@@ -50,8 +50,9 @@ def run():
 
         handlers.init_traj_reader(config)
         client_dir = this_dir / "server/local/client"
+        data_dir = this_dir / "server/local/data"
 
-        app = make_app(handlers, client_dir)
+        app = make_app(handlers, client_dir, data_dir)
 
         uvicorn.run(app, port=port, log_level="critical")
 

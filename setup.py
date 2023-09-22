@@ -23,6 +23,7 @@ setuptools.setup(
         "pydash",
         "rich",
         "rseed",
+        "python-multipart",
         "starlette",
         "uvicorn",
     ],

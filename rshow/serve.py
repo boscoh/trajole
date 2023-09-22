@@ -21,6 +21,7 @@ init_logging()
 this_dir = Path(__file__).abspath().parent
 
 client_dir = this_dir / "server/lounge/client"
+data_dir = this_dir / "server/lounge/data"
 port_json = this_dir.parent / "config" / "port.json"
 port = json.load(open(port_json)).get("port")
 
@@ -31,6 +32,6 @@ if "--dev" in sys.argv:
     dump_yaml({"server": "lounge", "work_dir": os.getcwd()}, "dev_config.yaml")
     os.system(f"uvicorn app_from_dev_config:app --reload --port {port}")
 else:
-    app = make_app(handlers, client_dir)
+    app = make_app(handlers, client_dir, data_dir)
     logger.info(f"start rshow server on port {port}")
     uvicorn.run(app, port=port, log_level="critical")

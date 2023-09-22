@@ -1,17 +1,20 @@
 ./build_local_client.sh
 
 cd config
-cp config.dev.json config.json
+cp lounge.config.json config.json
+cd ..
 
-cd ../client
+cd client
 npm run build
-rm -rf ../rshow/server/local/client
-cp -r dist ../rshow/server/local/client
-git add ../rshow/server/local/client
+rm -rf ../rshow/server/lounge/client
+cp -r dist ../rshow/server/lounge/client
+git add ../rshow/server/lounge/client
+cd ..
 
 rsync -avz --progress \
   --exclude '.DS_Store' \
-  --exclude 'client/node_modules' \
+  --exclude 'client/node_modules/' \
+  --exclude 'rshow/server/lounge/data' \
   --exclude 'rshow/server/lounge/last_views.yaml' \
   * bosco@216.153.60.196:rs/rshow
 

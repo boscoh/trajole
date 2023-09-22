@@ -110,7 +110,11 @@ class RemoteResultRpcProxy {
       get(target, prop) {
         return async function () {
           let response = await aysnc_rpc(prop, ...arguments);
-          return response.result;
+          if (_.has(response, "result")) {
+            return response.result;
+          } else {
+            return null;
+          }
         };
       },
     });

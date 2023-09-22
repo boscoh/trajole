@@ -3,18 +3,22 @@ import logging
 import time
 import traceback
 from io import BytesIO
+
+import pydash as py_
+from fastapi import FastAPI, File, Form, Request, UploadFile
+from path import Path
 from rich.pretty import pretty_repr
-from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import StreamingResponse, FileResponse
+from starlette.responses import FileResponse, StreamingResponse
 from starlette.staticfiles import StaticFiles
-
 
 logger = logging.getLogger(__name__)
 
 
-def make_app(handlers, client_dir):
+def make_app(handlers, client_dir, data_dir):
+    data_dir = Path(data_dir)
+
     app = FastAPI()
 
     app.add_middleware(
@@ -67,6 +71,24 @@ def make_app(handlers, client_dir):
                 logger.debug(line)
             raise e
         return StreamingResponse(bytes_io, media_type="application/octet-stream")
+
+    @app.post("/upload/")
+    async def upload_file(file: UploadFile = File(...)):
+        fname = file.filename.replace(" ", "-")
+        original_ensemble_id = py_.kebab_case(Path(fname).stem)
+        ensemble_id = original_ensemble_id
+        ensemble_dir = data_dir / ensemble_id
+        i = 1
+        while ensemble_dir.exists():
+            ensemble_id = Path(f"{original_ensemble_id}({i})")
+            ensemble_dir = data_dir / ensemble_id
+            i += 1
+        ensemble_dir.makedirs_p()
+        full_fname = ensemble_dir / "ensemble.csv"
+        with open(full_fname, "wb+") as f:
+            f.write(file.file.read())
+        logger.info(f"Saved {full_fname} for {fname}")
+        return {"filename": fname, "ensembleId": ensemble_id}
 
     @app.get("/")
     async def serve_index(request: Request):

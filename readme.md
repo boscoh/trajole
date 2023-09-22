@@ -186,4 +186,4 @@ stdout_logfile=/var/log/lounge/logs
 ```
 
 Restart: `sudo service supervisor start`
-Status: `supervisorctl status`
+Status: `sudo supervisorctl status`

@@ -1,9 +1,11 @@
 import _ from 'lodash'
+import {inFrames} from "./modules/util";
 
 export default {
   state () {
     return {
       foamId: '',
+      ensembleId: '',
       tags: {},
       nLoaders: 0,
       loadingMsg: 'Connecting...',
@@ -14,10 +16,8 @@ export default {
       newView: null,
       selectView: null,
       iFrameTrajList: [],
-      toClickFrame: null,
-      loadIFrameTraj: null,
-      dumpIFrameTraj: null,
-      forceRedrawKey: '',
+      loadIFrameTrajList: [],
+      dumpIFrameTrajList: [],
       minFrame: null
     }
   },
@@ -27,8 +27,21 @@ export default {
     },
 
     frameStr (state) {
-      let values = _.map(state.iFrameTrajList, x => x[0])
-      return `Foam: ${state.foamId} - Frame: ${values.join(' ')}`
+      let s
+      if (state.ensembleId) {
+        s = `Ensemble: ${state.ensembleId}`
+        let values = _.map(state.iFrameTrajList, (x) => x[1]);
+        if (values.length) {
+          s += ` Traj: ${values.join(' ')}`
+        }
+      } else {
+        s = `Traj: ${state.foamId}`
+        let values = _.map(state.iFrameTrajList, (x) => x[0]);
+        if (values.length) {
+          s += ` Frame: ${values.join(' ')}`
+        }
+      }
+      return s
     }
   },
   mutations: {
@@ -38,30 +51,37 @@ export default {
       }
     },
 
-    setFoamId (state, foamId) {
-      state.foamId = foamId
-    },
-
-    setDatasets (state, datasets) {
-      state.datasets = datasets
-    },
-
     addIFrameTraj (state, iFrameTraj) {
       let iFrameTrajList = state.iFrameTrajList
       iFrameTrajList.push(iFrameTraj)
       state.iFrameTrajList = iFrameTrajList
     },
 
-    deleteIFrameTraj (state, i) {
+    deleteItemFromIFrameTrajList (state, i) {
       state.iFrameTrajList.splice(i, 1)
     },
 
-    cleariFrameTrajList (state) {
-      state.iFrameTrajList = []
+    addLoad (state, entry) {
+      if (!entry.thisFrameOnly) {
+        if (inFrames(state.iFrameTrajList, entry.iFrameTraj)) {
+          return
+        }
+      }
+      state.loadIFrameTrajList.push(_.cloneDeep(entry))
     },
 
-    selectFrame (state, iFrame) {
-      state.toClickFrame = iFrame
+    addDumpIFrameTraj (state, iFrameTraj) {
+      if (inFrames(state.iFrameTrajList, iFrameTraj)) {
+        state.dumpIFrameTrajList.push(iFrameTraj)
+      }
+    },
+
+    toggleIFrameTraj (state, iFrameTraj) {
+      if ((state.iFrameTrajList.length > 1) && (inFrames(state.iFrameTrajList, iFrameTraj))) {
+        state.dumpIFrameTrajList.push(iFrameTraj)
+      } else {
+        state.loadIFrameTrajList.push({iFrameTraj, thisFrameOnly: false})
+      }
     },
 
     pushLoading (state) {

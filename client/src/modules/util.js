@@ -123,3 +123,21 @@ export function getPdbText (jolecule, title) {
   let text = lines.join('\n')
   return text
 }
+
+export function delay (ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+export function makeId() {
+  let result = ''
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  for (let i = 0; i < 3; i += 1) {
+    result += _.sample(uppercase)
+  }
+  const numbers = '123456789'
+  for (let i = 0; i < 2; i += 1) {
+    result += _.sample(numbers)
+  }
+  return result
+}
+

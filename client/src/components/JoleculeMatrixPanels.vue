@@ -13,7 +13,7 @@
       #matrix-widget.h-100(:style="matrixStyle" :key="forceMatrixKey")
       #strip-widget.h-100(:style="stripStyle" :key="forceStripKey")
       #table.p-2.me-2.overflow-scroll(:style="tableStyle")
-        ligand-table(ref="table")
+        ensemble-table(ref="table")
 
       ///////////////////////
       #jolecule-container.h-100(:style="joleculeStyle")
@@ -29,6 +29,7 @@ import { initEmbedJolecule } from "jolecule";
 import { MatrixWidget } from "../modules/matrixwidget";
 import { v3 } from "jolecule";
 import {
+  delay,
   getFirstValue,
   inFrames,
   isSameVec,
@@ -38,11 +39,12 @@ import {
 } from "../modules/util";
 import { aysnc_rpc } from "../modules/rpc";
 import LigandTable from "./LigandTable.vue";
+import EnsembleTable from "./EnsembleTable.vue";
 import * as rpc from "../modules/rpc";
 
 export default {
   components: {
-    LigandTable,
+    EnsembleTable
   },
   data() {
     return {
@@ -65,6 +67,8 @@ export default {
       this.onkeydown(e);
     });
 
+    this.table = this.$refs.table
+
     this.jolecule = initEmbedJolecule({
       divTag: "#jolecule-container",
       backgroundColor: "#CCC",
@@ -81,6 +85,8 @@ export default {
     });
     this.controller = this.jolecule.soupWidget.controller;
     this.soupView = this.jolecule.soupView;
+
+    this.initView = null
 
     this.stripWidth = "70px";
     this.actionsStripWidth = "200px";
@@ -100,8 +106,8 @@ export default {
     foamId() {
       return this.$store.state.foamId;
     },
-    toClickFrame() {
-      return this.$store.state.toClickFrame;
+    ensembleId() {
+      return this.$store.state.ensembleId;
     },
     selectView() {
       return this.$store.state.selectView;
@@ -109,33 +115,31 @@ export default {
     iFrameTrajList() {
       return this.$store.state.iFrameTrajList;
     },
-    loadIFrameTraj() {
-      return this.$store.state.loadIFrameTraj;
+    loadIFrameTrajList() {
+      return this.$store.state.loadIFrameTrajList;
     },
-    dumpIFrameTraj() {
-      return this.$store.state.dumpIFrameTraj;
+    dumpIFrameTrajList() {
+      return this.$store.state.dumpIFrameTrajList;
     },
   },
   watch: {
-    toClickFrame(to, from) {
-      if (!_.isNull(to)) {
-        this.clickFrame(to, true);
-      }
-      this.$store.commit("selectFrame", null);
-    },
     selectView(to, from) {
       if (!_.isNull(to)) {
         this.loadView(to);
       }
     },
-    loadIFrameTraj(to, from) {
-      if (!_.isNull(to)) {
-        this.loadFrameIntoJolecule(to.iFrameTraj, to.thisFrameOnly);
+    loadIFrameTrajList(to, from) {
+      if (to.length) {
+        let entry = to.shift()
+        console.log(`watch loadIFrameTrajList`, _.cloneDeep(entry), _.cloneDeep(this.loadIFrameTrajList))
+        this.loadFrameIntoJolecule(entry.iFrameTraj, entry.thisFrameOnly);
       }
     },
-    dumpIFrameTraj(to, from) {
-      if (!_.isNull(to)) {
-        this.deleteIFrameTraj(to);
+    dumpIFrameTrajList(to, from) {
+      if (to.length) {
+        let entry = to.shift()
+        console.log(`watch dumpIFrameTrajList`, _.cloneDeep(entry), _.cloneDeep(this.dumpIFrameTrajList))
+        this.deleteFrame(entry)
       }
     },
   },
@@ -227,32 +231,13 @@ export default {
     async loadFoamId(foamId, frames, viewId) {
       this.pushLoading();
 
+      this.clearPage()
+
       console.log(
         `loadFoamId(foamId=${foamId}, frames=${frames}, viewId=${viewId})`
       );
-
       document.title = "#" + foamId;
-      this.$store.commit("setFoamId", foamId);
-      this.$store.commit("cleariFrameTrajList");
-      this.$store.commit("setItem", { minFrame: null });
-      this.$store.commit("setDatasets", []);
-      this.$store.commit("setItem", { tags: {} });
-
-      // Clear all widgets
-      this.jolecule.clear();
-      this.cacheByiFrameTraj = {};
-      this.cacheAsCommunitiesByiFrameTraj = {};
-      this.cacheAsPocketsByiFrameTraj = {};
-      this.nStructureInFrameList = [];
-      this.resetWidgets();
-      if (this.matrixWidget) {
-        this.matrixWidget.iFrameTrajs = [];
-        this.matrixWidget.draw();
-      }
-      if (this.stripWidget) {
-        this.stripWidget.iFrameTrajs = [];
-        this.stripWidget.draw();
-      }
+      this.$store.commit("setItem", {foamId});
 
       let result;
 
@@ -263,6 +248,158 @@ export default {
 
       this.displayMode = await this.getConfig("mode");
 
+      this.resetStyles()
+
+      this.loadMetadata();
+
+      result = await this.remote.get_views(this.foamId);
+      let initView = null
+      if (result) {
+        this.views = result;
+        this.$store.commit("setItem", { views: this.views });
+        if (viewId && this.views) {
+          let view = _.find(this.views, (v) => v.id === viewId);
+          if (view) {
+            initView = view;
+          }
+        }
+      }
+
+      let iFrameTraj
+      if (this.displayMode === "strip") {
+        iFrameTraj = await this.loadStrip();
+      } else if (
+        this.displayMode === "sparse-matrix" ||
+        this.displayMode === "matrix"
+      ) {
+        iFrameTraj = await this.loadMatrix();
+      } else if (this.displayMode.includes("matrix-strip")) {
+        await this.loadStrip();
+        iFrameTraj = await this.loadMatrix();
+      } else if (this.displayMode === "table") {
+        iFrameTraj = await this.table.loadTable();
+      } else if (this.displayMode === "frame") {
+        iFrameTraj = [0, 0]
+      }
+
+      await this.loadFrameIntoJolecule(iFrameTraj, true);
+
+      let isInit = false;
+      if (initView) {
+        await this.loadView(initView);
+        isInit = true;
+      } else {
+        if (this.matrixWidget || this.stripWidget) {
+          if (frames) {
+            let n = 0
+            for (let frame of frames) {
+              await this.loadFrameIntoJolecule([frames[0], 0], n === 0)
+              n += 1
+            }
+          }
+        }
+      }
+
+      if (!isInit) {
+        this.selectLigand();
+      }
+
+      this.resize();
+      this.popLoading();
+    },
+
+    async loadEnsemble(ensembleId, viewId=null, trajs=[], mode="display") {
+      this.pushLoading();
+
+      this.clearPage()
+
+      console.log(`loadEnsemble(ensembleId=${ensembleId})`);
+      document.title = "#" + ensembleId;
+      this.$store.commit("setItem", {ensembleId});
+      this.$store.commit("setItem", {foamId: ensembleId});
+
+
+      this.displayMode = "table"
+      this.resetStyles()
+
+      let iFrameTraj = await this.table.loadTable(mode);
+
+      if (!_.isNull(iFrameTraj)) {
+        let result = await this.remote.get_views(this.foamId);
+        let initView = null;
+        if (result) {
+          this.views = result;
+          this.$store.commit("setItem", {views: this.views});
+          if (viewId && this.views) {
+            let view = _.find(this.views, (v) => v.id === viewId);
+            if (view) {
+              initView = view;
+            }
+          }
+        }
+
+        console.log(`loadEnsemble first frame`, iFrameTraj)
+
+        await this.loadFrameIntoJolecule(iFrameTraj);
+
+        await delay(500)
+
+        if (initView) {
+          await this.loadView(initView);
+        } else {
+          if (trajs) {
+            let n = 0
+            for (let traj of trajs) {
+              for (let row of this.table.table.rows) {
+                if (row.iFrameTraj && row.iFrameTraj[1] === traj) {
+                  if (!inFrames(this.iFrameTrajList, row.iFrameTraj)) {
+                    await this.loadFrameIntoJolecule(row.iFrameTraj, n === 0)
+                    n += 1
+                  }
+                }
+              }
+            }
+          }
+          this.selectLigand();
+        }
+      }
+
+      this.resize();
+
+      this.popLoading();
+    },
+
+    clearPage() {
+      this.$store.commit("setItem", { foamId: '' });
+      this.$store.commit("setItem", { ensembleId: '' });
+      this.$store.commit("setItem", { viewId: '' });
+      this.$store.commit("setItem", { minFrame: null });
+      this.$store.commit("setItem", { setDatasets: []});
+      this.$store.commit("setItem", { tags: {} });
+      this.$store.commit("setItem", { iFrameTrajList: [] });
+      this.$store.commit("setItem", { loadIFrameTrajList: [] });
+      this.$store.commit("setItem", { dumpIFrameTrajList: [] });
+      this.$store.commit("setItem", { datasets: [] });
+
+      this.jolecule.clear();
+      this.cacheByiFrameTraj = {};
+      this.cacheAsCommunitiesByiFrameTraj = {};
+      this.cacheAsPocketsByiFrameTraj = {};
+      this.nStructureInFrameList = [];
+
+      this.resetWidgets();
+      if (this.matrixWidget) {
+        this.matrixWidget.values = [];
+        this.matrixWidget.draw();
+      }
+      if (this.stripWidget) {
+        this.stripWidget.values = [];
+        this.stripWidget.draw();
+      }
+    },
+
+    resetStyles() {
+      let result
       if (!this.displayMode || this.displayMode === "frame") {
         result = `width: calc(100%);`;
       } else if (this.displayMode === "strip") {
@@ -299,69 +436,15 @@ export default {
       this.matrixStyle = result;
 
       this.$forceUpdate();
-
-      this.loadOtherData();
-
-      result = await this.remote.get_views(this.foamId);
-      let initView = null;
-      if (result) {
-        this.views = result;
-        this.$store.commit("setItem", { views: this.views });
-        if (viewId && this.views) {
-          let view = _.find(this.views, (v) => v.id === viewId);
-          if (view) {
-            initView = view;
-          }
-        }
-      }
-
-      if (this.displayMode === "strip") {
-        await this.loadStrip();
-      } else if (
-        this.displayMode === "sparse-matrix" ||
-        this.displayMode === "matrix"
-      ) {
-        await this.loadMatrix();
-      } else if (this.displayMode.includes("matrix-strip")) {
-        await this.loadStrip();
-        await this.loadMatrix();
-      } else if (this.displayMode === "table") {
-        let iFrameTraj = await this.$refs.table.loadTable();
-        await this.loadFrameIntoJolecule(iFrameTraj);
-      } else if (this.displayMode === "frame") {
-        await this.loadFrameIntoJolecule([0, 0], false);
-      }
-
-      let isInit = false;
-      if (initView) {
-        await this.loadView(initView);
-        isInit = true;
-      } else {
-        if (this.matrixWidget || this.stripWidget) {
-          if (frames) {
-            // this will clear previous initIFrameTraj
-            await this.clickFrame(frames[0], false);
-            for (let i = 1; i < frames.length; i += 1) {
-              await this.clickFrame(frames[i], true);
-            }
-          }
-        }
-      }
-
-      if (!isInit) {
-        this.selectLigand();
-      }
-
-      this.resize();
-      this.popLoading();
     },
 
     selectLigand() {
       let soup = this.jolecule.soup;
       let residue = soup.getResidueProxy();
+      console.log(`selectLigand nRes`, soup.getResidueCount())
       for (let i = 0; i < soup.getResidueCount(); i += 1) {
         residue.iRes = i;
-        if (_.includes(["LIG", "UNK", "UNL"], residue.restype)) {
+        if (_.includes(["LIG", "UNK", "UNL"], residue.resType)) {
           let atomIndices = residue.getAtomIndices();
           let ligandCenter = soup.getCenter(atomIndices);
 
@@ -379,7 +462,7 @@ export default {
 
           let systemCenter = soup.getCenter(_.range(soup.getAtomCount()));
 
-          let zoom = Math.abs(soup.maxLength) * 1.2;
+          let zoom = 50;
           let inVec = v3
             .diff(systemCenter, ligandCenter)
             .normalize()
@@ -396,20 +479,21 @@ export default {
           view.cameraParams.zBack = soup.maxLength / 2;
           view.cameraParams.zoom = zoom;
 
-          console.log(`isInit view`, _.cloneDeep(view));
+          console.log(`selectLigand view`, _.cloneDeep(view));
           this.jolecule.controller.setTargetView(view);
-          break;
+          return;
         }
       }
+      console.log(`selectLigand no ligand found`)
     },
 
-    async loadOtherData() {
+    async loadMetadata() {
       this.pushLoading();
       this.key = await this.getConfig("key");
       this.opt_keys = await this.getConfig("opt_keys");
       let datasets = await this.remote.get_json_datasets(this.foamId);
       if (datasets) {
-        this.$store.commit("setDatasets", datasets);
+        this.$store.commit("setItem", { datasets});
       }
       let tags = await this.remote.get_tags(this.foamId);
       if (tags) {
@@ -436,34 +520,22 @@ export default {
       this.resize();
       this.matrixWidget.selectGridValue = this.selectMatrixGridValue;
       this.matrixWidget.deselectGridValue = this.deselectMatrixGridValue;
-      await this.matrixWidget.clickGridValue(value);
+      return value.iFrameTraj
     },
 
     async selectMatrixGridValue(value, thisFrameOnly = false) {
-      let iFrameTraj;
       if (this.stripWidget && _.has(value, "iFrameTrajs")) {
         let label = value.label;
-        let n = value.iFrameTrajs.length;
-        let grid = [
-          _.map(value.iFrameTrajs, (iFrameTraj, i) => ({
-            p: i / n,
-            label,
-            iFrameTraj,
-          })),
-        ];
-        this.stripWidget.loadGrid(grid);
-        value = getFirstValue([grid]);
-        await this.stripWidget.clickGridValue(value);
-      }
-      if (_.has(value, "iFrameTraj")) {
-        iFrameTraj = value.iFrameTraj;
-        if (!_.isNil(iFrameTraj)) {
-          if (
-            this.hasFramesInJolecule() ||
-            !this.isIFrameTrajSelected(iFrameTraj)
-          ) {
-            await this.loadFrameIntoJolecule(iFrameTraj, thisFrameOnly);
-          }
+        let iFrameTrajs = value.iFrameTrajs
+        let n = iFrameTrajs.length;
+        let strip = _.map(iFrameTrajs, (x, i) => ({p: i / n, label, x}))
+        this.stripWidget.loadGrid([strip]);
+        let firstValue = getFirstValue([[strip]]);
+        await this.stripWidget.clickGridValue(firstValue, thisFrameOnly);
+      } else {
+        let iFrameTraj = value.iFrameTraj;
+        if (!this.isIFrameTrajSelected(iFrameTraj)) {
+          this.$store.commit('addLoad', { iFrameTraj, thisFrameOnly })
         }
       }
     },
@@ -476,7 +548,7 @@ export default {
         iFrameTraj = value.iFrameTrajs[0];
       }
       if (this.isIFrameTrajSelected(iFrameTraj)) {
-        await this.deleteIFrameTraj(iFrameTraj);
+        this.$store.commit('addDumpIFrameTraj', iFrameTraj)
       }
     },
 
@@ -489,10 +561,7 @@ export default {
       this.resize();
       this.stripWidget.selectGridValue = this.selectStripGridValue;
       this.stripWidget.deselectGridValue = this.deselectStripGridValue;
-      let value = getFirstValue(strip);
-      if (value) {
-        await this.stripWidget.clickGridValue(value);
-      }
+      return getFirstValue(strip).iFrameTraj;
     },
 
     async selectStripGridValue(value, thisFrameOnly) {
@@ -511,7 +580,7 @@ export default {
     async deselectStripGridValue(value) {
       let iFrameTraj = value.iFrameTraj;
       if (this.isIFrameTrajSelected(iFrameTraj)) {
-        await this.deleteIFrameTraj(iFrameTraj);
+        await this.deleteFrame(iFrameTraj);
       }
     },
 
@@ -576,13 +645,49 @@ export default {
       return this.nStructureInFrameList.length;
     },
 
-    rewriteUrlWithFrames() {
-      let values = _.map(this.iFrameTrajList, (x) => x[0]);
-      history.pushState(
-        {},
-        null,
-        "#" + this.$route.path + "?frame=" + values.join(",")
-      );
+    updateState() {
+      if (this.ensembleId) {
+        let trajs = _.map(this.iFrameTrajList, (x) => x[1]);
+        history.pushState(
+            {},
+            null,
+            "#" + this.$route.path + "?traj=" + trajs.join(",")
+        );
+        this.table.iFrameTrajList = _.cloneDeep(this.iFrameTrajList)
+      } else {
+        let frames = _.map(this.iFrameTrajList, (x) => x[0]);
+        history.pushState(
+            {},
+            null,
+            "#" + this.$route.path + "?frame=" + frames.join(",")
+        );
+        if (this.stripWidget) {
+          this.stripWidget.resetValuesFromFrames(this.iFrameTrajList)
+          this.stripWidget.draw()
+        }
+        if (this.matrixWidget) {
+          this.matrixWidget.resetValuesFromFrames(this.iFrameTrajList)
+          this.matrixWidget.draw()
+        }
+      }
+
+      let oldLoadIFrameTrajList = this.loadIFrameTrajList
+      let loadIFrameTrajList = []
+      for (let entry of oldLoadIFrameTrajList) {
+        if (!_.includes(this.iFrameTrajList, entry.iFrameTraj)) {
+          loadIFrameTrajList.push(entry)
+        }
+      }
+      this.$store.commit('setItem',{loadIFrameTrajList})
+
+      let oldDumpIFrameTrajList = this.dumpIFrameTrajList
+      let dumpIFrameTrajList = []
+      for (let iFrameTraj of oldDumpIFrameTrajList) {
+        if (_.includes(this.iFrameTrajList, iFrameTraj)) {
+          dumpIFrameTrajList.push(iFrameTraj)
+        }
+      }
+      this.$store.commit('setItem',{dumpIFrameTrajList})
     },
 
     async loadFrameIntoJolecule(iFrameTraj, thisFrameOnly = false) {
@@ -622,7 +727,7 @@ export default {
             this.jolecule.controller.deleteStructure(i);
           }
           this.nStructureInFrameList = [];
-          this.$store.commit("cleariFrameTrajList");
+          this.$store.commit("setItem", {iFrameTrajList: []});
         }
         this.nStructureInFrameList.push(nStructureInThisFrame);
         this.$store.commit("addIFrameTraj", iFrameTraj);
@@ -637,7 +742,7 @@ export default {
         this.jolecule.soupWidget.buildScene();
       }
       this.isFetching = false;
-      this.rewriteUrlWithFrames();
+      this.updateState();
     },
 
     async reloadLastFrameOfJolecule() {
@@ -686,9 +791,7 @@ export default {
         soup.findGridLimits();
 
         this.nStructureInFrameList.splice(i, 1);
-        this.$store.commit("deleteIFrameTraj", i);
         this.nStructureInFrameList.push(nStructure);
-        this.$store.commit("addIFrameTraj", iFrameTraj);
 
         this.jolecule.soupView.setHardCurrentView(saveCurrentView);
         this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame();
@@ -698,26 +801,17 @@ export default {
         this.jolecule.soupWidget.buildScene();
       }
 
-      console.log(
-        "reloadLastFrameOfJolecule after grid",
-        _.keys(this.jolecule.soup.grid.isElem).length
-      );
-      console.log(
-        "reloadLastFrameOfJolecule after view.grid",
-        _.keys(this.jolecule.soupView.currentView.grid.isElem).length
-      );
-
       this.isFetching = false;
     },
 
-    async deleteIFrameTraj(delIFrameTraj) {
+    async deleteFrame(delIFrameTraj) {
       let i = _.findIndex(this.iFrameTrajList, (iFrameTraj) =>
         isSameVec(iFrameTraj, delIFrameTraj)
       );
       if (!_.isNil(i)) {
         await this.deleteItemFromIFrameTrajList(i);
       }
-      this.rewriteUrlWithFrames();
+      this.updateState();
     },
 
     async deleteItemFromIFrameTrajList(i) {
@@ -734,7 +828,7 @@ export default {
         nStructureToDelete -= 1;
       }
       this.jolecule.soupWidget.buildScene();
-      this.$store.commit("deleteIFrameTraj", i);
+      this.$store.commit("deleteItemFromIFrameTrajList", i);
       this.nStructureInFrameList.splice(i, 1);
     },
 
@@ -753,15 +847,34 @@ export default {
     },
 
     async loadView(view) {
+      console.log(`loadView`, _.cloneDeep(view))
       if (_.has(view, "matrixWidgetValues")) {
         await this.matrixWidget.loadValues(view.matrixWidgetValues);
       }
       if (_.has(view, "stripWidgetValues")) {
         await this.stripWidget.loadValues(view.stripWidgetValues);
       }
+      if (this.ensembleId) {
+        if (_.has(view, "ensembleTableValues")) {
+          let oldIFrameTrajList = _.cloneDeep(this.iFrameTrajList);
+          for (let iFrameTraj of view.ensembleTableValues) {
+            if (!inFrames(this.iFrameTrajList, iFrameTraj)) {
+              await this.loadFrameIntoJolecule(iFrameTraj, false);
+            }
+          }
+          for (let iFrameTraj of oldIFrameTrajList) {
+            if (!inFrames(view.ensembleTableValues, iFrameTraj)) {
+              await this.deleteFrame(iFrameTraj)
+            }
+          }
+          this.table.iFrameTrajList = _.cloneDeep(this.iFrameTrajList)
+        }
+      }
+
       let newView = this.jolecule.soupView.getCurrentView();
       newView.setFromDict(view.viewDict);
       this.controller.setTargetView(newView);
+
       history.pushState({}, null, "#" + this.$route.path + "?view=" + view.id);
     },
 
@@ -769,17 +882,24 @@ export default {
       let viewDict = this.jolecule.soupView.getCurrentView().getDict();
       let view = {
         id: viewDict.view_id.replace("view:", ""),
-        foamId: this.foamId,
         timestamp: Math.floor(Date.now() / 1000),
         viewDict: viewDict,
         text: "",
         imgs: "",
       };
+      if (this.ensembleId) {
+        view.ensembleId = this.ensembleId
+      } else if (this.foamId) {
+        view.foamId = this.foamId
+      }
       if (this.matrixWidget) {
-        view.matrixWidgetValues = this.matrixWidget.values;
+        view.matrixWidgetValues = _.cloneDeep(this.matrixWidget.values);
       }
       if (this.stripWidget) {
-        view.stripWidgetValues = this.stripWidget.values;
+        view.stripWidgetValues = _.cloneDeep(this.stripWidget.values);
+      }
+      if (this.ensembleId && this.table) {
+        view.ensembleTableValues = _.cloneDeep(this.table.iFrameTrajList);
       }
       this.$store.commit("setItem", { newView: view });
     },
@@ -791,7 +911,6 @@ export default {
       grid.isChanged = true;
       this.jolecule.soupView.isUpdateColors = true;
       this.jolecule.soupWidget.buildScene();
-      console.log("clearGridDisplay grid", grid.isElem);
     },
 
     async toggleAsCommunities() {
@@ -819,7 +938,8 @@ export default {
       console.log("selectOptKey", key, iFrameTraj);
       await this.remote.select_new_key(this.foamId, key);
       this.resetWidgets();
-      await this.loadMatrix(iFrameTraj);
+      iFrameTraj = await this.loadMatrix(iFrameTraj);
+      this.clickFrame(iFrameTraj)
     },
 
     async close() {
@@ -875,49 +995,27 @@ export default {
       }
     },
 
-    async clickFrame(iFrame, isShift = true) {
-      console.log(`clickFrame ${iFrame}`);
-      let widget;
+    getGridWidget() {
       if (this.matrixWidget) {
-        widget = this.matrixWidget;
+        return this.matrixWidget;
       } else if (this.stripWidget) {
-        widget = this.stripWidget;
-      } else {
-        this.loadFrameIntoJolecule([iFrame, 0]);
-        return;
+        return this.stripWidget;
       }
-      let getMatrixValue = (iFrameTraj) => {
-        let value = null;
-        let grid = widget.grid;
-        let nCol = widget.grid.length;
-        let nRow = widget.grid[0].length;
-        for (let i = 0; i < nCol; i += 1) {
-          for (let j = 0; j < nRow; j += 1) {
-            let isMatch = false;
-            let gridValue = grid[i][j];
-            if (!grid[i][j].iFrameTraj) {
-              continue;
-            }
-            let iFrameTrajCell = grid[i][j].iFrameTraj;
-            let thisMatch =
-              iFrameTraj[0] === iFrameTrajCell[0] &&
-              iFrameTraj[1] === iFrameTrajCell[1];
-            if (thisMatch) {
-              return gridValue;
-            }
-          }
-        }
-        return null;
-      };
-
-      let iFrameTraj = [iFrame, 0];
-      let value = getMatrixValue(iFrameTraj);
-      if (!value) {
-        return;
-      }
-
-      await widget.clickGridValue(value, isShift);
+      return null
     },
+
+    async clickFrame(iFrameTraj, thisFrameOnly = true) {
+      console.log(`clickFrame ${iFrameTraj}`);
+      let gridWidget = this.getGridWidget()
+      if (!gridWidget) {
+        this.loadFrameIntoJolecule(iFrameTraj);
+      } else {
+        let value = gridWidget.getGridValue(iFrameTraj)
+        if (value) {
+          gridWidget.clickGridValue(value, thisFrameOnly);
+        }
+      }
+    }
   },
 };
 </script>

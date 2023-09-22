@@ -7,13 +7,19 @@ import Vuex from 'vuex'
 import mystore from './store.js'
 
 import App from './App.vue'
-import PageView from './views/PageView.vue'
+import FoamTraj from './views/FoamTraj.vue'
 import HomeView from './views/HomeView.vue'
+import EnsembleListView from './views/EnsembleListView.vue'
+import EnsembleView from './views/EnsembleView.vue'
+import EditEnsembleView from './views/EditEnsembleView.vue'
 
 Vue.use(VueRouter)
 const routes = [
   { path: '/', component: HomeView },
-  { path: '/foamtraj/:foamId', component: PageView }
+  { path: '/ensembles', component: EnsembleListView },
+  { path: '/ensemble/:ensembleId', component: EnsembleView },
+  { path: '/editensemble/:ensembleId', component: EditEnsembleView },
+  { path: '/foamtraj/:foamId', component: FoamTraj }
 ]
 const router = new VueRouter({
   routes

@@ -19,6 +19,9 @@
         href="https://www.notion.so/redesignscience/Trajectories-in-FoamDB-77c74685264a4d908e567669ff897fe9"
       ) User Guide to FoamDB
 
+    .mt-3
+      // User Guide
+      router-link(to="/ensembles") Ensembles over Multiple Trajectories
 
     .d-flex.flex-column.align-items-center
 
@@ -51,11 +54,8 @@
       template(v-if="lastFoamIdViews.length > 0")
         .mt-5 Last views updated
         .d-flex.justify-content-center(v-for="v in lastFoamIdViews")
-          a.btn.btn-light.mt-1(
-            :href="'/#/foamtraj/' + v.foamId + '?view=' + v.id"
-            style="width: 250px"
-          )
-            | FoamId:{{v.foamId}}:{{v.id}}
+          a.btn.btn-light.mt-1( :href="v.href" style="width: 250px" )
+            | {{v.name}}
             span.text-muted(v-if="v.text" style="font-size: 0.8rem")
               br
               | {{v.text}}
@@ -95,6 +95,15 @@ export default {
       let response = await rpc.remote.get_last_foamid_views(100);
       if (response.result) {
         this.lastFoamIdViews = response.result.reverse();
+        for (let view of this.lastFoamIdViews) {
+          if (view.ensembleId) {
+            view.name = `Ensemble:${view.ensembleId}:${view.id}`
+            view.href = `/#/ensemble/${view.ensembleId}?view=${view.id}`
+          } else {
+            view.name = `Foam:${view.foamId}:${view.id}`
+            view.href = `/#/foamtraj/${view.foamId}?view=${view.id}`
+          }
+        }
       }
       console.log("restart", _.cloneDeep(this.lastFoamIdViews));
     },

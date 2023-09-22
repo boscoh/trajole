@@ -2,12 +2,14 @@
 
 cd config
 cp lounge-dev.config.json config.json
+cd ..
 
-cd ../client
+cd client
 npm run build
 rm -rf ../rshow/server/lounge/client
 cp -r dist ../rshow/server/lounge/client
 git add ../rshow/server/lounge/client
+cd ..
 
 rsync -avz --progress \
   --exclude '.DS_Store' \

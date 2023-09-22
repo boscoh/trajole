@@ -6,8 +6,6 @@ import { delFromFrames, getIndexOfFrames, inFrames, isSameVec } from "./util";
 export class MatrixWidget extends widgets.CanvasWidget {
   constructor(selector, grid, isSparse) {
     super(selector);
-    this.iFrameTrajs = [];
-    this.values = [];
     this.isSparse = isSparse;
     this.mousePressed = false;
     this.borderColor = "rgb(255, 0, 0, 0.2)";
@@ -26,6 +24,7 @@ export class MatrixWidget extends widgets.CanvasWidget {
   }
 
   loadGrid(grid) {
+    this.values = []
     this.grid = grid;
     this.nGridX = this.grid.length;
     this.nGridY = this.grid[0].length;
@@ -68,9 +67,9 @@ export class MatrixWidget extends widgets.CanvasWidget {
   }
 
   async loadValues(values) {
-    await this.clickGridValue(values[0], false);
+    await this.clickGridValue(values[0], true);
     for (let i = 1; i < values.length; i += 1) {
-      await this.clickGridValue(values[i], true);
+      await this.clickGridValue(values[i], false);
     }
   }
 
@@ -121,7 +120,8 @@ export class MatrixWidget extends widgets.CanvasWidget {
             this.borderColor
           );
         }
-        for (let selectediFrameTraj of this.iFrameTrajs) {
+        for (let value of this.values) {
+          let selectediFrameTraj = this.getIFrameTrajFromValue(value)
           if (isSameVec(iFrameTraj, selectediFrameTraj)) {
             this.fillRect(
               i * this.diffX + this.diffX / 2 - boxXHalf,
@@ -167,42 +167,48 @@ export class MatrixWidget extends widgets.CanvasWidget {
     return centralValue;
   }
 
+  getGridValue(iFrameTraj) {
+    let grid = this.grid;
+    for (let i = 0; i < grid.length; i += 1) {
+      for (let j = 0; j < grid[0].length; j += 1) {
+        if (isSameVec(iFrameTraj, grid[i][j].iFrameTraj)) {
+          return grid[i][j]
+        }
+      }
+    }
+    return null
+  }
+
+  resetValuesFromFrames(iFrameTrajList) {
+    this.values = _.filter(_.map(iFrameTrajList, i => this.getGridValue(i)))
+  }
+
   // to be overriden
   async selectGridValue(value, thisFrameOnly) {}
 
   // to be overriden
   async deselectGridValue(value) {}
 
-  async clickGridValue(value, isShift) {
-    if (!value.iFrameTraj) {
-      return;
-    }
-    if (isShift) {
-      if (inFrames(this.iFrameTrajs, value.iFrameTraj)) {
-        if (this.values.length === 1) {
-          return;
-        }
-        delFromFrames(this.iFrameTrajs, value.iFrameTraj);
-        await this.deselectGridValue(value);
-        let i = getIndexOfFrames(this.iFrameTrajs, value.iFrameTraj);
-        this.values.splice(i, 1);
+  async clickGridValue(value, thisFrameOnly) {
+    if (value.iFrameTraj) {
+      if (thisFrameOnly) {
+        await this.selectGridValue(value, true);
       } else {
-        await this.selectGridValue(value, false);
-        this.iFrameTrajs.push(value.iFrameTraj);
-        this.values.push(value);
+        console.log("clickGridValue", value, _.cloneDeep(this.values))
+        let iFrameTrajs = _.map(_.filter(this.values, v => v.iFrameTraj), v => v.iFrameTraj)
+        if ((iFrameTrajs.length > 1) && (inFrames(iFrameTrajs, value.iFrameTraj))) {
+          await this.deselectGridValue(value);
+        } else {
+          await this.selectGridValue(value, false);
+        }
       }
-    } else {
-      await this.selectGridValue(value, true);
-      this.iFrameTrajs = [value.iFrameTraj];
-      this.values = [value];
     }
-    this.draw();
   }
 
   async handleSelect(event) {
     let value = this.getMouseValue(event);
-    let isShift = event.shiftKey;
-    this.clickGridValue(value, isShift);
+    console.log(`MatrixWidget.handleSelect`, value)
+    this.clickGridValue(value, !event.shiftKey);
   }
 
   mouseleave(event) {
