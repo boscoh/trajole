@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "scripts": {
     "format": "prettier-standard src/**",
-    "dev": "cd ../config; cp config.dev.json config.json; cd ../client; vite",
+    "dev": "cd ../config; cp local.dev.json config.json; cd ../client; vite",
     "build": "vite build"
   },
   "dependencies": {

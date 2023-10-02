@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 def make_app(handlers, client_dir, data_dir):
+    logger.info(f"client_dir: {client_dir}")
+    logger.info(f"data_dir: {data_dir}")
+
     data_dir = Path(data_dir)
 
     app = FastAPI()

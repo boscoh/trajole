@@ -1,9 +1,11 @@
 import logging
 import time
 from collections import OrderedDict
+from functools import lru_cache
 from path import Path
 import pickle
 import shutil
+from _thread import RLock
 
 from addict import Dict
 import pydash as py_
@@ -25,11 +27,26 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-traj_reader_by_foam_id = OrderedDict()
 
 this_dir = Path(__file__).abspath().parent
 data_dir = this_dir / "data"
 last_foam_id_views = PersistDictList(this_dir / "last_views.yaml", key="id")
+
+traj_reader_by_foam_id = OrderedDict()
+
+def get_reader_from_lru_cache(cache_id, init_reader_fn, maxsize=1000):
+    lock = RLock()
+    with lock:
+        if cache_id in traj_reader_by_foam_id:
+            traj_reader_by_foam_id.move_to_end(cache_id)
+        else:
+            traj_reader_by_foam_id[cache_id] = init_reader_fn(cache_id)
+            while len(traj_reader_by_foam_id) > maxsize:
+                cache_id, reader = traj_reader_by_foam_id.popitem(last=False)
+                reader.close()
+                del reader
+        reader = traj_reader_by_foam_id[cache_id]
+    return reader
 
 
 def select_new_key(foam_id, key):
@@ -78,22 +95,16 @@ def set_tags(foam_id, tags: dict):
     return {"success": True}
 
 
+def init_traj_reader(foam_id):
+    return FoamTrajReader({"trajectories": [foam_id], "is_solvent": False})
+
+
 def get_foam_traj_reader(foam_id):
-    # implement an LRU cache for traj_reader
-    if foam_id in traj_reader_by_foam_id:
-        traj_reader_by_foam_id.move_to_end(foam_id)
-    else:
-        config = dict(trajectories=[foam_id], is_solvent=False)
-        traj_reader_by_foam_id[foam_id] = FoamTrajReader(config)
-        # ensure LRU cache stays small
-        while len(traj_reader_by_foam_id) > 1000:
-            foam_id, traj_reader = traj_reader_by_foam_id.popitem(last=False)
-            traj_reader.close()
-            del traj_reader
-    return traj_reader_by_foam_id[foam_id]
+    return get_reader_from_lru_cache(foam_id, init_traj_reader)
 
 
 def reset_foam_id(foam_id):
+    # force reader to be reinitialized
     traj_reader = get_foam_traj_reader(foam_id)
     return {"success": True}
 
@@ -223,39 +234,31 @@ def superpose(last_frame, new_frame, atom_mask):
     )
 
 
+def init_ensemble_reader(ensemble_id):
+    csv = str(data_dir / ensemble_id / "ensemble.csv")
+    reader = FoamEnsembleReader({"ensemble_id": ensemble_id, "csv": csv})
+    reader.last_frame = None
+
+    def get_frame_of_ensemble(i_frame_traj):
+        i_frame, ensemble_id = i_frame_traj
+        traj_reader = get_foam_traj_reader(ensemble_id)
+        frame = traj_reader.get_frame([i_frame, 0])
+        if reader.last_frame is not None:
+            superpose(
+                reader.last_frame,
+                frame,
+                "intersect {protein} {mdtraj name CA}",
+            )
+        reader.last_frame = frame
+        return frame
+
+    reader.get_frame = get_frame_of_ensemble
+
+    return reader
+
+
 def get_ensemble_reader(ensemble_id):
-    if ensemble_id in traj_reader_by_foam_id:
-        traj_reader_by_foam_id.move_to_end(ensemble_id)
-    else:
-        config = Dict(
-            ensemble_id=ensemble_id, csv=str(data_dir / ensemble_id / "ensemble.csv")
-        )
-        ensemble_traj_reader = FoamEnsembleReader(config)
-        ensemble_traj_reader.last_frame = None
-
-        def ensemble_get_frame(i_frame_traj):
-            i_frame, ensemble_id = i_frame_traj
-            traj_reader = get_foam_traj_reader(ensemble_id)
-            frame = traj_reader.get_frame([i_frame, 0])
-            if ensemble_traj_reader.last_frame is not None:
-                superpose(
-                    ensemble_traj_reader.last_frame,
-                    frame,
-                    "diff {protein} {mdtraj name CA}",
-                )
-            ensemble_traj_reader.last_frame = frame
-            return frame
-
-        ensemble_traj_reader.get_frame = ensemble_get_frame
-
-        traj_reader_by_foam_id[ensemble_id] = ensemble_traj_reader
-        # ensure LRU cache stays small
-        while len(traj_reader_by_foam_id) > 1000:
-            ensemble_id, traj_reader = traj_reader_by_foam_id.popitem(last=False)
-            traj_reader.close()
-            del traj_reader
-
-    return traj_reader_by_foam_id[ensemble_id]
+    return get_reader_from_lru_cache(ensemble_id, init_ensemble_reader)
 
 
 def load_ensemble_id(ensemble_id):
@@ -285,6 +288,7 @@ def create_ensemble(ensemble_id):
         f.write("foam_id,i_frame\n")
     logger.info(f"Saved {full_fname} for {fname}")
     return {"filename": fname, "ensembleId": ensemble_id}
+
 
 def add_to_ensemble(ensemble_id, foam_id, frame):
     ensemble_reader = get_ensemble_reader(ensemble_id)
