@@ -1,10 +1,9 @@
 import _ from "lodash";
 import config from "../../../config/config.json";
 
-const defaultRemoteUrl = `${location.protocol}//${location.host}/rpc-run`;
-const remoteUrl = config.apiUrl;
-console.log(`rpc.defaultRemoteUrl=${defaultRemoteUrl}`);
 console.log(`config=${JSON.stringify(config)}`);
+
+const remoteUrl = config.apiUrl;
 console.log(`rpc.remoteUrl=${remoteUrl}`);
 
 /**

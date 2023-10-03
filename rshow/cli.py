@@ -16,6 +16,18 @@ from rshow.make_app import make_app
 from rshow.log import init_logging
 import uvicorn
 
+import socket
+from contextlib import closing
+
+
+logger = logging.getLogger(__name__)
+
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(('', 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
+
 
 config = Dict(mode="")
 
@@ -24,11 +36,14 @@ def run():
     global config
 
     this_dir = Path(__file__).abspath().parent
+
+    init_logging()
+
     if not config.get("port"):
-        port_json = this_dir.parent / "config" / "port.json"
-        port = json.load(open(port_json)).get("port")
+        port = find_free_port()
     else:
         port = config.port
+    logger.info(f"port: {port}")
 
     if config.is_dev:
         config.server = "local"
@@ -42,10 +57,9 @@ def run():
         # to expose an app objct
         os.system(f"uvicorn app_from_dev_config:app --reload --port {port}")
     else:
-        init_logging()
 
         rshow.openurl.open_url_in_background(
-            f"http://localhost:{config.port}/#/foamtraj/0"
+            f"http://localhost:{port}/#/foamtraj/0"
         )
 
         handlers.init_traj_reader(config)
@@ -60,7 +74,7 @@ def run():
 @click.group()
 @click.option("--dev", is_flag=True, help="Run continuous server")
 @click.option("--solvent", is_flag=True, help="Keep solvent")
-@click.option("--port", default=9023, help="port number")
+@click.option("--port", default=None, help="port number")
 def cli(dev, solvent, port):
     """
     rshow: mdtraj h5 viewer
