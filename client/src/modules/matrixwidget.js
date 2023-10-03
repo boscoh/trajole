@@ -190,7 +190,8 @@ export class MatrixWidget extends widgets.CanvasWidget {
   async deselectGridValue(value) {}
 
   async clickGridValue(value, thisFrameOnly) {
-    if (value.iFrameTraj) {
+    console.log('clickGridValue input', value)
+    if (value && value.iFrameTraj) {
       if (thisFrameOnly) {
         await this.selectGridValue(value, true);
       } else {

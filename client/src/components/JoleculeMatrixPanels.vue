@@ -528,7 +528,7 @@ export default {
         let label = value.label;
         let iFrameTrajs = value.iFrameTrajs
         let n = iFrameTrajs.length;
-        let strip = _.map(iFrameTrajs, (x, i) => ({p: i / n, label, x}))
+        let strip = _.map(iFrameTrajs, (iFrameTraj, i) => ({p: i / n, label, iFrameTraj}))
         this.stripWidget.loadGrid([strip]);
         let firstValue = getFirstValue([[strip]]);
         await this.stripWidget.clickGridValue(firstValue, thisFrameOnly);
@@ -561,7 +561,13 @@ export default {
       this.resize();
       this.stripWidget.selectGridValue = this.selectStripGridValue;
       this.stripWidget.deselectGridValue = this.deselectStripGridValue;
-      return getFirstValue(strip).iFrameTraj;
+      let value = getFirstValue(strip)
+      console.log('firstValue', value)
+      if (_.isNil(value)) {
+        return null;
+      } else {
+        return value.iFrameTraj;
+      }
     },
 
     async selectStripGridValue(value, thisFrameOnly) {

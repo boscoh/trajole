@@ -39,16 +39,16 @@ def run():
 
     init_logging()
 
-    if not config.get("port"):
-        port = find_free_port()
-    else:
-        port = config.port
-    logger.info(f"port: {port}")
+    port = config.get("port")
 
     if config.is_dev:
         config.server = "local"
-        config.work_dir = os.getcwd()
 
+        config.work_dir = os.getcwd()
+        if not port:
+            port = 9023
+
+        logger.info(f"port: {port}")
         os.chdir(this_dir)
         dump_yaml(config, "dev_config.yaml")
 
@@ -58,6 +58,9 @@ def run():
         os.system(f"uvicorn app_from_dev_config:app --reload --port {port}")
     else:
 
+        if not port:
+            port = find_free_port()
+        logger.info(f"port: {port}")
         rshow.openurl.open_url_in_background(
             f"http://localhost:{port}/#/foamtraj/0"
         )
