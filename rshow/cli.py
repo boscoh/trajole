@@ -57,10 +57,10 @@ def run():
         # to expose an app objct
         os.system(f"uvicorn app_from_dev_config:app --reload --port {port}")
     else:
-
         if not port:
             port = find_free_port()
         logger.info(f"port: {port}")
+
         rshow.openurl.open_url_in_background(
             f"http://localhost:{port}/#/foamtraj/0"
         )

@@ -52,7 +52,7 @@ export default {
       forceStripKey: -1,
       isAsCommunities: false,
       isAsPockets: false,
-      displayMode: "", // "strip", "table", "matrix-strip", "matrix", "sparse-matrix"
+      displayMode: "", // "strip", "slide", "table", "matrix-strip", "matrix", "sparse-matrix"
       errorMsg: "",
       joleculeStyle: "height: 100%",
       tableStyle: "display: none",
@@ -276,7 +276,7 @@ export default {
       } else if (this.displayMode.includes("matrix-strip")) {
         await this.loadStrip();
         iFrameTraj = await this.loadMatrix();
-      } else if (this.displayMode === "table") {
+      } else if (this.displayMode === "table" || this.displayMode === "slide") {
         iFrameTraj = await this.table.loadTable();
       } else if (this.displayMode === "frame") {
         iFrameTraj = [0, 0]
@@ -319,7 +319,11 @@ export default {
       this.$store.commit("setItem", {foamId: ensembleId});
 
 
-      this.displayMode = "table"
+      if (mode === "slide") {
+        this.displayMode = "slide"
+      } else {
+        this.displayMode = "table"
+      }
       this.resetStyles()
 
       let iFrameTraj = await this.table.loadTable(mode);
@@ -400,7 +404,7 @@ export default {
 
     resetStyles() {
       let result
-      if (!this.displayMode || this.displayMode === "frame") {
+      if (!this.displayMode || this.displayMode === "frame" || this.displayMode === "slide") {
         result = `width: calc(100%);`;
       } else if (this.displayMode === "strip") {
         result = `width: calc(100% - ${this.stripWidth});`;

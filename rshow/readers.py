@@ -8,7 +8,7 @@ from typing import Any
 import mdtraj
 import numpy as np
 import parmed
-import pydash as py_
+from pydash import py_
 from addict import Dict
 from rich.pretty import pretty_repr, pprint
 from rseed.util.fs import tic, toc, load_json, load_yaml
@@ -42,7 +42,7 @@ class RshowReaderMixin(ABC):
 
     @abstractmethod
     def __init__(self, config={}):
-        self.config = config
+        self.config = Dict(config)
         self.traj_manager = None
 
     @abstractmethod
@@ -54,14 +54,14 @@ class RshowReaderMixin(ABC):
         pass
 
     @abstractmethod
-    def get_title(self) -> dict:
+    def get_tags(self) -> dict:
         pass
 
     @abstractmethod
     def get_frame(self, i_frame_traj: [int, int] = None) -> mdtraj.Trajectory:
         pass
 
-    def get_pdb_lines(self, i_frame_traj: [int, int]):
+    def get_pdb_lines(self, i_frame_traj):
         logger.info(f"pdb {i_frame_traj}")
         return filter_for_atom_lines(
             get_pdb_lines_of_traj_frame(self.get_frame(i_frame_traj))
@@ -174,7 +174,7 @@ class TrajReader(RshowReaderMixin):
             self.config.trajectories, atom_mask=self.get_atom_mask(), is_dry_cache=True
         )
 
-    def get_title(self):
+    def get_tags(self):
         names = [Path(t).name for t in self.config.trajectories]
         if len(names) == 1:
             return {"h5": names[0]}
@@ -184,7 +184,7 @@ class TrajReader(RshowReaderMixin):
             raise ValueError("No trajectories found.")
 
     def process_config(self):
-        self.config.title = self.get_title()
+        self.config.title = self.get_tags()
         self.traj_manager = self.get_traj_manager()
         self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
         self.config.mode = "strip"
@@ -232,6 +232,20 @@ class TrajReader(RshowReaderMixin):
         dump_yaml(views, self.views_yaml)
 
 
+def get_first_value(matrix):
+    value = py_.head(
+        py_.filter(py_.flatten_deep(matrix), lambda v: py_.has(v, "iFrameTraj"))
+    )
+    if value is not None:
+        return value
+    value = py_.head(
+        py_.filter(py_.flatten_deep(matrix), lambda v: py_.has(v, "iFrameTrajs"))
+    )
+    if value is not None:
+        return value
+    return None
+
+
 class FoamTrajReader(TrajReader):
     def get_traj_manager(self):
         mask = self.get_atom_mask()
@@ -239,23 +253,29 @@ class FoamTrajReader(TrajReader):
             self.config.trajectories, atom_mask=mask, is_foamdb=True, is_dry_cache=True
         )
 
-    def get_title(self):
+    def get_tags(self):
         return {"foam": self.config.trajectories[0]}
 
     def process_config(self):
+        # As the coordinates are superposed frame by frame, it's important
+        # that the first frame (which is the reference frame) is correctly
+        # loaded. Here, we determine the first frame and load
         super().process_config()
+
         h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
+
         if h5.has_dataset("rshow_matrix"):
             self.config.mode = "sparse-matrix"
+            logger.info('load matrix in init')
+            self.config.matrix = h5.get_json_dataset("rshow_matrix")
+            value = get_first_value(self.config.matrix)
+            self.config.i_frame_first = value["iFrameTraj"][0]
 
-    def get_config(self, k):
-        if k == "matrix":
-            if not self.config.matrix:
-                logger.info(tic(f"loading rshow-matrix"))
-                h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
-                self.config.matrix = h5.get_json_dataset("rshow_matrix")
-                logger.info(toc())
-        return self.config[k]
+        if self.config.mode == "strip":
+            self.config.i_frame_first = -1
+
+        logger.info('load first frame in init')
+        self.get_frame([self.config.i_frame_first, 0])
 
     def get_views(self):
         h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
@@ -293,7 +313,7 @@ class FrameReader(TrajReader):
     def get_frame(self, i_frame_traj=None):
         return self.frame
 
-    def get_title(self):
+    def get_tags(self):
         fname = self.config.title.lower()
         if fname.endswith("parmed"):
             key = "parmed"
@@ -344,7 +364,6 @@ class MatrixTrajReader(TrajReader):
         self.views_yaml = fname.with_suffix(".views.yaml")
 
 
-
 class FoamEnsembleReader(RshowReaderMixin):
     """
     self.config
@@ -358,14 +377,14 @@ class FoamEnsembleReader(RshowReaderMixin):
     """
 
     def __init__(self, config={}):
-        self.config = config
+        self.config = Dict(config)
         self.traj_manager = None
         self.process_config()
 
     def get_config(self, k) -> Any:
         return None
 
-    def get_title(self) -> dict:
+    def get_tags(self) -> dict:
         return {"csv": self.config.ensemble_id + ".csv"}
 
     def get_frame(self, i_frame_traj: [int, int] = None) -> mdtraj.Trajectory:
@@ -377,10 +396,18 @@ class FoamEnsembleReader(RshowReaderMixin):
         self.config.mode = "table"
 
         print(f"FoamEnsembleReader.process_config {self.config.csv}")
-        self.config.table = Dict(ensembe_id=ensemble_id, rows=[], headers=[])
+        self.config.table = Dict(
+            ensembe_id=ensemble_id,
+            rows=[],
+            headers=[],
+            iAtomMask=None,
+            iFoamCol=None,
+            iFrameCol=None,
+        )
         with open(self.config.csv) as f:
             i_frame_col = None
             i_foam_col = None
+            i_atom_mask = None
             for i, row in enumerate(csv.reader(f)):
                 j = i - 1
                 if i == 0:
@@ -395,31 +422,54 @@ class FoamEnsembleReader(RshowReaderMixin):
                             i_frame_col = self.config.table.headers.index(label)
                             self.config.table.iFrameCol = i_frame_col
                             break
-                    logger.info(f"i_foam_col {i_foam_col} i_frame_col {i_frame_col}")
+                    for label in ["atom_mask"]:
+                        if label in self.config.table.headers:
+                            i_atom_mask = self.config.table.headers.index(label)
+                            self.config.table.iAtomMask = i_atom_mask
+                            break
+                    if i_atom_mask is None:
+                        i_atom_mask = len(self.config.table.headers)
+                        self.config.table.headers.append("atom_mask")
+                        self.config.table.iAtomMask = i_atom_mask
+                    logger.info(
+                        f"i_foam_col {i_foam_col} i_frame_col {i_frame_col} i_atom_mask {i_atom_mask}"
+                    )
                 else:
                     foam_id = row[i_foam_col]
                     frame = row[i_frame_col] if i_frame_col is not None else -1
+                    if len(row) < len(self.config.table.headers):
+                        row.append("")
                     result = {"vals": row}
                     try:
                         i_frame_traj = [int(frame), int(foam_id)]
+                        if i_atom_mask is not None:
+                            i_frame_traj.append(row[i_atom_mask])
                         result["iFrameTraj"] = i_frame_traj
                     except:
                         logger.warning(f"couldn't find foam_id in row {j}")
                     self.config.table.rows.append(result)
 
-    def add(self, foam_id, frame):
+    def add_row(self, foam_id, frame, atom_mask=None):
         table = self.config.table
         headers = table.headers
         n = len(headers)
         row = {"vals": [""] * n, "iFrameTraj": [int(frame), int(foam_id)]}
         iFoamCol = table["iFoamCol"]
+        if not py_.is_none(iFoamCol):
+            row["vals"][iFoamCol] = int(foam_id)
         iFrameCol = table["iFrameCol"]
-        row["vals"][iFoamCol] = int(foam_id)
-        row["vals"][iFrameCol] = int(frame)
+        if not py_.is_none(iFrameCol):
+            row["vals"][iFrameCol] = int(frame)
+        iAtomMask = table["iAtomMask"]
+        if not py_.is_none(iAtomMask):
+            row["vals"][iAtomMask] = atom_mask
         table["rows"].append(row)
 
+    def remove_row(self, i_row):
+        del self.config.table["rows"][i_row]
+
     def save(self):
-        with open(self.config.csv, 'w') as f:
+        with open(self.config.csv, "w") as f:
             writer = csv.writer(f)
             table = self.config.table
             writer.writerow(table.headers)
@@ -445,7 +495,6 @@ class FoamEnsembleReader(RshowReaderMixin):
         views = self.get_views()
         delete_view(views, to_delete_view)
         self.save_views(views)
-
 
 
 class LigandsReceptorReader(TrajReader):
@@ -502,14 +551,14 @@ class LigandsReceptorReader(TrajReader):
         i_frame = i_frame_traj[0]
         return self.receptor_lines + self.get_ligand_pdb_lines(i_frame)
 
-    def get_title(self):
+    def get_tags(self):
         return {"fname": self.config.title}
 
 
 def convert_rows_to_p_rows(rows):
     values = py_.flatten_deep(rows)
-    max_val = py_.max_(values)
-    min_val = py_.min_(values)
+    max_val = py_.max(values)
+    min_val = py_.min(values)
     delta_val = max_val - min_val
     return [
         [(v - min_val) / delta_val if delta_val else 0 for v in row] for row in rows
@@ -547,7 +596,7 @@ class ParallelTrajReader(TrajReader):
 
         rows = [sampler.var_kt[self.config.key][i] for i in i_sorted]
         p_rows = convert_rows_to_p_rows(rows)
-        n_sample_max = py_.max_([len(row) for row in rows])
+        n_sample_max = py_.max([len(row) for row in rows])
         matrix = [[0 for k in range(n_replica)] for t in range(n_sample_max)]
         for k, row in enumerate(rows):
             offset = n_sample_max - len(row)
@@ -584,7 +633,7 @@ class ParalleFixedReceptorLigandTrajReader(TrajReader):
         rows = [sampler.var_kt[self.config.key][i] for i in i_sorted]
         p_rows = convert_rows_to_p_rows(rows)
         i_ligand_kt = sampler.var_kt["i_ligand"]
-        n_sample_max = py_.max_([len(row) for row in rows])
+        n_sample_max = py_.max([len(row) for row in rows])
 
         matrix = [[0 for k in range(len(rows))] for t in range(n_sample_max)]
         for k, row in enumerate(rows):

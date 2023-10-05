@@ -48,7 +48,7 @@ def reset_foam_id(foam_id):
 
 
 def get_tags(foam_id):
-    return traj_reader.get_title()
+    return traj_reader.get_tags()
 
 
 def get_config(foam_id, k):

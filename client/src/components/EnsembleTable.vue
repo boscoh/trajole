@@ -1,6 +1,21 @@
 // vue component in pug
 <template lang="pug">
 div
+  .mb-2.d-flex.flex-row.flex-nowrap
+
+    button.ms-2.btn.btn-small.btn-outline-secondary(
+      @click="edit" v-if="mode === 'display'"
+    )
+      | Edit
+    button.ms-2.btn.btn-small.btn-outline-secondary(
+      @click="display" v-if="mode === 'edit'"
+    )
+      | Table
+    button.ms-2.btn.btn-small.btn-outline-secondary(
+      @click="slide" v-if="mode !== 'slide'"
+    )
+      | Slide
+
   table.table(v-if="table && mode==='display'" style="cursor: pointer")
     thead(v-if="headers")
       tr
@@ -40,6 +55,11 @@ div
         type="number"
         v-model="frame"
       )
+      input.ms-2.form-control(
+        style="width: 8em"
+        type="str"
+        v-model="atomMask"
+      )
       button.ms-2.btn.btn-small.btn-outline-secondary(
         @click="add"
       )
@@ -52,21 +72,40 @@ div
               span.me-1 {{ headers[iFoamCol].value }}
           th(v-if="iFrameCol !== null")
               span.me-1 {{ headers[iFrameCol].value }}
+          th(v-if="iAtomMask !== null")
+              span.me-1 {{ headers[iAtomMask].value }}
           th
       tbody
         tr(
           v-for="(row, i) in table.rows"
           :key="i"
           :class="[isIFrameTrajSelected(row.iFrameTraj) ? 'bg-primary' : '']"
-          @mousedown="e => downTableEntry(e, row)"
-          @mouseup="e => upTableEntry(e, row)"
-          @mousemove="e => moveTableEntry(e, row)"
+
         )
-          td.text-nowrap(v-if="iFoamCol !== null")
+          td.text-nowrap(
+            v-if="iFoamCol !== null"
+            @mousedown="e => downTableEntry(e, row)"
+            @mouseup="e => upTableEntry(e, row)"
+            @mousemove="e => moveTableEntry(e, row)"
+          )
             | {{row.vals[iFoamCol]}}
-          td.text-nowrap(v-if="iFrameCol !== null")
+          td.text-nowrap(
+            v-if="iFrameCol !== null"
+            @mousedown="e => downTableEntry(e, row)"
+            @mouseup="e => upTableEntry(e, row)"
+            @mousemove="e => moveTableEntry(e, row)"
+          )
             | {{row.vals[iFrameCol]}}
-          td
+          td.text-nowrap(
+            v-if="iAtomMask !== null"
+            @mousedown="e => downTableEntry(e, row)"
+            @mouseup="e => upTableEntry(e, row)"
+            @mousemove="e => moveTableEntry(e, row)"
+          )
+            | {{row.vals[iAtomMask]}}
+          td(
+            @click="remove(i)"
+          )
             i.fas.fa-trash
 
 </template>
@@ -87,10 +126,13 @@ export default {
       headers: [],
       iFoamCol: null,
       iFrameCol: null,
+      iAtomMask: null,
       iFrameTraj: null,
       iFrameTrajList: [],
       foamId: null,
-      frame: null
+      frame: null,
+      atomMask: null,
+
     };
   },
   methods: {
@@ -114,6 +156,7 @@ export default {
       }));
       this.iFoamCol = this.table.iFoamCol
       this.iFrameCol = this.table.iFrameCol
+      this.iAtomMask = this.table.iAtomMask
 
       if (this.table.rows.length) {
         return this.table.rows[0].iFrameTraj
@@ -189,8 +232,25 @@ export default {
     },
 
     async add() {
-      let response = await rpc.remote.add_to_ensemble(this.$store.state.ensembleId, _.parseInt(this.foamId), _.parseInt(this.frame));
+      let response = await rpc.remote.add_to_ensemble(this.$store.state.ensembleId, _.parseInt(this.foamId), _.parseInt(this.frame), this.atomMask);
       this.loadTable(this.mode)
+    },
+
+    async remove(i) {
+      this.table.rows.splice(i, 1)
+      let response = await rpc.remote.remove_from_ensemble(this.$store.state.ensembleId, i)
+    },
+
+    edit() {
+      this.$router.push(`/editensemble/${this.$store.state.ensembleId}`)
+    },
+
+    display() {
+      this.$router.push(`/ensemble/${this.$store.state.ensembleId}`)
+    },
+
+    slide() {
+      this.$router.push(`/slideensemble/${this.$store.state.ensembleId}`)
     }
   },
 };

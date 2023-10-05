@@ -1,18 +1,16 @@
 import logging
 import time
 from collections import OrderedDict
-from functools import lru_cache
+import os
 from path import Path
 import pickle
-import shutil
 from _thread import RLock
 
 from addict import Dict
 import pydash as py_
 from rich.pretty import pprint
-from rseed.formats.easyh5 import EasyTrajH5, EasyFoamTrajH5
+from rseed.formats.easyh5 import EasyTrajH5
 from rseed.granary import Granary
-from rseed.util.fs import tic, toc
 from rseed.analysis.fes import get_i_frame_min
 
 from rshow.persist import PersistDictList
@@ -20,19 +18,18 @@ from rshow.readers import FoamTrajReader, FoamEnsembleReader
 from rshow.util import get_pair_distances
 
 from rseed.util.select import select_mask
-from rseed.util.struct import get_parmed_from_traj_frame, get_traj_frame_from_parmed
-
+from rseed.util.struct import get_parmed_from_traj_frame
 
 import numpy as np
 
 logger = logging.getLogger(__name__)
-
 
 this_dir = Path(__file__).abspath().parent
 data_dir = this_dir / "data"
 last_foam_id_views = PersistDictList(this_dir / "last_views.yaml", key="id")
 
 traj_reader_by_foam_id = OrderedDict()
+
 
 def get_reader_from_lru_cache(cache_id, init_reader_fn, maxsize=1000):
     lock = RLock()
@@ -55,14 +52,11 @@ def select_new_key(foam_id, key):
 
 
 def get_tags(foam_id):
-    import os
-
     from foamdb.client import PostgresClient
     from foamdb.config import Config
 
     if os.environ.get("HOME") is None:
-        # when we are running under supervisord
-        # in the lounge vm where there is no HOME
+        # when running under supervisord in the lounge vm, there is no HOME
         config = Config("/home/bosco/.config/foamdb/config.json")
     else:
         config = Config()
@@ -99,7 +93,7 @@ def init_traj_reader(foam_id):
     return FoamTrajReader({"trajectories": [foam_id], "is_solvent": False})
 
 
-def get_foam_traj_reader(foam_id):
+def get_foam_traj_reader(foam_id) -> FoamTrajReader:
     return get_reader_from_lru_cache(foam_id, init_traj_reader)
 
 
@@ -121,12 +115,12 @@ def get_pdb_lines(foam_id, i_frame_traj):
     return get_foam_traj_reader(foam_id).get_pdb_lines(i_frame_traj)
 
 
-def get_pdb_lines_with_as_communities(foam_id, i_frame):
-    return get_foam_traj_reader(foam_id).get_pdb_lines_with_as_communities(i_frame)
+def get_pdb_lines_with_as_communities(foam_id, i_frame_traj):
+    return get_foam_traj_reader(foam_id).get_pdb_lines_with_as_communities(i_frame_traj)
 
 
-def get_pdb_lines_with_as_pockets(foam_id, i_frame):
-    return get_foam_traj_reader(foam_id).get_pdb_lines_with_as_pockets(i_frame)
+def get_pdb_lines_with_as_pockets(foam_id, i_frame_traj):
+    return get_foam_traj_reader(foam_id).get_pdb_lines_with_as_pockets(i_frame_traj)
 
 
 def get_views(foam_id):
@@ -225,13 +219,20 @@ def superpose(last_frame, new_frame, atom_mask):
     pmd = get_parmed_from_traj_frame(new_frame)
     i_ca_atoms = select_mask(pmd, atom_mask)
 
-    logger.info(f"superpose atoms {len(i_ca_atoms_last)} {len(i_ca_atoms)}")
     new_frame.xyz = np.copy(new_frame.xyz)
-    new_frame.superpose(
-        reference=last_frame,
-        atom_indices=i_ca_atoms,
-        ref_atom_indices=i_ca_atoms_last,
-    )
+
+    if len(i_ca_atoms) == len(i_ca_atoms_last):
+        logger.info(f"superpose atoms {len(i_ca_atoms_last)} {len(i_ca_atoms)}")
+        new_frame.superpose(
+            reference=last_frame,
+            atom_indices=i_ca_atoms,
+            ref_atom_indices=i_ca_atoms_last,
+        )
+    else:
+        old_center = last_frame.xyz[-1].mean(axis=0)
+        new_center = new_frame.xyz[-1].mean(axis=0)
+        new_frame.xyz[-1] -= new_center
+        new_frame.xyz[-1] += old_center
 
 
 def init_ensemble_reader(ensemble_id):
@@ -240,7 +241,7 @@ def init_ensemble_reader(ensemble_id):
     reader.last_frame = None
 
     def get_frame_of_ensemble(i_frame_traj):
-        i_frame, ensemble_id = i_frame_traj
+        i_frame, ensemble_id = i_frame_traj[:2]
         traj_reader = get_foam_traj_reader(ensemble_id)
         frame = traj_reader.get_frame([i_frame, 0])
         if reader.last_frame is not None:
@@ -257,7 +258,7 @@ def init_ensemble_reader(ensemble_id):
     return reader
 
 
-def get_ensemble_reader(ensemble_id):
+def get_ensemble_reader(ensemble_id) -> FoamEnsembleReader:
     return get_reader_from_lru_cache(ensemble_id, init_ensemble_reader)
 
 
@@ -290,7 +291,13 @@ def create_ensemble(ensemble_id):
     return {"filename": fname, "ensembleId": ensemble_id}
 
 
-def add_to_ensemble(ensemble_id, foam_id, frame):
+def add_to_ensemble(ensemble_id, foam_id, frame, atom_mask=""):
     ensemble_reader = get_ensemble_reader(ensemble_id)
-    ensemble_reader.add(foam_id, frame)
+    ensemble_reader.add_row(foam_id, frame, atom_mask)
+    ensemble_reader.save()
+
+
+def remove_from_ensemble(ensemble_id, i_row):
+    ensemble_reader = get_ensemble_reader(ensemble_id)
+    ensemble_reader.remove_row(i_row)
     ensemble_reader.save()
