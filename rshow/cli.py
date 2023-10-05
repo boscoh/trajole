@@ -149,19 +149,6 @@ def re(re_dir, key):
 
 
 @cli.command()
-@click.argument("re_dir", default=".", required=False)
-@click.option("--key", default="u")
-def re_dock(re_dir, key):
-    """
-    Multiple replicas in a replica-exchange w/fixed receptor
-    """
-    config.stream_class = "ParalleFixedReceptorLigandTrajReader"
-    config.re_dir = re_dir
-    config.key = key
-    run()
-
-
-@cli.command()
 @click.argument("pdb")
 @click.argument("sdf")
 @click.argument("csv", required=False)

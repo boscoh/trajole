@@ -13,7 +13,6 @@ from addict import Dict
 from rich.pretty import pretty_repr, pprint
 from rseed.util.fs import tic, toc, load_json, load_yaml
 
-
 from rseed.formats.easyh5 import EasyFoamTrajH5, EasyTrajH5
 from rseed.formats.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
 from rseed.formats.stream import StreamingTrajectoryManager, TrajectoryManager
@@ -246,58 +245,6 @@ def get_first_value(matrix):
     return None
 
 
-class FoamTrajReader(TrajReader):
-    def get_traj_manager(self):
-        mask = self.get_atom_mask()
-        return StreamingTrajectoryManager(
-            self.config.trajectories, atom_mask=mask, is_foamdb=True, is_dry_cache=True
-        )
-
-    def get_tags(self):
-        return {"foam": self.config.trajectories[0]}
-
-    def process_config(self):
-        # As the coordinates are superposed frame by frame, it's important
-        # that the first frame (which is the reference frame) is correctly
-        # loaded. Here, we determine the first frame and load
-        super().process_config()
-
-        h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
-
-        if h5.has_dataset("rshow_matrix"):
-            self.config.mode = "sparse-matrix"
-            logger.info('load matrix in init')
-            self.config.matrix = h5.get_json_dataset("rshow_matrix")
-            value = get_first_value(self.config.matrix)
-            self.config.i_frame_first = value["iFrameTraj"][0]
-
-        if self.config.mode == "strip":
-            self.config.i_frame_first = -1
-
-        logger.info('load first frame in init')
-        self.get_frame([self.config.i_frame_first, 0])
-
-    def get_views(self):
-        h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
-        if h5.has_dataset("json_views"):
-            return h5.get_json_dataset("json_views")
-        return []
-
-    def save_views(self, views):
-        h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
-        h5.set_json_dataset("json_views", views)
-
-    def update_view(self, view):
-        views = self.get_views()
-        self.save_views(update_view(views, view))
-        return {"success": True}
-
-    def delete_view(self, to_delete_view):
-        views = self.get_views()
-        delete_view(views, to_delete_view)
-        self.save_views(views)
-
-
 class FrameReader(TrajReader):
     def process_config(self):
         self.config.title = self.config.pdb_or_parmed
@@ -362,6 +309,171 @@ class MatrixTrajReader(TrajReader):
             self.config.trajectories, atom_mask=self.get_atom_mask(), is_dry_cache=True
         )
         self.views_yaml = fname.with_suffix(".views.yaml")
+
+
+class LigandsReceptorReader(TrajReader):
+    def process_config(self):
+        self.config.title = f"{Path(self.config.pdb).name}"
+        self.config.mode = "table"
+
+        pdb = get_checked_path(self.config.pdb)
+        self.frame = mdtraj.load_pdb(str(pdb))
+        self.receptor_lines = get_pdb_lines_of_traj_frame(self.frame)
+
+        labels = []
+        self.ligand_parmeds = []
+        ligand_file = get_checked_path(self.config.ligands)
+        for i_mol, openff_mol in enumerate(iter_ff_mol_from_file(str(ligand_file))):
+            label = openff_mol.name
+            labels.append(label)
+            j = i_mol + 1
+            if j == 1:
+                openff_mol.name = "LIG"
+            else:
+                openff_mol.name = f"Ll{j}" if i_mol < 10 else f"L{j}"
+            top = openff_mol.to_topology().to_openmm()
+            ligand_parmed = parmed.openmm.load_topology(
+                top, xyz=openff_mol.conformers[0]
+            )
+            logger.info(
+                f"ligand n_atom={len(ligand_parmed.atoms)} iFrameTraj=[{i_mol},0] title={label}"
+            )
+            self.ligand_parmeds.append(ligand_parmed)
+
+        n = len(self.ligand_parmeds)
+        self.config.table_headers = ["title", "i"]
+        self.config.table = [
+            dict(iFrameTraj=[i, 0], p=i / n, vals=[labels[i], i]) for i in range(n)
+        ]
+        if self.config.csv:
+            with open(get_checked_path(self.config.csv)) as f:
+                for i, row in enumerate(csv.reader(f)):
+                    if i == 0:
+                        self.config.table_headers.extend(row)
+                    elif i > n:
+                        break
+                    else:
+                        row = [round(float(x), 3) for x in row]
+                        self.config.table[i - 1]["vals"].extend(row)
+        self.views_yaml = Path(pdb).with_suffix(".views.yaml")
+
+    def get_ligand_pdb_lines(self, i_ligand):
+        traj = get_traj_frame_from_parmed(self.ligand_parmeds[i_ligand])
+        return get_pdb_lines_of_traj_frame(traj)
+
+    def get_pdb_lines(self, i_frame_traj):
+        i_frame = i_frame_traj[0]
+        return self.receptor_lines + self.get_ligand_pdb_lines(i_frame)
+
+    def get_tags(self):
+        return {"fname": self.config.title}
+
+
+def convert_rows_to_p_rows(rows):
+    values = py_.flatten_deep(rows)
+    max_val = py_.max(values)
+    min_val = py_.min(values)
+    delta_val = max_val - min_val
+    return [
+        [(v - min_val) / delta_val if delta_val else 0 for v in row] for row in rows
+    ]
+
+
+class ParallelTrajReader(TrajReader):
+    def process_config(self):
+        self.config.title = f"Replicas (row)"
+        self.config.mode = "matrix"
+
+        parent_dir = Path(self.config.re_dir)
+        sampler = FreeEnergySampler.from_h5(get_checked_path(parent_dir / "energy.h5"))
+        i_sorted = sort_temperatures(sampler.temperatures)
+        k_reverse = [i_sort for k, i_sort in enumerate(i_sorted)]
+        n_replica = len(sampler.temperatures)
+        self.config.opt_keys = list(sampler.var_kt.keys())
+
+        self.config.trajectories = [
+            str(parent_dir / f"trajectory-{i}.h5") for i in range(n_replica)
+        ]
+        self.traj_manager = TrajectoryManager(
+            trajectories=self.config.trajectories,
+            atom_mask=self.get_atom_mask(),
+            is_dry_cache=True,
+        )
+        self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
+
+        self.config.strip = []
+        for i_traj in range(self.traj_manager.get_n_trajectories()):
+            n_frame = self.traj_manager.get_n_frame(i_traj)
+            self.config.strip.append(
+                [dict(iFrameTraj=[i, i_traj], p=i / n_frame) for i in range(n_frame)]
+            )
+
+        rows = [sampler.var_kt[self.config.key][i] for i in i_sorted]
+        p_rows = convert_rows_to_p_rows(rows)
+        n_sample_max = py_.max([len(row) for row in rows])
+        matrix = [[0 for k in range(n_replica)] for t in range(n_sample_max)]
+        for k, row in enumerate(rows):
+            offset = n_sample_max - len(row)
+            for t, value in enumerate(row):
+                matrix[t + offset][k] = {
+                    "value": value,
+                    "p": p_rows[k][t],
+                    "label": f"u={value:.3f}",
+                    "iFrameTraj": [t, k_reverse[k]],
+                }
+        self.config.matrix = matrix
+
+
+class FoamTrajReader(TrajReader):
+    def get_traj_manager(self):
+        mask = self.get_atom_mask()
+        return StreamingTrajectoryManager(
+            self.config.trajectories, atom_mask=mask, is_foamdb=True, is_dry_cache=True
+        )
+
+    def get_tags(self):
+        return {"foam": self.config.trajectories[0]}
+
+    def process_config(self):
+        # As the coordinates are superposed frame by frame, it's important
+        # that the first frame (which is the reference frame) is correctly
+        # loaded. Here, we determine the first frame and load
+        super().process_config()
+
+        h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
+
+        if h5.has_dataset("rshow_matrix"):
+            self.config.mode = "sparse-matrix"
+            logger.info("load matrix in init")
+            self.config.matrix = h5.get_json_dataset("rshow_matrix")
+            value = get_first_value(self.config.matrix)
+            self.config.i_frame_first = value["iFrameTraj"][0]
+
+        if self.config.mode == "strip":
+            self.config.i_frame_first = -1
+
+        logger.info("load first frame in init")
+        self.get_frame([self.config.i_frame_first, 0])
+
+    def get_views(self):
+        h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
+        if h5.has_dataset("json_views"):
+            return h5.get_json_dataset("json_views")
+        return []
+
+    def save_views(self, views):
+        h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
+        h5.set_json_dataset("json_views", views)
+
+    def update_view(self, view):
+        views = self.get_views()
+        self.save_views(update_view(views, view))
+        return {"success": True}
+
+    def delete_view(self, to_delete_view):
+        views = self.get_views()
+        delete_view(views, to_delete_view)
+        self.save_views(views)
 
 
 class FoamEnsembleReader(RshowReaderMixin):
@@ -495,159 +607,3 @@ class FoamEnsembleReader(RshowReaderMixin):
         views = self.get_views()
         delete_view(views, to_delete_view)
         self.save_views(views)
-
-
-class LigandsReceptorReader(TrajReader):
-    def process_config(self):
-        self.config.title = f"{Path(self.config.pdb).name}"
-        self.config.mode = "table"
-
-        pdb = get_checked_path(self.config.pdb)
-        self.frame = mdtraj.load_pdb(str(pdb))
-        self.receptor_lines = get_pdb_lines_of_traj_frame(self.frame)
-
-        labels = []
-        self.ligand_parmeds = []
-        ligand_file = get_checked_path(self.config.ligands)
-        for i_mol, openff_mol in enumerate(iter_ff_mol_from_file(str(ligand_file))):
-            label = openff_mol.name
-            labels.append(label)
-            j = i_mol + 1
-            if j == 1:
-                openff_mol.name = "LIG"
-            else:
-                openff_mol.name = f"Ll{j}" if i_mol < 10 else f"L{j}"
-            top = openff_mol.to_topology().to_openmm()
-            ligand_parmed = parmed.openmm.load_topology(
-                top, xyz=openff_mol.conformers[0]
-            )
-            logger.info(
-                f"ligand n_atom={len(ligand_parmed.atoms)} iFrameTraj=[{i_mol},0] title={label}"
-            )
-            self.ligand_parmeds.append(ligand_parmed)
-
-        n = len(self.ligand_parmeds)
-        self.config.table_headers = ["title", "i"]
-        self.config.table = [
-            dict(iFrameTraj=[i, 0], p=i / n, vals=[labels[i], i]) for i in range(n)
-        ]
-        if self.config.csv:
-            with open(get_checked_path(self.config.csv)) as f:
-                for i, row in enumerate(csv.reader(f)):
-                    if i == 0:
-                        self.config.table_headers.extend(row)
-                    elif i > n:
-                        break
-                    else:
-                        row = [round(float(x), 3) for x in row]
-                        self.config.table[i - 1]["vals"].extend(row)
-        self.views_yaml = Path(pdb).with_suffix(".views.yaml")
-
-    def get_ligand_pdb_lines(self, i_ligand):
-        traj = get_traj_frame_from_parmed(self.ligand_parmeds[i_ligand])
-        return get_pdb_lines_of_traj_frame(traj)
-
-    def get_pdb_lines(self, i_frame_traj):
-        i_frame = i_frame_traj[0]
-        return self.receptor_lines + self.get_ligand_pdb_lines(i_frame)
-
-    def get_tags(self):
-        return {"fname": self.config.title}
-
-
-def convert_rows_to_p_rows(rows):
-    values = py_.flatten_deep(rows)
-    max_val = py_.max(values)
-    min_val = py_.min(values)
-    delta_val = max_val - min_val
-    return [
-        [(v - min_val) / delta_val if delta_val else 0 for v in row] for row in rows
-    ]
-
-
-class ParallelTrajReader(TrajReader):
-    def process_config(self):
-        self.config.title = f"Replicas (row)"
-        self.config.mode = "matrix"
-
-        parent_dir = Path(self.config.re_dir)
-        sampler = FreeEnergySampler.from_h5(get_checked_path(parent_dir / "energy.h5"))
-        i_sorted = sort_temperatures(sampler.temperatures)
-        k_reverse = [i_sort for k, i_sort in enumerate(i_sorted)]
-        n_replica = len(sampler.temperatures)
-        self.config.opt_keys = list(sampler.var_kt.keys())
-
-        self.config.trajectories = [
-            str(parent_dir / f"trajectory-{i}.h5") for i in range(n_replica)
-        ]
-        self.traj_manager = TrajectoryManager(
-            trajectories=self.config.trajectories,
-            atom_mask=self.get_atom_mask(),
-            is_dry_cache=True,
-        )
-        self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
-
-        self.config.strip = []
-        for i_traj in range(self.traj_manager.get_n_trajectories()):
-            n_frame = self.traj_manager.get_n_frame(i_traj)
-            self.config.strip.append(
-                [dict(iFrameTraj=[i, i_traj], p=i / n_frame) for i in range(n_frame)]
-            )
-
-        rows = [sampler.var_kt[self.config.key][i] for i in i_sorted]
-        p_rows = convert_rows_to_p_rows(rows)
-        n_sample_max = py_.max([len(row) for row in rows])
-        matrix = [[0 for k in range(n_replica)] for t in range(n_sample_max)]
-        for k, row in enumerate(rows):
-            offset = n_sample_max - len(row)
-            for t, value in enumerate(row):
-                matrix[t + offset][k] = {
-                    "value": value,
-                    "p": p_rows[k][t],
-                    "label": f"u={value:.3f}",
-                    "iFrameTraj": [t, k_reverse[k]],
-                }
-        self.config.matrix = matrix
-
-
-class ParalleFixedReceptorLigandTrajReader(TrajReader):
-    def process_config(self):
-        self.config.title = f"Replicas (row)"
-        self.config.mode = "matrix"
-        parent_dir = Path(self.config.re_dir)
-
-        fname = parent_dir / "ligand-trajectory.h5"
-        logger.info(f"load rigid-receptor and ligand conformations: {fname}")
-        self.h5 = EasyTrajH5(fname)
-        self.frame = self.h5.get_frame_traj(0)
-        self.i_ligand_atoms = self.h5.get_dataset("i_ligand_atoms")[:]
-        self.conformations_nm = self.h5.get_dataset("ligand_conformations")
-        self.views_yaml = fname.with_suffix(".views.yaml")
-
-        energy_h5 = parent_dir / "energy.h5"
-        sampler = FreeEnergySampler.from_h5(get_checked_path(energy_h5))
-        i_sorted = sort_temperatures(sampler.temperatures)
-        k_reverse = [i_sort for k, i_sort in enumerate(i_sorted)]
-        self.config.opt_keys = list(sampler.var_kt.keys())
-
-        rows = [sampler.var_kt[self.config.key][i] for i in i_sorted]
-        p_rows = convert_rows_to_p_rows(rows)
-        i_ligand_kt = sampler.var_kt["i_ligand"]
-        n_sample_max = py_.max([len(row) for row in rows])
-
-        matrix = [[0 for k in range(len(rows))] for t in range(n_sample_max)]
-        for k, row in enumerate(rows):
-            offset = n_sample_max - len(row)
-            for t, value in enumerate(row):
-                matrix[t + offset][k] = {
-                    "value": value,
-                    "p": p_rows[k][t],
-                    "label": f"u={value:.3f}",
-                    "iFrameTraj": [i_ligand_kt[k_reverse[k]][t], 0],
-                }
-        self.config.matrix = matrix
-
-    def get_frame(self, i_frame_traj=None):
-        i_frame = i_frame_traj[0]
-        self.frame.xyz[0][self.i_ligand_atoms] = self.conformations_nm[i_frame]
-        return self.frame
