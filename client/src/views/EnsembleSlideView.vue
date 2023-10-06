@@ -20,6 +20,11 @@
       .ps-2.my-2.w-100(style="z-index: 2002")
         loading-button
 
+      button.ms-2.btn.btn-small.btn-outline-secondary(
+        @click="edit"
+      )
+        | Edit
+
       view-manager.ms-2
 
 </template>
@@ -163,6 +168,11 @@ export default {
         this.toggleAsCommunities();
       }
     },
+
+    edit() {
+      this.$router.push(`/editensemble/${this.$store.state.ensembleId}`)
+    },
+
   },
 };
 </script>

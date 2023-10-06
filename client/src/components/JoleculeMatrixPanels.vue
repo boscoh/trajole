@@ -284,24 +284,21 @@ export default {
 
       await this.loadFrameIntoJolecule(iFrameTraj, true);
 
-      let isInit = false;
-      if (initView) {
-        await this.loadView(initView);
-        isInit = true;
-      } else {
+      if (!initView) {
         if (this.matrixWidget || this.stripWidget) {
           if (frames) {
             let n = 0
             for (let frame of frames) {
-              await this.loadFrameIntoJolecule([frames[0], 0], n === 0)
+              await this.loadFrameIntoJolecule([frame, 0], n === 0)
               n += 1
             }
           }
         }
+        await this.selectLigand();
       }
 
-      if (!isInit) {
-        this.selectLigand();
+      if (initView) {
+        await this.loadView(initView);
       }
 
       this.resize();
@@ -539,7 +536,7 @@ export default {
       } else {
         let iFrameTraj = value.iFrameTraj;
         if (!this.isIFrameTrajSelected(iFrameTraj)) {
-          this.$store.commit('addLoad', { iFrameTraj, thisFrameOnly })
+          await this.loadFrameIntoJolecule(iFrameTraj, thisFrameOnly);
         }
       }
     },
@@ -680,7 +677,12 @@ export default {
           this.matrixWidget.draw()
         }
       }
+      this.checkWatchLists()
+    },
 
+    checkWatchLists() {
+      // Check for store.state.loadIFrameTrajList and reset the list
+      // if they have not been loaded
       let oldLoadIFrameTrajList = this.loadIFrameTrajList
       let loadIFrameTrajList = []
       for (let entry of oldLoadIFrameTrajList) {
@@ -690,6 +692,8 @@ export default {
       }
       this.$store.commit('setItem',{loadIFrameTrajList})
 
+      // Check for store.state.dumpIFrameTrajList and reset the list
+      // if they have not been deleted
       let oldDumpIFrameTrajList = this.dumpIFrameTrajList
       let dumpIFrameTrajList = []
       for (let iFrameTraj of oldDumpIFrameTrajList) {
@@ -885,6 +889,8 @@ export default {
       newView.setFromDict(view.viewDict);
       this.controller.setTargetView(newView);
 
+      this.$store.commit('setItem',{viewId: view.id})
+
       history.pushState({}, null, "#" + this.$route.path + "?view=" + view.id);
     },
 
@@ -1018,11 +1024,11 @@ export default {
       console.log(`clickFrame ${iFrameTraj}`);
       let gridWidget = this.getGridWidget()
       if (!gridWidget) {
-        this.loadFrameIntoJolecule(iFrameTraj);
+        await this.loadFrameIntoJolecule(iFrameTraj);
       } else {
         let value = gridWidget.getGridValue(iFrameTraj)
         if (value) {
-          gridWidget.clickGridValue(value, thisFrameOnly);
+          await gridWidget.clickGridValue(value, thisFrameOnly);
         }
       }
     }
