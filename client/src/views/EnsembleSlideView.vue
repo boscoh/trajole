@@ -90,6 +90,11 @@ export default {
   watch: {
     $route (to, from) {
       this.handleUrl()
+    },
+    views (to, from) {
+      if (!_.isNull(to)) {
+        this.selectView(to[0])
+      }
     }
   },
   mounted () {
