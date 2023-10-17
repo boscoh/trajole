@@ -3,9 +3,11 @@
     style="width: calc(100vw); height: calc(100vh); background-color: #CCC"
   )
 
-    // Main column with nav-bar
+    // Main column
     .flex-grow-1.d-flex.flex-column.user-select-none
-      nav-bar
+      .d-flex.flex-row.justify-content-between.m-2
+
+        .h2.m-0 Slide show
 
       .flex-grow-1(style="height: calc(100vh - 65px)")
         jolecule-matrix-panels(ref="joleculeMatrix" style="width: calc(100vw - 200px)")
@@ -20,12 +22,33 @@
       .ps-2.my-2.w-100(style="z-index: 2002")
         loading-button
 
-      button.ms-2.btn.btn-small.btn-outline-secondary(
-        @click="edit"
-      )
-        | Edit
+      .ms-2.flex-grow-1.overflow-scroll.mt-1
+        .w-100.mb-1.p-2.rounded(
+          style="background-color: #BBB"
+          v-for="view in views"
+          :key="view.id"
+        )
+          .d-flex.flex-row.w-100.mb-1.pt-2.pb-0.text-start(style="font-size:0.9em")
+            button.btn.w-100.text-start.btn-sm.btn-secondary(
+              v-if="view.id === viewId"
+              @click="selectView(view)"
+              :key="view.id"
+            )
+              .py-2
+                template(v-if="view.text")
+                  | {{ view.text }}
+                span.text-secondary(v-else)
+                  | (No description)
+            button.btn.w-100.text-start.btn-sm.btn-outline-secondary(
+              @click="selectView(view)"
+              v-else
+            )
+              .py-2
+                template(v-if="view.text")
+                  | {{ view.text }}
+                span.text-secondary(v-else)
+                  | (No description)
 
-      view-manager.ms-2
 
 </template>
 
@@ -44,135 +67,58 @@
 </style>
 
 <script>
-import _ from "lodash";
-import { saveBlobFile } from "../modules/util";
-import * as rpc from "../modules/rpc";
-import JoleculeMatrixPanels from "../components/JoleculeMatrixPanels.vue";
-import FramesButton from "../components/FramesButton.vue";
-import JsonButton from "../components/JsonButton.vue";
-import PocketsPanel from "../components/PocketsPanel.vue";
-import ViewManager from "../components/ViewManager.vue";
-import LoadingButton from "../components/LoadingButton.vue";
-import ToggleText from "../components/ToggleText.vue";
-import NavBar from "../components/NavBar.vue";
-import * as bootstrap from "bootstrap";
+import _ from 'lodash'
+import * as rpc from '../modules/rpc'
+import JoleculeMatrixPanels from '../components/JoleculeMatrixPanels.vue'
+import LoadingButton from '../components/LoadingButton.vue'
+
 export default {
-  data() {
+  data () {
     return {
       isAsPockets: false,
       isAsCommunities: false,
       actionWidth: `200px`,
-      key: "",
+      key: '',
       opt_keys: [],
-      distances: [],
-    };
+      distances: []
+    }
   },
   components: {
-    NavBar,
     JoleculeMatrixPanels,
-    FramesButton,
-    PocketsPanel,
-    ViewManager,
-    LoadingButton,
-    ToggleText,
+    LoadingButton
   },
   watch: {
-    $route(to, from) {
-      this.handleUrl();
-    },
+    $route (to, from) {
+      this.handleUrl()
+    }
   },
-  mounted() {
-    this.handleUrl();
-    this.$refs.pocketsPanel.setJolecule(this.$refs.joleculeMatrix.jolecule);
-    window.addEventListener("keypress", (e) => {
-      this.onkeydown(e);
-    });
+  mounted () {
+    this.handleUrl()
   },
   computed: {
-    isLoading() {
-      return this.$store.getters.isLoading;
+    foamId () {
+      return this.$store.state.foamId
     },
-    hasParmed() {
-      return this.$store.state.datasets.includes("parmed");
+    viewId () {
+      return this.$store.state.viewId
     },
+    views () {
+      return this.$store.state.views
+    },
+    isLoading () {
+      return this.$store.getters.isLoading
+    }
   },
   methods: {
-    handleUrl() {
-      let ensembleId = this.$route.params.ensembleId;
-      let viewId = this.$route.query.view;
-      let trajs = this.$route.query.traj;
-      if (trajs) {
-        trajs = _.map(trajs.split(","), _.parseInt);
-      }
-      this.$refs.joleculeMatrix.loadEnsemble(ensembleId, viewId, trajs, "slide")
+    handleUrl () {
+      let ensembleId = this.$route.params.ensembleId
+      let viewId = this.$route.query.view
+      this.$refs.joleculeMatrix.loadEnsemble(ensembleId, viewId, 'slide')
     },
-    downloadPdb() {
-      this.$refs.joleculeMatrix.downloadPdb();
-    },
-    saveView() {
-      this.$refs.joleculeMatrix.saveView();
-    },
-    async downloadParmed() {
-      this.$store.commit("pushLoading");
-
-      let foamId = this.$store.state.foamId;
-      let url = rpc.remoteUrl.replace("rpc-run", "parmed") + `/${foamId}`;
-      let fname = `foamid-${foamId}`;
-      let iFrameTraj = _.last(this.$store.state.iFrameTrajList);
-      if (iFrameTraj) {
-        let iFrame = iFrameTraj[0];
-        url += `?i_frame=${iFrame}`;
-        fname += `-frame-${iFrame}`;
-      }
-      fname += ".parmed";
-      console.log(`parmed download`);
-      const fetchResponse = await fetch(url, { method: "get" });
-      let blob = await fetchResponse.blob();
-      console.log(`downloadParmed ${url} ${fname}`, blob);
-      saveBlobFile(blob, fname);
-
-      this.$store.commit("popLoading");
-    },
-    selectKey(key) {
-      this.$refs.joleculeMatrix.selectOptKey(key);
-    },
-    toggleAsCommunities() {
-      this.$refs.joleculeMatrix.toggleAsCommunities();
-      this.isAsPockets = this.$refs.joleculeMatrix.isAsPockets;
-      this.isAsCommunities = this.$refs.joleculeMatrix.isAsCommunities;
-    },
-    toggleAsPockets() {
-      this.$refs.joleculeMatrix.toggleAsPockets();
-      this.isAsPockets = this.$refs.joleculeMatrix.isAsPockets;
-      this.isAsCommunities = this.$refs.joleculeMatrix.isAsCommunities;
-    },
-    selectLigand() {
-      this.$refs.joleculeMatrix.selectLigand();
-    },
-    cancel() {
-      this.$store.commit("setItem", { keyboardLock: false });
-    },
-    onkeydown(event) {
-      if (
-        this.$store.state.keyboardLock ||
-        window.keyboardLock ||
-        event.metaKey ||
-        event.ctrlKey
-      ) {
-        return;
-      }
-      let c = String.fromCharCode(event.keyCode).toUpperCase();
-      if (c === "P") {
-        this.toggleAsPockets();
-      } else if (c === "A") {
-        this.toggleAsCommunities();
-      }
-    },
-
-    edit() {
-      this.$router.push(`/editensemble/${this.$store.state.ensembleId}`)
-    },
-
-  },
-};
+    async selectView (view) {
+      this.$store.commit('setItem', { viewId: view.id })
+      this.$store.commit('setItem', { selectView: view })
+    }
+  }
+}
 </script>
