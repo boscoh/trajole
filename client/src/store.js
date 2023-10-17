@@ -1,5 +1,5 @@
 import _ from 'lodash'
-import {inFrames} from "./modules/util";
+import { inFrames } from './modules/util'
 
 export default {
   state () {
@@ -30,13 +30,12 @@ export default {
       let s
       if (state.ensembleId) {
         s = `Ensemble: ${state.ensembleId}`
-        let values = _.map(state.iFrameTrajList, (x) => x[1]);
-        if (values.length) {
-          s += ` Traj: ${values.join(' ')}`
+        for (let i of state.iFrameTrajList) {
+          s += ` ${i[1]}:${i[0]}`
         }
       } else {
         s = `Traj: ${state.foamId}`
-        let values = _.map(state.iFrameTrajList, (x) => x[0]);
+        let values = _.map(state.iFrameTrajList, x => x[0])
         if (values.length) {
           s += ` Frame: ${values.join(' ')}`
         }
@@ -77,10 +76,13 @@ export default {
     },
 
     toggleIFrameTraj (state, iFrameTraj) {
-      if ((state.iFrameTrajList.length > 1) && (inFrames(state.iFrameTrajList, iFrameTraj))) {
+      if (
+        state.iFrameTrajList.length > 1 &&
+        inFrames(state.iFrameTrajList, iFrameTraj)
+      ) {
         state.dumpIFrameTrajList.push(iFrameTraj)
       } else {
-        state.loadIFrameTrajList.push({iFrameTraj, thisFrameOnly: false})
+        state.loadIFrameTrajList.push({ iFrameTraj, thisFrameOnly: false })
       }
     },
 
