@@ -5,7 +5,9 @@ import os
 from path import Path
 import pickle
 from _thread import RLock
+import copy
 
+import parmed
 from addict import Dict
 import pydash as py_
 from rich.pretty import pprint
@@ -31,7 +33,12 @@ last_foam_id_views = PersistDictList(this_dir / "last_views.yaml", key="id")
 traj_reader_by_foam_id = OrderedDict()
 
 
-def get_reader_from_lru_cache(cache_id, init_reader_fn, maxsize=1000):
+def get_reader_from_lru_cache(
+    cache_id,
+    init_reader_fn,
+    traj_reader_by_foam_id=traj_reader_by_foam_id,
+    maxsize=1000,
+):
     lock = RLock()
     with lock:
         if cache_id in traj_reader_by_foam_id:
@@ -212,50 +219,74 @@ def get_ensembles():
     return results
 
 
-def superpose(last_frame, new_frame, atom_mask):
-    last_pmd = get_parmed_from_traj_frame(last_frame)
-    i_ca_atoms_last = select_mask(last_pmd, atom_mask)
+def superpose(frame1, frame2, atom_mask1, atom_mask2=None):
+    if not atom_mask2:
+        atom_mask2 = atom_mask1
 
-    pmd = get_parmed_from_traj_frame(new_frame)
-    i_ca_atoms = select_mask(pmd, atom_mask)
+    pmd1 = get_parmed_from_traj_frame(frame1)
+    i_ca_atoms1 = select_mask(pmd1, atom_mask1)
 
-    new_frame.xyz = np.copy(new_frame.xyz)
+    pmd2 = get_parmed_from_traj_frame(frame2)
+    i_ca_atoms2 = select_mask(pmd2, atom_mask2)
 
-    if len(i_ca_atoms) == len(i_ca_atoms_last):
-        logger.info(f"superpose atoms {len(i_ca_atoms_last)} {len(i_ca_atoms)}")
-        new_frame.superpose(
-            reference=last_frame,
-            atom_indices=i_ca_atoms,
-            ref_atom_indices=i_ca_atoms_last,
+    frame2.xyz = np.copy(frame2.xyz)
+
+    if len(i_ca_atoms2) == len(i_ca_atoms1):
+        logger.info(f"superpose atoms {len(i_ca_atoms1)} {len(i_ca_atoms2)}")
+        frame2.superpose(
+            reference=frame1,
+            atom_indices=i_ca_atoms2,
+            ref_atom_indices=i_ca_atoms1,
         )
     else:
-        old_center = last_frame.xyz[-1].mean(axis=0)
-        new_center = new_frame.xyz[-1].mean(axis=0)
-        new_frame.xyz[-1] -= new_center
-        new_frame.xyz[-1] += old_center
+        old_center = frame1.xyz[-1].mean(axis=0)
+        new_center = frame2.xyz[-1].mean(axis=0)
+        frame2.xyz[-1] -= new_center
+        frame2.xyz[-1] += old_center
 
 
 def init_ensemble_reader(ensemble_id):
     csv = str(data_dir / ensemble_id / "ensemble.csv")
-    reader = FoamEnsembleReader({"ensemble_id": ensemble_id, "csv": csv})
-    reader.last_frame = None
+    ensemble_reader = FoamEnsembleReader({"ensemble_id": ensemble_id, "csv": csv})
+    ensemble_reader.last_frame = None
+    ensemble_reader.i_frame_traj = None
 
-    def get_frame_of_ensemble(i_frame_traj):
+    def get_frame(i_frame_traj):
         i_frame, ensemble_id = i_frame_traj[:2]
+
         traj_reader = get_foam_traj_reader(ensemble_id)
-        frame = traj_reader.get_frame([i_frame, 0])
-        if reader.last_frame is not None:
-            superpose(
-                reader.last_frame,
-                frame,
-                "intersect {protein} {mdtraj name CA}",
-            )
-        reader.last_frame = frame
+        last_i_frame_traj = ensemble_reader.i_frame_traj
+
+        logger.info(f"get_frame_of_ensemble {last_i_frame_traj} {i_frame_traj}")
+
+        ref_frame = traj_reader.get_frame([i_frame, 0])
+        frame = copy.deepcopy(ref_frame)
+
+        if ensemble_reader.frame is not None:
+            last_frame = ensemble_reader.frame
+            if len(last_i_frame_traj) > 2 and len(i_frame_traj) > 2:
+                logger.info(f"get_frame_of_ensemble superpose with different atom mask")
+                last_atom_mask = last_i_frame_traj[2]
+                atom_mask = i_frame_traj[2]
+                superpose(last_frame, frame, last_atom_mask, atom_mask)
+            else:
+                logger.info(f"get_frame_of_ensemble superpose with default atom mask")
+                atom_mask = "intersect {protein} {mdtraj name CA}"
+                superpose(last_frame, frame, atom_mask)
+
+        ensemble_reader.frame = frame
+        ensemble_reader.i_frame_traj = i_frame_traj
         return frame
 
-    reader.get_frame = get_frame_of_ensemble
+    ensemble_reader.get_frame = get_frame
 
-    return reader
+    return ensemble_reader
+
+
+def clear_ensemble_cache(ensemble_id):
+    ensemble_reader = get_ensemble_reader(ensemble_id)
+    ensemble_reader.frame = None
+    ensemble_reader.i_frame_traj = None
 
 
 def get_ensemble_reader(ensemble_id) -> FoamEnsembleReader:
@@ -291,6 +322,12 @@ def create_ensemble(ensemble_id):
     return {"filename": fname, "ensembleId": ensemble_id}
 
 
+def update_ensemble_row(ensemble_id, i_row, foam_id, frame, atom_mask=""):
+    ensemble_reader = get_ensemble_reader(ensemble_id)
+    ensemble_reader.update_row(i_row, foam_id, frame, atom_mask)
+    ensemble_reader.save()
+
+
 def add_to_ensemble(ensemble_id, foam_id, frame, atom_mask=""):
     ensemble_reader = get_ensemble_reader(ensemble_id)
     ensemble_reader.add_row(foam_id, frame, atom_mask)
@@ -301,3 +338,41 @@ def remove_from_ensemble(ensemble_id, i_row):
     ensemble_reader = get_ensemble_reader(ensemble_id)
     ensemble_reader.remove_row(i_row)
     ensemble_reader.save()
+
+
+def get_parmed_from_easytraj(easytraj):
+    top = easytraj.fetch_topology().to_openmm()
+    return parmed.openmm.load_topology(top)
+
+
+def get_parmed_from_foam(foam_id):
+    return get_parmed_from_easytraj(get_h5(foam_id))
+
+
+def add_aligned_rows(ensemble_id, foam_id1, foam_id2, range_start, range_end):
+    from rshim.blast import align_parmed
+
+    pmd1 = get_parmed_from_foam(foam_id1)
+    pmd2 = get_parmed_from_foam(foam_id2)
+    fasta1 = data_dir / "fasta1.fasta"
+    fasta2 = data_dir / "fasta2.fasta"
+    matched_segs_list = align_parmed(
+        pmd1,
+        pmd2,
+        fasta1,
+        fasta2,
+        range_start,
+        range_end,
+    )
+
+    results = []
+
+    ensemble_reader = get_ensemble_reader(ensemble_id)
+    for seg1, seg2 in matched_segs_list:
+        ensemble_reader.add_row(foam_id1, 0, seg1)
+        results.append([0, foam_id1, seg1])
+        ensemble_reader.add_row(foam_id2, 0, seg2)
+        results.append([0, foam_id2, seg2])
+    ensemble_reader.save()
+
+    return results

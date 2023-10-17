@@ -22,12 +22,12 @@
 </template>
 
 <script>
-import "bootstrap/dist/css/bootstrap.min.css";
-import * as bootstrap from "bootstrap";
-import _ from "lodash";
-import { initEmbedJolecule } from "jolecule";
-import { MatrixWidget } from "../modules/matrixwidget";
-import { v3 } from "jolecule";
+import 'bootstrap/dist/css/bootstrap.min.css'
+import * as bootstrap from 'bootstrap'
+import _ from 'lodash'
+import { initEmbedJolecule } from 'jolecule'
+import { MatrixWidget } from '../modules/matrixwidget'
+import { v3 } from 'jolecule'
 import {
   delay,
   getFirstValue,
@@ -35,44 +35,44 @@ import {
   isSameVec,
   saveBlobFile,
   saveTextFile,
-  getPdbText,
-} from "../modules/util";
-import { aysnc_rpc } from "../modules/rpc";
-import LigandTable from "./LigandTable.vue";
-import EnsembleTable from "./EnsembleTable.vue";
-import * as rpc from "../modules/rpc";
+  getPdbText
+} from '../modules/util'
+import { aysnc_rpc } from '../modules/rpc'
+import LigandTable from './LigandTable.vue'
+import EnsembleTable from './EnsembleTable.vue'
+import * as rpc from '../modules/rpc'
 
 export default {
   components: {
     EnsembleTable
   },
-  data() {
+  data () {
     return {
       forceMatrixKey: 1,
       forceStripKey: -1,
       isAsCommunities: false,
       isAsPockets: false,
-      displayMode: "", // "strip", "slide", "table", "matrix-strip", "matrix", "sparse-matrix"
-      errorMsg: "",
-      joleculeStyle: "height: 100%",
-      tableStyle: "display: none",
-      stripStyle: "display: none",
-      matrixStyle: "display: none",
-    };
+      displayMode: '', // "strip", "slide", "table", "matrix-strip", "matrix", "sparse-matrix"
+      errorMsg: '',
+      joleculeStyle: 'height: 100%',
+      tableStyle: 'display: none',
+      stripStyle: 'display: none',
+      matrixStyle: 'display: none'
+    }
   },
-  async mounted() {
-    document.oncontextmenu = _.noop;
+  async mounted () {
+    document.oncontextmenu = _.noop
 
-    window.addEventListener("keydown", (e) => {
-      this.onkeydown(e);
-    });
+    window.addEventListener('keydown', e => {
+      this.onkeydown(e)
+    })
 
     this.table = this.$refs.table
 
     this.jolecule = initEmbedJolecule({
-      divTag: "#jolecule-container",
-      backgroundColor: "#CCC",
-      viewId: "",
+      divTag: '#jolecule-container',
+      backgroundColor: '#CCC',
+      viewId: '',
       viewHeight: 170,
       isViewTextShown: false,
       isSequenceBar: true,
@@ -81,208 +81,211 @@ export default {
       bCutoff: -1.0,
       isPlayable: false,
       isLegend: true,
-      isToolbarOnTop: true,
-    });
-    this.controller = this.jolecule.soupWidget.controller;
-    this.soupView = this.jolecule.soupView;
+      isToolbarOnTop: true
+    })
+    this.controller = this.jolecule.soupWidget.controller
+    this.soupView = this.jolecule.soupView
 
     this.initView = null
 
-    this.stripWidth = "70px";
-    this.actionsStripWidth = "200px";
+    this.stripWidth = '70px'
+    this.actionsStripWidth = '200px'
 
-    this.errorModal = new bootstrap.Modal(
-      document.getElementById("fail-modal")
-    );
+    this.errorModal = new bootstrap.Modal(document.getElementById('fail-modal'))
 
-    window.addEventListener("beforeunload", (e) => this.close());
-    window.addEventListener("resize", this.resize);
+    window.addEventListener('beforeunload', e => this.close())
+    window.addEventListener('resize', this.resize)
 
-    this.resize();
+    this.resize()
 
-    this.initRemoteRpc();
+    this.initRemoteRpc()
   },
   computed: {
-    foamId() {
-      return this.$store.state.foamId;
+    foamId () {
+      return this.$store.state.foamId
     },
-    ensembleId() {
-      return this.$store.state.ensembleId;
+    ensembleId () {
+      return this.$store.state.ensembleId
     },
-    selectView() {
-      return this.$store.state.selectView;
+    selectView () {
+      return this.$store.state.selectView
     },
-    iFrameTrajList() {
-      return this.$store.state.iFrameTrajList;
+    iFrameTrajList () {
+      return this.$store.state.iFrameTrajList
     },
-    loadIFrameTrajList() {
-      return this.$store.state.loadIFrameTrajList;
+    loadIFrameTrajList () {
+      return this.$store.state.loadIFrameTrajList
     },
-    dumpIFrameTrajList() {
-      return this.$store.state.dumpIFrameTrajList;
-    },
+    dumpIFrameTrajList () {
+      return this.$store.state.dumpIFrameTrajList
+    }
   },
   watch: {
-    selectView(to, from) {
+    selectView (to, from) {
       if (!_.isNull(to)) {
-        this.loadView(to);
+        this.loadView(to)
       }
     },
-    loadIFrameTrajList(to, from) {
+    loadIFrameTrajList (to, from) {
       if (to.length) {
         let entry = to.shift()
-        console.log(`watch loadIFrameTrajList`, _.cloneDeep(entry), _.cloneDeep(this.loadIFrameTrajList))
-        this.loadFrameIntoJolecule(entry.iFrameTraj, entry.thisFrameOnly);
+        console.log(`watch loadIFrameTrajList`, _.cloneDeep(entry))
+        this.loadFrameIntoJolecule(entry.iFrameTraj, entry.thisFrameOnly, false)
       }
     },
-    dumpIFrameTrajList(to, from) {
+    dumpIFrameTrajList (to, from) {
       if (to.length) {
         let entry = to.shift()
-        console.log(`watch dumpIFrameTrajList`, _.cloneDeep(entry), _.cloneDeep(this.dumpIFrameTrajList))
+        console.log(
+          `watch dumpIFrameTrajList`,
+          _.cloneDeep(entry),
+          _.cloneDeep(this.dumpIFrameTrajList)
+        )
         this.deleteFrame(entry)
       }
-    },
+    }
   },
   methods: {
-    initRemoteRpc() {
-      let _this = this;
+    initRemoteRpc () {
+      let _this = this
 
       class RemoteResultRpcProxy {
-        constructor() {
+        constructor () {
           return new Proxy(this, {
-            get(target, prop) {
+            get (target, prop) {
               return async function () {
-                _this.pushLoading();
+                _this.pushLoading()
 
-                let response = await aysnc_rpc(prop, ...arguments);
+                let response = await aysnc_rpc(prop, ...arguments)
 
-                let result = null;
+                let result = null
                 if (!response.result) {
-                  _this.handleError(response);
+                  _this.handleError(response)
                 } else {
-                  result = response.result;
+                  result = response.result
                 }
 
-                _this.popLoading();
+                _this.popLoading()
 
-                return result;
-              };
-            },
-          });
+                return result
+              }
+            }
+          })
         }
       }
 
-      this.remote = new RemoteResultRpcProxy();
+      this.remote = new RemoteResultRpcProxy()
     },
 
-    resize() {
+    resize () {
       if (this.matrixWidget) {
-        this.matrixWidget.resize();
+        this.matrixWidget.resize()
       }
       if (this.stripWidget) {
-        this.stripWidget.resize();
+        this.stripWidget.resize()
       }
       if (this.jolecule) {
-        this.jolecule.resize();
+        this.jolecule.resize()
       }
     },
 
-    pushLoading(loadingMsg = null) {
-      this.$store.commit("pushLoading");
+    pushLoading (loadingMsg = null) {
+      this.$store.commit('pushLoading')
       if (!_.isNull(loadingMsg)) {
-        this.$store.commit("setItem", { loadingMsg });
+        this.$store.commit('setItem', { loadingMsg })
       }
-      this.$forceUpdate();
+      this.$forceUpdate()
     },
 
-    popLoading(loadingMsg = null) {
-      this.$store.commit("popLoading");
+    popLoading (loadingMsg = null) {
+      this.$store.commit('popLoading')
       if (!_.isNull(loadingMsg)) {
-        this.$store.commit("setItem", { loadingMsg });
+        this.$store.commit('setItem', { loadingMsg })
       }
-      this.$forceUpdate();
+      this.$forceUpdate()
     },
 
-    handleError(response) {
+    handleError (response) {
       if (!response.error) {
-        return;
+        return
       }
-      this.errorModal.show();
-      if (_.last(response.error.message).includes("FileNotFoundError")) {
-        this.errorMsg = `Trajectory #${this.foamId} is empty`;
+      this.errorModal.show()
+      if (_.last(response.error.message).includes('FileNotFoundError')) {
+        this.errorMsg = `Trajectory #${this.foamId} is empty`
       } else {
-        this.errorMsg = JSON.stringify(response.error, null, 2);
+        this.errorMsg = JSON.stringify(response.error, null, 2)
       }
-      this.$store.commit("setItem", {
-        tags: { Error: `loading FoamId=${this.foamId}` },
-      });
+      this.$store.commit('setItem', {
+        tags: { Error: `loading FoamId=${this.foamId}` }
+      })
     },
 
-    async getConfig(key) {
-      return await this.remote.get_config(this.foamId, key);
+    async getConfig (key) {
+      return await this.remote.get_config(this.foamId, key)
     },
 
-    resetWidgets() {
-      this.forceMatrixKey = Math.random();
-      this.forceStripKey = Math.random();
-      this.$forceUpdate();
+    resetWidgets () {
+      this.forceMatrixKey = Math.random()
+      this.forceStripKey = Math.random()
+      this.$forceUpdate()
     },
 
-    async loadFoamId(foamId, frames, viewId) {
-      this.pushLoading();
+    async loadFoamId (foamId, frames, viewId) {
+      this.pushLoading()
 
       this.clearPage()
 
       console.log(
         `loadFoamId(foamId=${foamId}, frames=${frames}, viewId=${viewId})`
-      );
-      document.title = "#" + foamId;
-      this.$store.commit("setItem", {foamId});
+      )
+      document.title = '#' + foamId
+      this.$store.commit('setItem', { foamId })
 
-      let result;
+      let result
 
-      result = await this.remote.reset_foam_id(this.foamId);
+      result = await this.remote.reset_foam_id(this.foamId)
       if (result) {
-        this.$store.commit("setItem", { tags: result.title });
+        this.$store.commit('setItem', { tags: result.title })
       }
 
-      this.displayMode = await this.getConfig("mode");
+      this.displayMode = await this.getConfig('mode')
 
       this.resetStyles()
 
-      this.loadMetadata();
+      this.loadMetadata()
 
-      result = await this.remote.get_views(this.foamId);
       let initView = null
+
+      result = await this.remote.get_views(this.foamId)
       if (result) {
-        this.views = result;
-        this.$store.commit("setItem", { views: this.views });
+        this.views = result
+        this.$store.commit('setItem', { views: this.views })
         if (viewId && this.views) {
-          let view = _.find(this.views, (v) => v.id === viewId);
+          let view = _.find(this.views, v => v.id === viewId)
           if (view) {
-            initView = view;
+            initView = view
           }
         }
       }
 
       let iFrameTraj
-      if (this.displayMode === "strip") {
-        iFrameTraj = await this.loadStrip();
+      if (this.displayMode === 'strip') {
+        iFrameTraj = await this.loadStrip()
       } else if (
-        this.displayMode === "sparse-matrix" ||
-        this.displayMode === "matrix"
+        this.displayMode === 'sparse-matrix' ||
+        this.displayMode === 'matrix'
       ) {
-        iFrameTraj = await this.loadMatrix();
-      } else if (this.displayMode.includes("matrix-strip")) {
-        await this.loadStrip();
-        iFrameTraj = await this.loadMatrix();
-      } else if (this.displayMode === "table" || this.displayMode === "slide") {
-        iFrameTraj = await this.table.loadTable();
-      } else if (this.displayMode === "frame") {
+        iFrameTraj = await this.loadMatrix()
+      } else if (this.displayMode.includes('matrix-strip')) {
+        await this.loadStrip()
+        iFrameTraj = await this.loadMatrix()
+      } else if (this.displayMode === 'table' || this.displayMode === 'slide') {
+        iFrameTraj = await this.table.loadTable()
+      } else if (this.displayMode === 'frame') {
         iFrameTraj = [0, 0]
       }
 
-      await this.loadFrameIntoJolecule(iFrameTraj, true);
+      await this.loadFrameIntoJolecule(iFrameTraj, true)
 
       if (!initView) {
         if (this.matrixWidget || this.stripWidget) {
@@ -294,380 +297,348 @@ export default {
             }
           }
         }
-        await this.selectLigand();
+        await this.selectLigand()
       }
 
       if (initView) {
-        await this.loadView(initView);
+        await this.loadView(initView)
       }
 
-      this.resize();
-      this.popLoading();
+      this.resize()
+      this.popLoading()
     },
 
-    async loadEnsemble(ensembleId, viewId=null, trajs=[], mode="display") {
-      this.pushLoading();
-
+    async loadEnsemble (ensembleId, viewId = null, ensembleMode = 'display') {
+      console.log(`loadEnsemble(ensembleId=${ensembleId})`)
+      this.pushLoading()
       this.clearPage()
 
-      console.log(`loadEnsemble(ensembleId=${ensembleId})`);
-      document.title = "#" + ensembleId;
-      this.$store.commit("setItem", {ensembleId});
-      this.$store.commit("setItem", {foamId: ensembleId});
-
-
-      if (mode === "slide") {
-        this.displayMode = "slide"
+      if (ensembleMode === 'slide') {
+        this.displayMode = 'slide'
       } else {
-        this.displayMode = "table"
+        this.displayMode = 'table'
       }
       this.resetStyles()
 
-      let iFrameTraj = await this.table.loadTable(mode);
+      document.title = '#' + ensembleId
+      this.$store.commit('setItem', { ensembleId })
+      this.$store.commit('setItem', { foamId: ensembleId })
 
-      if (!_.isNull(iFrameTraj)) {
-        let result = await this.remote.get_views(this.foamId);
-        let initView = null;
-        if (result) {
-          this.views = result;
-          this.$store.commit("setItem", {views: this.views});
-          if (viewId && this.views) {
-            let view = _.find(this.views, (v) => v.id === viewId);
-            if (view) {
-              initView = view;
-            }
+      await this.table.loadTable(ensembleMode)
+
+      let result = await this.remote.get_views(ensembleId)
+      if (result) {
+        this.views = result
+        this.$store.commit('setItem', { views: this.views })
+        if (viewId && this.views) {
+          let view = _.find(this.views, v => v.id === viewId)
+          if (view) {
+            await this.loadView(view)
           }
-        }
-
-        console.log(`loadEnsemble first frame`, iFrameTraj)
-
-        await this.loadFrameIntoJolecule(iFrameTraj);
-
-        await delay(500)
-
-        if (initView) {
-          await this.loadView(initView);
-        } else {
-          if (trajs) {
-            let n = 0
-            for (let traj of trajs) {
-              for (let row of this.table.table.rows) {
-                if (row.iFrameTraj && row.iFrameTraj[1] === traj) {
-                  if (!inFrames(this.iFrameTrajList, row.iFrameTraj)) {
-                    await this.loadFrameIntoJolecule(row.iFrameTraj, n === 0)
-                    n += 1
-                  }
-                }
-              }
-            }
-          }
-          this.selectLigand();
         }
       }
 
-      this.resize();
-
-      this.popLoading();
+      await delay(500)
+      this.resize()
+      this.popLoading()
     },
 
-    clearPage() {
-      this.$store.commit("setItem", { foamId: '' });
-      this.$store.commit("setItem", { ensembleId: '' });
-      this.$store.commit("setItem", { viewId: '' });
-      this.$store.commit("setItem", { minFrame: null });
-      this.$store.commit("setItem", { setDatasets: []});
-      this.$store.commit("setItem", { tags: {} });
-      this.$store.commit("setItem", { iFrameTrajList: [] });
-      this.$store.commit("setItem", { loadIFrameTrajList: [] });
-      this.$store.commit("setItem", { dumpIFrameTrajList: [] });
-      this.$store.commit("setItem", { datasets: [] });
+    clearPage () {
+      this.$store.commit('setItem', { foamId: '' })
+      this.$store.commit('setItem', { ensembleId: '' })
+      this.$store.commit('setItem', { viewId: '' })
+      this.$store.commit('setItem', { minFrame: null })
+      this.$store.commit('setItem', { setDatasets: [] })
+      this.$store.commit('setItem', { tags: {} })
+      this.$store.commit('setItem', { iFrameTrajList: [] })
+      this.$store.commit('setItem', { loadIFrameTrajList: [] })
+      this.$store.commit('setItem', { dumpIFrameTrajList: [] })
+      this.$store.commit('setItem', { datasets: [] })
 
-      this.jolecule.clear();
-      this.cacheByiFrameTraj = {};
-      this.cacheAsCommunitiesByiFrameTraj = {};
-      this.cacheAsPocketsByiFrameTraj = {};
-      this.nStructureInFrameList = [];
+      this.jolecule.clear()
+      this.cacheByiFrameTraj = {}
+      this.cacheAsCommunitiesByiFrameTraj = {}
+      this.cacheAsPocketsByiFrameTraj = {}
+      this.nStructureInFrameList = []
 
-      this.resetWidgets();
+      this.resetWidgets()
       if (this.matrixWidget) {
-        this.matrixWidget.values = [];
-        this.matrixWidget.draw();
+        this.matrixWidget.values = []
+        this.matrixWidget.draw()
       }
       if (this.stripWidget) {
-        this.stripWidget.values = [];
-        this.stripWidget.draw();
+        this.stripWidget.values = []
+        this.stripWidget.draw()
       }
     },
 
-    resetStyles() {
+    resetStyles () {
       let result
-      if (!this.displayMode || this.displayMode === "frame" || this.displayMode === "slide") {
-        result = `width: calc(100%);`;
-      } else if (this.displayMode === "strip") {
-        result = `width: calc(100% - ${this.stripWidth});`;
-      } else {
-        result = `width: calc(50%)`;
-      }
-      this.joleculeStyle = result;
-
-      if (this.displayMode === "table") {
-        result = `width: calc(50%)`;
-      } else {
-        result = "display: none";
-      }
-      this.tableStyle = result;
-
-      if (this.displayMode === "matrix-strip" || this.displayMode === "strip") {
-        result = `width: ${this.stripWidth}`;
-      } else {
-        result = "display: none";
-      }
-      this.stripStyle = result;
-
-      if (this.displayMode === "matrix-strip") {
-        result = `width: calc(50% - ${this.stripWidth})`;
-      } else if (
-        this.displayMode === "matrix" ||
-        this.displayMode === "sparse-matrix"
+      if (
+        !this.displayMode ||
+        this.displayMode === 'frame' ||
+        this.displayMode === 'slide'
       ) {
-        result = `width: calc(50%)`;
+        result = `width: calc(100%);`
+      } else if (this.displayMode === 'strip') {
+        result = `width: calc(100% - ${this.stripWidth});`
       } else {
-        result = "display: none";
+        result = `width: calc(50%)`
       }
-      this.matrixStyle = result;
+      this.joleculeStyle = result
 
-      this.$forceUpdate();
+      if (this.displayMode === 'table') {
+        result = `width: calc(50%)`
+      } else {
+        result = 'display: none'
+      }
+      this.tableStyle = result
+
+      if (this.displayMode === 'matrix-strip' || this.displayMode === 'strip') {
+        result = `width: ${this.stripWidth}`
+      } else {
+        result = 'display: none'
+      }
+      this.stripStyle = result
+
+      if (this.displayMode === 'matrix-strip') {
+        result = `width: calc(50% - ${this.stripWidth})`
+      } else if (
+        this.displayMode === 'matrix' ||
+        this.displayMode === 'sparse-matrix'
+      ) {
+        result = `width: calc(50%)`
+      } else {
+        result = 'display: none'
+      }
+      this.matrixStyle = result
+
+      this.$forceUpdate()
     },
 
-    selectLigand() {
-      let soup = this.jolecule.soup;
-      let residue = soup.getResidueProxy();
+    selectLigand () {
+      let soup = this.jolecule.soup
+      let residue = soup.getResidueProxy()
       console.log(`selectLigand nRes`, soup.getResidueCount())
       for (let i = 0; i < soup.getResidueCount(); i += 1) {
-        residue.iRes = i;
-        if (_.includes(["LIG", "UNK", "UNL"], residue.resType)) {
-          let atomIndices = residue.getAtomIndices();
-          let ligandCenter = soup.getCenter(atomIndices);
+        residue.iRes = i
+        if (_.includes(['LIG', 'UNK', 'UNL'], residue.resType)) {
+          let atomIndices = residue.getAtomIndices()
+          let ligandCenter = soup.getCenter(atomIndices)
 
-          let maxDist = 0;
-          let maxPos = v3.create(0, 0, 0);
-          let atom = soup.getAtomProxy();
+          let maxDist = 0
+          let maxPos = v3.create(0, 0, 0)
+          let atom = soup.getAtomProxy()
           for (let iAtom of atomIndices) {
-            let pos = atom.load(iAtom).pos;
-            let dist = v3.distance(ligandCenter, pos);
+            let pos = atom.load(iAtom).pos
+            let dist = v3.distance(ligandCenter, pos)
             if (dist > maxDist) {
-              maxPos = pos;
-              maxDist = dist;
+              maxPos = pos
+              maxDist = dist
             }
           }
 
-          let systemCenter = soup.getCenter(_.range(soup.getAtomCount()));
+          let systemCenter = soup.getCenter(_.range(soup.getAtomCount()))
 
-          let zoom = 50;
+          let zoom = 50
           let inVec = v3
             .diff(systemCenter, ligandCenter)
             .normalize()
-            .multiplyScalar(zoom);
-          let maxVec = v3.diff(maxPos, ligandCenter);
-          let upVec = v3.perpendicular(maxVec, inVec).normalize();
+            .multiplyScalar(zoom)
+          let maxVec = v3.diff(maxPos, ligandCenter)
+          let upVec = v3.perpendicular(maxVec, inVec).normalize()
 
-          let soupView = this.jolecule.soupView;
-          let view = soupView.getCurrentView();
-          view.cameraParams.focus = ligandCenter;
-          view.cameraParams.position = ligandCenter.clone().sub(inVec);
-          view.cameraParams.up = upVec;
-          view.cameraParams.zFront = -soup.maxLength / 2;
-          view.cameraParams.zBack = soup.maxLength / 2;
-          view.cameraParams.zoom = zoom;
+          let soupView = this.jolecule.soupView
+          let view = soupView.getCurrentView()
+          view.cameraParams.focus = ligandCenter
+          view.cameraParams.position = ligandCenter.clone().sub(inVec)
+          view.cameraParams.up = upVec
+          view.cameraParams.zFront = -soup.maxLength / 2
+          view.cameraParams.zBack = soup.maxLength / 2
+          view.cameraParams.zoom = zoom
 
-          console.log(`selectLigand view`, _.cloneDeep(view));
-          this.jolecule.controller.setTargetView(view);
-          return;
+          console.log(`selectLigand view`, _.cloneDeep(view))
+          this.jolecule.controller.setTargetView(view)
+          return
         }
       }
       console.log(`selectLigand no ligand found`)
     },
 
-    async loadMetadata() {
-      this.pushLoading();
-      this.key = await this.getConfig("key");
-      this.opt_keys = await this.getConfig("opt_keys");
-      let datasets = await this.remote.get_json_datasets(this.foamId);
+    async loadMetadata () {
+      this.pushLoading()
+      this.key = await this.getConfig('key')
+      this.opt_keys = await this.getConfig('opt_keys')
+      let datasets = await this.remote.get_json_datasets(this.foamId)
       if (datasets) {
-        this.$store.commit("setItem", { datasets});
+        this.$store.commit('setItem', { datasets })
       }
-      let tags = await this.remote.get_tags(this.foamId);
+      let tags = await this.remote.get_tags(this.foamId)
       if (tags) {
-        this.$store.commit("setItem", { tags });
+        this.$store.commit('setItem', { tags })
       }
-      let minFrame = await this.remote.get_min_frame(this.foamId);
+      let minFrame = await this.remote.get_min_frame(this.foamId)
       if (!_.isNull(minFrame)) {
-        this.$store.commit("setItem", { minFrame });
-        console.log("minFrame", minFrame);
+        this.$store.commit('setItem', { minFrame })
+        console.log('minFrame', minFrame)
       }
-      this.popLoading();
+      this.popLoading()
     },
 
-    async loadMatrix(iFrameTraj) {
-      this.pushLoading("Matrix...");
-      let matrix = await this.getConfig("matrix");
-      this.popLoading("Connecting...");
+    async loadMatrix (iFrameTraj) {
+      this.pushLoading('Matrix...')
+      let matrix = await this.getConfig('matrix')
+      this.popLoading('Connecting...')
       if (_.isEmpty(matrix)) {
-        return;
+        return
       }
-      let value = _.isNil(iFrameTraj) ? getFirstValue(matrix) : { iFrameTraj };
-      let isSparse = this.displayMode === "sparse-matrix";
-      this.matrixWidget = new MatrixWidget("#matrix-widget", matrix, isSparse);
-      this.resize();
-      this.matrixWidget.selectGridValue = this.selectMatrixGridValue;
-      this.matrixWidget.deselectGridValue = this.deselectMatrixGridValue;
+      let value = _.isNil(iFrameTraj) ? getFirstValue(matrix) : { iFrameTraj }
+      let isSparse = this.displayMode === 'sparse-matrix'
+      this.matrixWidget = new MatrixWidget('#matrix-widget', matrix, isSparse)
+      this.resize()
+      this.matrixWidget.selectGridValue = this.selectMatrixGridValue
+      this.matrixWidget.deselectGridValue = this.deselectMatrixGridValue
       return value.iFrameTraj
     },
 
-    async selectMatrixGridValue(value, thisFrameOnly = false) {
-      if (this.stripWidget && _.has(value, "iFrameTrajs")) {
-        let label = value.label;
+    async selectMatrixGridValue (value, thisFrameOnly = false) {
+      if (this.stripWidget && _.has(value, 'iFrameTrajs')) {
+        let label = value.label
         let iFrameTrajs = value.iFrameTrajs
-        let n = iFrameTrajs.length;
-        let strip = _.map(iFrameTrajs, (iFrameTraj, i) => ({p: i / n, label, iFrameTraj}))
-        this.stripWidget.loadGrid([strip]);
-        let firstValue = getFirstValue([[strip]]);
-        await this.stripWidget.clickGridValue(firstValue, thisFrameOnly);
+        let n = iFrameTrajs.length
+        let strip = _.map(iFrameTrajs, (iFrameTraj, i) => ({
+          p: i / n,
+          label,
+          iFrameTraj
+        }))
+        this.stripWidget.loadGrid([strip])
+        let firstValue = getFirstValue([[strip]])
+        await this.stripWidget.clickGridValue(firstValue, thisFrameOnly)
       } else {
-        let iFrameTraj = value.iFrameTraj;
+        let iFrameTraj = value.iFrameTraj
         if (!this.isIFrameTrajSelected(iFrameTraj)) {
-          await this.loadFrameIntoJolecule(iFrameTraj, thisFrameOnly);
+          await this.loadFrameIntoJolecule(iFrameTraj, thisFrameOnly)
         }
       }
     },
 
-    async deselectMatrixGridValue(value) {
-      let iFrameTraj;
-      if (_.has(value, "iFrameTraj")) {
-        iFrameTraj = value.iFrameTraj;
-      } else if (_.has(value, "iFrameTrajs")) {
-        iFrameTraj = value.iFrameTrajs[0];
+    async deselectMatrixGridValue (value) {
+      let iFrameTraj
+      if (_.has(value, 'iFrameTraj')) {
+        iFrameTraj = value.iFrameTraj
+      } else if (_.has(value, 'iFrameTrajs')) {
+        iFrameTraj = value.iFrameTrajs[0]
       }
       if (this.isIFrameTrajSelected(iFrameTraj)) {
         this.$store.commit('addDumpIFrameTraj', iFrameTraj)
       }
     },
 
-    async loadStrip() {
-      let strip = await this.getConfig("strip");
+    async loadStrip () {
+      let strip = await this.getConfig('strip')
       if (_.isEmpty(strip)) {
-        strip = [[]];
+        strip = [[]]
       }
-      this.stripWidget = new MatrixWidget("#strip-widget", strip, false);
-      this.resize();
-      this.stripWidget.selectGridValue = this.selectStripGridValue;
-      this.stripWidget.deselectGridValue = this.deselectStripGridValue;
+      this.stripWidget = new MatrixWidget('#strip-widget', strip, false)
+      this.resize()
+      this.stripWidget.selectGridValue = this.selectStripGridValue
+      this.stripWidget.deselectGridValue = this.deselectStripGridValue
       let value = getFirstValue(strip)
       console.log('firstValue', value)
       if (_.isNil(value)) {
-        return null;
+        return null
       } else {
-        return value.iFrameTraj;
+        return value.iFrameTraj
       }
     },
 
-    async selectStripGridValue(value, thisFrameOnly) {
-      let iFrameTraj = value.iFrameTraj;
+    async selectStripGridValue (value, thisFrameOnly) {
+      let iFrameTraj = value.iFrameTraj
       if (_.isNil(iFrameTraj)) {
-        return;
+        return
       }
       if (
         this.hasFramesInJolecule() ||
         !this.isIFrameTrajSelected(iFrameTraj)
       ) {
-        await this.loadFrameIntoJolecule(iFrameTraj, thisFrameOnly);
+        await this.loadFrameIntoJolecule(iFrameTraj, thisFrameOnly)
       }
     },
 
-    async deselectStripGridValue(value) {
-      let iFrameTraj = value.iFrameTraj;
+    async deselectStripGridValue (value) {
+      let iFrameTraj = value.iFrameTraj
       if (this.isIFrameTrajSelected(iFrameTraj)) {
-        await this.deleteFrame(iFrameTraj);
+        await this.deleteFrame(iFrameTraj)
       }
     },
 
-    isIFrameTrajSelected(iFrameTraj) {
-      return inFrames(this.iFrameTrajList, iFrameTraj);
+    isIFrameTrajSelected (iFrameTraj) {
+      return inFrames(this.iFrameTrajList, iFrameTraj)
     },
 
-    async getPdbLines(iFrameTraj) {
-      this.pushLoading("Frames...");
-      let key = `${iFrameTraj[0]}-${iFrameTraj[1]}`;
-      let result = [];
+    async getPdbLines (iFrameTraj, useCache = true) {
+      this.pushLoading('Frames...')
+      let key = iFrameTraj.toString()
+      let result = []
       if (this.isAsCommunities) {
-        if (key in this.cacheAsCommunitiesByiFrameTraj) {
-          console.log(
-            `getPdbLines from cacheAsCommunitiesByiFrameTraj[${key}]`
-          );
-          result = this.cacheAsCommunitiesByiFrameTraj[key];
+        if (useCache && key in this.cacheAsCommunitiesByiFrameTraj) {
+          console.log(`getPdbLines from cacheAsCommunitiesByiFrameTraj[${key}]`)
+          result = this.cacheAsCommunitiesByiFrameTraj[key]
         } else {
           let response = await this.remote.get_pdb_lines_with_as_communities(
             this.foamId,
             iFrameTraj
-          );
+          )
           if (response) {
-            this.cacheAsCommunitiesByiFrameTraj[key] = response;
-            result = response;
+            this.cacheAsCommunitiesByiFrameTraj[key] = response
+            result = response
           }
         }
       } else if (this.isAsPockets) {
-        if (key in this.cacheAsPocketsByiFrameTraj) {
-          console.log(`getPdbLines from cacheAsPocketsByiFrameTraj[${key}]`);
-          result = this.cacheAsPocketsByiFrameTraj[key];
+        if (useCache && key in this.cacheAsPocketsByiFrameTraj) {
+          console.log(`getPdbLines from cacheAsPocketsByiFrameTraj[${key}]`)
+          result = this.cacheAsPocketsByiFrameTraj[key]
         } else {
           let response = await this.remote.get_pdb_lines_with_as_pockets(
             this.foamId,
             iFrameTraj
-          );
+          )
           if (response) {
-            this.cacheAsPocketsByiFrameTraj[key] = response;
-            result = response;
+            this.cacheAsPocketsByiFrameTraj[key] = response
+            result = response
           }
         }
       } else {
-        if (key in this.cacheByiFrameTraj) {
-          console.log(`getPdbLines from cacheByiFrameTraj[${key}]`);
-          result = this.cacheByiFrameTraj[key];
+        if (useCache && key in this.cacheByiFrameTraj) {
+          console.log(`getPdbLines from cacheByiFrameTraj[${key}]`)
+          result = this.cacheByiFrameTraj[key]
         } else {
           let response = await this.remote.get_pdb_lines(
             this.foamId,
             iFrameTraj
-          );
+          )
           if (response) {
-            this.cacheByiFrameTraj[key] = response;
-            result = response;
+            this.cacheByiFrameTraj[key] = response
+            result = response
           }
         }
       }
-      this.popLoading("Connecting...");
-      return result;
+      this.popLoading('Connecting...')
+      return result
     },
 
-    hasFramesInJolecule() {
-      return this.nStructureInFrameList.length;
+    hasFramesInJolecule () {
+      return this.nStructureInFrameList.length
     },
 
-    updateState() {
-      if (this.ensembleId) {
-        let trajs = _.map(this.iFrameTrajList, (x) => x[1]);
+    updateState () {
+      if (!this.ensembleId) {
+        let frames = _.map(this.iFrameTrajList, x => x[0])
         history.pushState(
-            {},
-            null,
-            "#" + this.$route.path + "?traj=" + trajs.join(",")
-        );
-        this.table.iFrameTrajList = _.cloneDeep(this.iFrameTrajList)
-      } else {
-        let frames = _.map(this.iFrameTrajList, (x) => x[0]);
-        history.pushState(
-            {},
-            null,
-            "#" + this.$route.path + "?frame=" + frames.join(",")
-        );
+          {},
+          null,
+          '#' + this.$route.path + '?frame=' + frames.join(',')
+        )
         if (this.stripWidget) {
           this.stripWidget.resetValuesFromFrames(this.iFrameTrajList)
           this.stripWidget.draw()
@@ -680,7 +651,7 @@ export default {
       this.checkWatchLists()
     },
 
-    checkWatchLists() {
+    checkWatchLists () {
       // Check for store.state.loadIFrameTrajList and reset the list
       // if they have not been loaded
       let oldLoadIFrameTrajList = this.loadIFrameTrajList
@@ -690,7 +661,7 @@ export default {
           loadIFrameTrajList.push(entry)
         }
       }
-      this.$store.commit('setItem',{loadIFrameTrajList})
+      this.$store.commit('setItem', { loadIFrameTrajList })
 
       // Check for store.state.dumpIFrameTrajList and reset the list
       // if they have not been deleted
@@ -701,337 +672,346 @@ export default {
           dumpIFrameTrajList.push(iFrameTraj)
         }
       }
-      this.$store.commit('setItem',{dumpIFrameTrajList})
+      this.$store.commit('setItem', { dumpIFrameTrajList })
     },
 
-    async loadFrameIntoJolecule(iFrameTraj, thisFrameOnly = false) {
+    async loadFrameIntoJolecule (
+      iFrameTraj,
+      thisFrameOnly = false,
+      useCache = true
+    ) {
       if (this.isFetching) {
-        return;
+        return
       }
-      this.isFetching = true;
-      let pdbLines = await this.getPdbLines(iFrameTraj);
+      this.isFetching = true
+      let pdbLines = await this.getPdbLines(iFrameTraj, useCache)
       if (pdbLines) {
-        let saveCurrentView = null;
-        let pdbId = `frame-${iFrameTraj}`.replace(",", "-");
-        let soup = this.jolecule.soupWidget.soup;
-        let nStructurePrev = soup.structureIds.length;
+        let saveCurrentView = null
+        let frameStr = iFrameTraj.slice(0, 2)
+        let pdbId = `frame-${frameStr}`.replace(',', '-')
+        let soup = this.jolecule.soupWidget.soup
+        let nStructurePrev = soup.structureIds.length
         if (nStructurePrev > 0) {
-          saveCurrentView = this.jolecule.soupView.getCurrentView();
+          saveCurrentView = this.jolecule.soupView.getCurrentView()
         }
-        console.log(`loadFrameIntoJolecule load`, pdbId);
+        console.log(`loadFrameIntoJolecule load`, pdbId)
         await this.jolecule.asyncAddDataServer(
           {
             version: 2,
             pdbId: pdbId,
-            format: "pdb",
-            asyncGetData: async () => pdbLines.join("\n"),
+            format: 'pdb',
+            asyncGetData: async () => pdbLines.join('\n'),
             asyncGetViews: async () => [],
-            async asyncSaveViews() {},
-            async asyncDeleteViews() {},
+            async asyncSaveViews () {},
+            async asyncDeleteViews () {}
           },
           false
-        );
+        )
 
-        let nStructureInThisFrame = soup.structureIds.length - nStructurePrev;
+        let nStructureInThisFrame = soup.structureIds.length - nStructurePrev
         if (thisFrameOnly && this.hasFramesInJolecule()) {
           let iLastStructureToDelete =
-            soup.structureIds.length - 1 - nStructureInThisFrame;
+            soup.structureIds.length - 1 - nStructureInThisFrame
           for (let i = iLastStructureToDelete; i >= 0; i -= 1) {
-            console.log(`loadFrameIntoJolecule delete`, soup.structureIds[i]);
-            this.jolecule.controller.deleteStructure(i);
+            console.log(`loadFrameIntoJolecule delete`, soup.structureIds[i])
+            this.jolecule.controller.deleteStructure(i)
           }
-          this.nStructureInFrameList = [];
-          this.$store.commit("setItem", {iFrameTrajList: []});
+          this.nStructureInFrameList = []
+          this.$store.commit('setItem', { iFrameTrajList: [] })
         }
-        this.nStructureInFrameList.push(nStructureInThisFrame);
-        this.$store.commit("addIFrameTraj", iFrameTraj);
+        this.nStructureInFrameList.push(nStructureInThisFrame)
+        this.$store.commit('addIFrameTraj', iFrameTraj)
 
         if (saveCurrentView) {
-          this.jolecule.soupView.setHardCurrentView(saveCurrentView);
+          this.jolecule.soupView.setHardCurrentView(saveCurrentView)
         }
-        this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame();
+        this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame()
         if (!this.isAsCommunities && !this.isAsPockets) {
-          this.clearGridDisplay();
+          this.clearGridDisplay()
         }
-        this.jolecule.soupWidget.buildScene();
+        this.jolecule.soupWidget.buildScene()
       }
-      this.isFetching = false;
-      this.updateState();
+      this.isFetching = false
+      this.updateState()
     },
 
-    async reloadLastFrameOfJolecule() {
+    async reloadLastFrameOfJolecule () {
       if (this.isFetching) {
-        return;
+        return
       }
-      this.isFetching = true;
-      let iFrameTraj = _.last(this.iFrameTrajList);
+      this.isFetching = true
+      let iFrameTraj = _.last(this.iFrameTrajList)
 
       console.log(
-        "reloadLastFrameOfJolecule before grid",
+        'reloadLastFrameOfJolecule before grid',
         _.keys(this.jolecule.soup.grid.isElem).length
-      );
+      )
       console.log(
-        "reloadLastFrameOfJolecule before view.grid",
+        'reloadLastFrameOfJolecule before view.grid',
         _.keys(this.jolecule.soupView.currentView.grid.isElem).length
-      );
+      )
 
-      let pdbLines = await this.getPdbLines(iFrameTraj);
+      let pdbLines = await this.getPdbLines(iFrameTraj)
       if (pdbLines) {
-        let saveCurrentView = this.jolecule.soupView.getCurrentView();
+        let saveCurrentView = this.jolecule.soupView.getCurrentView()
 
-        let pdbId = `frame-${iFrameTraj}`.replace(",", "-");
-        let soup = this.jolecule.soup;
-        let structureId = _.last(soup.structureIds);
+        let pdbId = `frame-${iFrameTraj}`.replace(',', '-')
+        let soup = this.jolecule.soup
+        let structureId = _.last(soup.structureIds)
         await this.jolecule.asyncAddDataServer(
           {
             version: 2,
             pdbId: pdbId,
-            format: "pdb",
-            asyncGetData: async () => pdbLines.join("\n"),
+            format: 'pdb',
+            asyncGetData: async () => pdbLines.join('\n'),
             asyncGetViews: async () => [],
-            async asyncSaveViews() {},
-            async asyncDeleteViews() {},
+            async asyncSaveViews () {},
+            async asyncDeleteViews () {}
           },
           false
-        );
-        soup.structureIds[soup.structureIds.length - 1] = structureId;
+        )
+        soup.structureIds[soup.structureIds.length - 1] = structureId
 
-        let nStructure = _.last(this.nStructureInFrameList);
-        let i = this.iFrameTrajList.length - 1;
-        await this.deleteItemFromIFrameTrajList(i);
+        let nStructure = _.last(this.nStructureInFrameList)
+        let i = this.iFrameTrajList.length - 1
+        await this.deleteItemFromIFrameTrajList(i)
 
         // recount the grids after removing the grids from
         // the deleted frame
-        soup.findGridLimits();
+        soup.findGridLimits()
 
-        this.nStructureInFrameList.splice(i, 1);
-        this.nStructureInFrameList.push(nStructure);
+        this.nStructureInFrameList.splice(i, 1)
+        this.nStructureInFrameList.push(nStructure)
 
-        this.jolecule.soupView.setHardCurrentView(saveCurrentView);
-        this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame();
+        this.jolecule.soupView.setHardCurrentView(saveCurrentView)
+        this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame()
         if (!this.isAsCommunities && !this.isAsPockets) {
-          this.clearGridDisplay();
+          this.clearGridDisplay()
         }
-        this.jolecule.soupWidget.buildScene();
+        this.jolecule.soupWidget.buildScene()
       }
 
-      this.isFetching = false;
+      this.isFetching = false
     },
 
-    async deleteFrame(delIFrameTraj) {
-      let i = _.findIndex(this.iFrameTrajList, (iFrameTraj) =>
+    async deleteFrame (delIFrameTraj) {
+      let i = _.findIndex(this.iFrameTrajList, iFrameTraj =>
         isSameVec(iFrameTraj, delIFrameTraj)
-      );
+      )
       if (!_.isNil(i)) {
-        await this.deleteItemFromIFrameTrajList(i);
+        await this.deleteItemFromIFrameTrajList(i)
       }
-      this.updateState();
+      this.updateState()
     },
 
-    async deleteItemFromIFrameTrajList(i) {
-      let nStructureBefore = _.sum(this.nStructureInFrameList.slice(0, i));
-      let nStructureToDelete = this.nStructureInFrameList[i];
-      let soup = this.jolecule.soupWidget.soup;
+    async deleteItemFromIFrameTrajList (i) {
+      let nStructureBefore = _.sum(this.nStructureInFrameList.slice(0, i))
+      let nStructureToDelete = this.nStructureInFrameList[i]
+      let soup = this.jolecule.soupWidget.soup
       while (nStructureToDelete) {
-        let iStructureToDelete = nStructureBefore + nStructureToDelete - 1;
-        let structureId = soup.structureIds[iStructureToDelete];
-        this.jolecule.controller.deleteStructure(iStructureToDelete);
+        let iStructureToDelete = nStructureBefore + nStructureToDelete - 1
+        let structureId = soup.structureIds[iStructureToDelete]
+        this.jolecule.controller.deleteStructure(iStructureToDelete)
         console.log(
           `deleteIFromIFrameTrajList ${iStructureToDelete}:${structureId}`
-        );
-        nStructureToDelete -= 1;
+        )
+        nStructureToDelete -= 1
       }
-      this.jolecule.soupWidget.buildScene();
-      this.$store.commit("deleteItemFromIFrameTrajList", i);
-      this.nStructureInFrameList.splice(i, 1);
+      this.jolecule.soupWidget.buildScene()
+      this.$store.commit('deleteItemFromIFrameTrajList', i)
+      this.nStructureInFrameList.splice(i, 1)
     },
 
-    downloadPdb() {
-      let text = getPdbText(this.jolecule, `Foamid:${this.foamId}`);
+    downloadPdb () {
+      let text = getPdbText(this.jolecule, `Foamid:${this.foamId}`)
 
-      let filename = `foamid-${this.foamId}`;
-      let iFrameTraj = _.last(this.iFrameTrajList);
+      let filename = `foamid-${this.foamId}`
+      let iFrameTraj = _.last(this.iFrameTrajList)
       if (iFrameTraj) {
-        let iFrame = iFrameTraj[0];
-        filename += `-frame-${iFrame}`;
+        let iFrame = iFrameTraj[0]
+        filename += `-frame-${iFrame}`
       }
-      filename += ".pdb";
+      filename += '.pdb'
 
-      saveTextFile(text, filename);
+      saveTextFile(text, filename)
     },
 
-    async loadView(view) {
+    async loadView (view) {
       console.log(`loadView`, _.cloneDeep(view))
-      if (_.has(view, "matrixWidgetValues")) {
-        await this.matrixWidget.loadValues(view.matrixWidgetValues);
+
+      // First load all the frames
+
+      if (_.has(view, 'matrixWidgetValues')) {
+        await this.matrixWidget.loadValues(view.matrixWidgetValues)
       }
-      if (_.has(view, "stripWidgetValues")) {
-        await this.stripWidget.loadValues(view.stripWidgetValues);
+
+      if (_.has(view, 'stripWidgetValues')) {
+        await this.stripWidget.loadValues(view.stripWidgetValues)
       }
+
       if (this.ensembleId) {
-        if (_.has(view, "ensembleTableValues")) {
-          let oldIFrameTrajList = _.cloneDeep(this.iFrameTrajList);
-          for (let iFrameTraj of view.ensembleTableValues) {
-            if (!inFrames(this.iFrameTrajList, iFrameTraj)) {
-              await this.loadFrameIntoJolecule(iFrameTraj, false);
-            }
+        if (_.has(view, 'ensembleTableValues')) {
+          await this.remote.clear_ensemble_cache(this.ensembleId)
+          for (let iFrameTraj of _.cloneDeep(this.iFrameTrajList)) {
+            await this.deleteFrame(iFrameTraj)
           }
-          for (let iFrameTraj of oldIFrameTrajList) {
-            if (!inFrames(view.ensembleTableValues, iFrameTraj)) {
-              await this.deleteFrame(iFrameTraj)
-            }
+          let values = view.ensembleTableValues
+          for (let i = 0; i < values.length; i += 1) {
+            let iFrameTraj = values[i]
+            await this.loadFrameIntoJolecule(iFrameTraj, i === 0)
           }
           this.table.iFrameTrajList = _.cloneDeep(this.iFrameTrajList)
         }
       }
 
-      let newView = this.jolecule.soupView.getCurrentView();
-      newView.setFromDict(view.viewDict);
-      this.controller.setTargetView(newView);
+      // Then set the view
+      let newView = this.jolecule.soupView.getCurrentView()
+      newView.setFromDict(view.viewDict)
+      this.controller.setTargetView(newView)
 
-      this.$store.commit('setItem',{viewId: view.id})
-
-      history.pushState({}, null, "#" + this.$route.path + "?view=" + view.id);
+      // update store and URL
+      this.$store.commit('setItem', { viewId: view.id })
+      history.pushState({}, null, '#' + this.$route.path + '?view=' + view.id)
     },
 
-    async saveView() {
-      let viewDict = this.jolecule.soupView.getCurrentView().getDict();
+    async saveView () {
+      let viewDict = this.jolecule.soupView.getCurrentView().getDict()
       let view = {
-        id: viewDict.view_id.replace("view:", ""),
+        id: viewDict.view_id.replace('view:', ''),
         timestamp: Math.floor(Date.now() / 1000),
         viewDict: viewDict,
-        text: "",
-        imgs: "",
-      };
+        text: '',
+        imgs: ''
+      }
       if (this.ensembleId) {
         view.ensembleId = this.ensembleId
       } else if (this.foamId) {
         view.foamId = this.foamId
       }
       if (this.matrixWidget) {
-        view.matrixWidgetValues = _.cloneDeep(this.matrixWidget.values);
+        view.matrixWidgetValues = _.cloneDeep(this.matrixWidget.values)
       }
       if (this.stripWidget) {
-        view.stripWidgetValues = _.cloneDeep(this.stripWidget.values);
+        view.stripWidgetValues = _.cloneDeep(this.stripWidget.values)
       }
       if (this.ensembleId && this.table) {
-        view.ensembleTableValues = _.cloneDeep(this.table.iFrameTrajList);
+        view.ensembleTableValues = _.cloneDeep(this.table.iFrameTrajList)
       }
-      this.$store.commit("setItem", { newView: view });
+      this.$store.commit('setItem', { newView: view })
     },
 
-    clearGridDisplay() {
-      this.jolecule.soupView.currentView.grid.isElem = {};
-      let grid = this.jolecule.soupView.soup.grid;
-      grid.isElem = {};
-      grid.isChanged = true;
-      this.jolecule.soupView.isUpdateColors = true;
-      this.jolecule.soupWidget.buildScene();
+    clearGridDisplay () {
+      this.jolecule.soupView.currentView.grid.isElem = {}
+      let grid = this.jolecule.soupView.soup.grid
+      grid.isElem = {}
+      grid.isChanged = true
+      this.jolecule.soupView.isUpdateColors = true
+      this.jolecule.soupWidget.buildScene()
     },
 
-    async toggleAsCommunities() {
-      this.isAsCommunities = !this.isAsCommunities;
-      this.clearGridDisplay();
+    async toggleAsCommunities () {
+      this.isAsCommunities = !this.isAsCommunities
+      this.clearGridDisplay()
       if (this.isAsCommunities) {
-        this.isAsPockets = false;
+        this.isAsPockets = false
       }
-      this.reloadLastFrameOfJolecule();
-      this.$forceUpdate();
+      this.reloadLastFrameOfJolecule()
+      this.$forceUpdate()
     },
 
-    async toggleAsPockets() {
-      this.isAsPockets = !this.isAsPockets;
-      this.clearGridDisplay();
+    async toggleAsPockets () {
+      this.isAsPockets = !this.isAsPockets
+      this.clearGridDisplay()
       if (this.isAsPockets) {
-        this.isAsCommunities = false;
+        this.isAsCommunities = false
       }
-      this.reloadLastFrameOfJolecule();
-      this.$forceUpdate();
+      this.reloadLastFrameOfJolecule()
+      this.$forceUpdate()
     },
 
-    async selectOptKey(key) {
-      let iFrameTraj = _.last(this.iFrameTrajList);
-      console.log("selectOptKey", key, iFrameTraj);
-      await this.remote.select_new_key(this.foamId, key);
-      this.resetWidgets();
-      iFrameTraj = await this.loadMatrix(iFrameTraj);
+    async selectOptKey (key) {
+      let iFrameTraj = _.last(this.iFrameTrajList)
+      console.log('selectOptKey', key, iFrameTraj)
+      await this.remote.select_new_key(this.foamId, key)
+      this.resetWidgets()
+      iFrameTraj = await this.loadMatrix(iFrameTraj)
       this.clickFrame(iFrameTraj)
     },
 
-    async close() {
-      await this.remote.kill();
+    async close () {
+      await this.remote.kill()
     },
 
-    onkeydown(event) {
+    onkeydown (event) {
       if (
         this.$store.state.keyboardLock ||
         window.keyboardLock ||
         event.metaKey ||
         event.ctrlKey
       ) {
-        return;
+        return
       }
-      let c = String.fromCharCode(event.keyCode).toUpperCase();
-      if (c === "V") {
-        this.createView();
-      } else if (c === "K" || event.keyCode === 37) {
-        this.controller.setTargetToPrevResidue();
-      } else if (c === "J" || event.keyCode === 39) {
-        this.controller.setTargetToNextResidue();
-      } else if (c === "S") {
-        this.controller.toggleShowOption("sphere");
-      } else if (c === "B") {
-        this.controller.toggleShowOption("backbone");
-      } else if (c === "R") {
-        this.controller.toggleShowOption("ribbon");
-      } else if (c === "L") {
-        this.controller.toggleShowOption("ligands");
-      } else if (c === "H") {
-        this.controller.toggleShowOption("hydrogen");
-      } else if (c === "W") {
-        this.controller.toggleShowOption("water");
-      } else if (c === "T") {
-        this.controller.toggleShowOption("transparent");
-      } else if (c === "N") {
-        this.controller.toggleResidueNeighbors();
-      } else if (c === "C") {
-        this.controller.toggleSelectedSidechains();
-      } else if (c === "X") {
-        let iAtom = this.soupView.getICenteredAtom();
+      let c = String.fromCharCode(event.keyCode).toUpperCase()
+      if (c === 'V') {
+        this.createView()
+      } else if (c === 'K' || event.keyCode === 37) {
+        this.controller.setTargetToPrevResidue()
+      } else if (c === 'J' || event.keyCode === 39) {
+        this.controller.setTargetToNextResidue()
+      } else if (c === 'S') {
+        this.controller.toggleShowOption('sphere')
+      } else if (c === 'B') {
+        this.controller.toggleShowOption('backbone')
+      } else if (c === 'R') {
+        this.controller.toggleShowOption('ribbon')
+      } else if (c === 'L') {
+        this.controller.toggleShowOption('ligands')
+      } else if (c === 'H') {
+        this.controller.toggleShowOption('hydrogen')
+      } else if (c === 'W') {
+        this.controller.toggleShowOption('water')
+      } else if (c === 'T') {
+        this.controller.toggleShowOption('transparent')
+      } else if (c === 'N') {
+        this.controller.toggleResidueNeighbors()
+      } else if (c === 'C') {
+        this.controller.toggleSelectedSidechains()
+      } else if (c === 'X') {
+        let iAtom = this.soupView.getICenteredAtom()
         if (iAtom >= 0) {
-          let atom = this.soupView.soup.getAtomProxy(iAtom);
-          this.controller.selectResidue(atom.iRes);
+          let atom = this.soupView.soup.getAtomProxy(iAtom)
+          this.controller.selectResidue(atom.iRes)
         }
       } else if (event.keyCode === 27) {
-        this.controller.clear();
-      } else if (c === "Z" || event.keyCode === 13) {
-        this.controller.zoomToSelection();
-      } else if (event.key === "Escape") {
-        this.controller.clear();
+        this.controller.clear()
+      } else if (c === 'Z' || event.keyCode === 13) {
+        this.controller.zoomToSelection()
+      } else if (event.key === 'Escape') {
+        this.controller.clear()
       }
     },
 
-    getGridWidget() {
+    getGridWidget () {
       if (this.matrixWidget) {
-        return this.matrixWidget;
+        return this.matrixWidget
       } else if (this.stripWidget) {
-        return this.stripWidget;
+        return this.stripWidget
       }
       return null
     },
 
-    async clickFrame(iFrameTraj, thisFrameOnly = true) {
-      console.log(`clickFrame ${iFrameTraj}`);
+    async clickFrame (iFrameTraj, thisFrameOnly = true) {
+      console.log(`clickFrame ${iFrameTraj}`)
       let gridWidget = this.getGridWidget()
       if (!gridWidget) {
-        await this.loadFrameIntoJolecule(iFrameTraj);
+        await this.loadFrameIntoJolecule(iFrameTraj)
       } else {
         let value = gridWidget.getGridValue(iFrameTraj)
         if (value) {
-          await gridWidget.clickGridValue(value, thisFrameOnly);
+          await gridWidget.clickGridValue(value, thisFrameOnly)
         }
       }
     }
-  },
-};
+  }
+}
 </script>

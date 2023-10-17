@@ -135,11 +135,7 @@ export default {
     handleUrl() {
       let ensembleId = this.$route.params.ensembleId;
       let viewId = this.$route.query.view;
-      let trajs = this.$route.query.traj;
-      if (trajs) {
-        trajs = _.map(trajs.split(","), _.parseInt);
-      }
-      this.$refs.joleculeMatrix.loadEnsemble(ensembleId, viewId, trajs)
+      this.$refs.joleculeMatrix.loadEnsemble(ensembleId, viewId)
     },
     downloadPdb() {
       this.$refs.joleculeMatrix.downloadPdb();

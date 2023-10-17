@@ -565,7 +565,10 @@ class FoamEnsembleReader(RshowReaderMixin):
         table = self.config.table
         headers = table.headers
         n = len(headers)
-        row = {"vals": [""] * n, "iFrameTraj": [int(frame), int(foam_id)]}
+        i_frame_traj = [int(frame), int(foam_id)]
+        if atom_mask:
+            i_frame_traj.append(atom_mask)
+        row = {"vals": [""] * n, "iFrameTraj": i_frame_traj}
         iFoamCol = table["iFoamCol"]
         if not py_.is_none(iFoamCol):
             row["vals"][iFoamCol] = int(foam_id)
@@ -576,6 +579,23 @@ class FoamEnsembleReader(RshowReaderMixin):
         if not py_.is_none(iAtomMask):
             row["vals"][iAtomMask] = atom_mask
         table["rows"].append(row)
+
+    def update_row(self, i_row, foam_id, frame, atom_mask=None):
+        i_frame_traj = [int(frame), int(foam_id)]
+        if atom_mask:
+            i_frame_traj.append(atom_mask)
+        table = self.config.table
+        row = table["rows"][i_row]
+        row["iFrameTraj"] = i_frame_traj
+        iFoamCol = table["iFoamCol"]
+        if not py_.is_none(iFoamCol):
+            row["vals"][iFoamCol] = int(foam_id)
+        iFrameCol = table["iFrameCol"]
+        if not py_.is_none(iFrameCol):
+            row["vals"][iFrameCol] = int(frame)
+        iAtomMask = table["iAtomMask"]
+        if not py_.is_none(iAtomMask):
+            row["vals"][iAtomMask] = atom_mask
 
     def remove_row(self, i_row):
         del self.config.table["rows"][i_row]

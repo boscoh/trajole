@@ -51,59 +51,65 @@
 </template>
 
 <script>
-import * as bootstrap from "bootstrap";
-import * as _ from "lodash"
+import * as bootstrap from 'bootstrap'
+import * as _ from 'lodash'
 
 export default {
-  data() {
+  data () {
     return {
       newFrame: null,
-      editFrames: [],
-    };
+      editFrames: []
+    }
   },
   computed: {
-    frameStr() {
-      return this.$store.getters.frameStr;
+    frameStr () {
+      return this.$store.getters.frameStr
     },
-    iFrameTrajList() {
-      return this.$store.state.iFrameTrajList;
-    },
+    iFrameTrajList () {
+      return this.$store.state.iFrameTrajList
+    }
   },
-  mounted() {
+  mounted () {
     this.editFramesModal = new bootstrap.Modal(
-      document.getElementById("edit-frames-modal")
-    );
+      document.getElementById('edit-frames-modal')
+    )
   },
   methods: {
-    buildEditFrames() {
-      this.editFrames = [];
+    buildEditFrames () {
+      this.editFrames = []
       for (let iFrameTraj of this.iFrameTrajList) {
-        this.editFrames.push({ frame: iFrameTraj[0] });
+        this.editFrames.push({ frame: iFrameTraj[0] })
       }
     },
-    async openFramesModal() {
+    async openFramesModal () {
       if (this.$store.state.ensembleId) {
         return
       }
-      this.buildEditFrames();
-      this.$store.commit("setItem", { keyboardLock: true });
-      this.editFramesModal.show();
+      this.buildEditFrames()
+      this.$store.commit('setItem', { keyboardLock: true })
+      this.editFramesModal.show()
     },
-    addFrame(newFrame) {
-      this.editFrames.push({ frame: newFrame });
-      this.$store.commit("addLoad", {iFrameTraj: [_.parseInt(newFrame), 0], thisFrameOnly: false});
-      this.newFrame = null;
+    addFrame (newFrame) {
+      this.editFrames.push({ frame: newFrame })
+      this.$store.commit('addLoad', {
+        iFrameTraj: [_.parseInt(newFrame), 0],
+        thisFrameOnly: false
+      })
+      this.newFrame = null
     },
-    removeFrame(i) {
-      this.$store.commit("addDumpIFrameTraj", [_.parseInt(this.editFrames[i].frame), 0]);
-      this.editFrames.splice(i, 1);
+    removeFrame (i) {
+      this.$store.commit('addDumpIFrameTraj', [
+        _.parseInt(this.editFrames[i].frame),
+        0
+      ])
+      this.editFrames.splice(i, 1)
     },
-    cancel() {
-      this.$store.commit("setItem", { keyboardLock: false });
+    cancel () {
+      this.$store.commit('setItem', { keyboardLock: false })
     },
-    copyFramesToClipboard(text) {
-      navigator.clipboard.writeText(text);
-    },
-  },
-};
+    copyFramesToClipboard (text) {
+      navigator.clipboard.writeText(text)
+    }
+  }
+}
 </script>
