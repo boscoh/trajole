@@ -28,7 +28,7 @@ def find_free_port():
         return s.getsockname()[1]
 
 
-config = Dict(mode="")
+config = Dict(mode="", file_mode="r")
 
 
 def run():
@@ -90,7 +90,7 @@ def cli(dev, solvent, port):
 @click.argument("h5")
 def traj(h5):
     """
-    open H5 Traj
+    Open H5
     """
     config.stream_class = "TrajReader"
     config.trajectories = [h5]
@@ -101,7 +101,7 @@ def traj(h5):
 @click.argument("metad_dir", default=".", required=False)
 def fes(metad_dir):
     """
-    open H5 Traj with FES of CV
+    Open H5 with FES matrix
     """
     config.stream_class = "FesMatrixTrajReader"
     config.metad_dir = metad_dir
@@ -112,7 +112,7 @@ def fes(metad_dir):
 @click.argument("foam_id")
 def traj_foam(foam_id):
     """
-    open H5 stored on FoamDB
+    Open H5 stored on FoamDB
     """
     config.stream_class = "FoamTrajReader"
     config.trajectories = [foam_id]
@@ -124,7 +124,7 @@ def traj_foam(foam_id):
 @click.option("--mode", default="matrix-strip", required=False)
 def matrix(matrix_yaml, mode):
     """
-    open H5 with 2D Matrix
+    Open H5 with matrix
     """
     config.stream_class = "MatrixTrajReader"
     config.matrix_yaml = matrix_yaml
@@ -137,7 +137,7 @@ def matrix(matrix_yaml, mode):
 @click.option("--key", default="u")
 def re(re_dir, key):
     """
-    open multiple H5 in parallel 2D Matrix
+    Open multiple H5 in parallel 
     """
     config.stream_class = "ParallelTrajReader"
     config.re_dir = re_dir
@@ -151,7 +151,7 @@ def re(re_dir, key):
 @click.argument("csv", required=False)
 def ligands(pdb, sdf, csv):
     """
-    open PDB with Ligands in SDF
+    Open PDB with ligands in SDF
     """
     config.stream_class = "LigandsReceptorReader"
     config.pdb = pdb
@@ -164,7 +164,7 @@ def ligands(pdb, sdf, csv):
 @click.argument("pdb")
 def frame(pdb):
     """
-    open PDB or PARMED
+    Open PDB or PARMED
     """
     config.stream_class = "FrameReader"
     config.pdb_or_parmed = pdb
@@ -176,7 +176,7 @@ def frame(pdb):
 @click.argument("open_url", required=False)
 def open_url(test_url, open_url):
     """
-    open OPEN_URL when TEST_URL works
+    Open OPEN_URL when TEST_URL works
     """
     from rshow.openurl import open_url_in_background
 

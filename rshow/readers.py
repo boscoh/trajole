@@ -11,7 +11,6 @@ import parmed
 from pydash import py_
 from addict import Dict
 from rich.pretty import pretty_repr
-from rseed.util.fs import load_yaml
 
 from rseed.formats.easyh5 import EasyFoamTrajH5
 from rseed.formats.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
@@ -150,6 +149,7 @@ class TrajReader(RshowReaderMixin):
             title="",  # Title for rshow
             is_solvent=True,
             atom_mask="",
+            file_mode="a",
         )
         self.config.update(config)
         for l in repr_lines(self.config, f"{self.__class__.__name__}.config = "):
@@ -170,7 +170,10 @@ class TrajReader(RshowReaderMixin):
 
     def get_traj_manager(self) -> TrajectoryManager:
         return TrajectoryManager(
-            self.config.trajectories, atom_mask=self.get_atom_mask(), is_dry_cache=True
+            self.config.trajectories,
+            atom_mask=self.get_atom_mask(),
+            file_mode=self.config.file_mode,
+            is_dry_cache=True,
         )
 
     def get_tags(self):
