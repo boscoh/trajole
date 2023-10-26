@@ -89,13 +89,13 @@ class AlphaSpace:
         i_atom = self.mdtraj.xyz.shape[1]
         i_res = len(list(self.mdtraj.top.residues))
         for community in self.communities:
-            i_pockets = community["core_pockets"] # + community["aux_pockets"]
+            i_pockets = community["core_pockets"]  # + community["aux_pockets"]
             nonpolar_spaces = [self.pockets[i].nonpolar_space for i in i_pockets]
             community["key"] = sum(nonpolar_spaces)
         self.communities.sort(key=lambda c: -c["key"])
         for i_community, community in enumerate(self.communities):
             element = self.elements[i_community % len(self.elements)]
-            i_pockets = community["core_pockets"] # + community["aux_pockets"]
+            i_pockets = community["core_pockets"]  # + community["aux_pockets"]
             for i_pocket in i_pockets:
                 for alpha in self.pockets[i_pocket].alphas:
                     line = self.gen_pdb_line(

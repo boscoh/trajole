@@ -10,7 +10,6 @@ import copy
 import parmed
 from addict import Dict
 import pydash as py_
-from rich.pretty import pprint
 from rseed.formats.easyh5 import EasyTrajH5
 from rseed.granary import Granary
 from rseed.analysis.fes import get_i_frame_min
@@ -265,12 +264,12 @@ def init_ensemble_reader(ensemble_id):
         if ensemble_reader.frame is not None:
             last_frame = ensemble_reader.frame
             if len(last_i_frame_traj) > 2 and len(i_frame_traj) > 2:
-                logger.info(f"get_frame_of_ensemble superpose with different atom mask")
+                logger.info("get_frame_of_ensemble superpose with different atom mask")
                 last_atom_mask = last_i_frame_traj[2]
                 atom_mask = i_frame_traj[2]
                 superpose(last_frame, frame, last_atom_mask, atom_mask)
             else:
-                logger.info(f"get_frame_of_ensemble superpose with default atom mask")
+                logger.info("get_frame_of_ensemble superpose with default atom mask")
                 atom_mask = "intersect {protein} {mdtraj name CA}"
                 superpose(last_frame, frame, atom_mask)
 

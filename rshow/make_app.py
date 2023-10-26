@@ -5,7 +5,7 @@ import traceback
 from io import BytesIO
 
 import pydash as py_
-from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi import FastAPI, File, Request, UploadFile
 from path import Path
 from rich.pretty import pretty_repr
 from starlette.middleware.cors import CORSMiddleware
@@ -49,7 +49,7 @@ def make_app(handlers, client_dir, data_dir):
             result = {"result": result, "jsonrpc": "2.0", "id": job_id}
             elapsed_ms = round((time.perf_counter_ns() - start_time) / 1e6)
             logger.info(f"rpc-run.{method}:finished in {elapsed_ms}ms")
-        except Exception as e:
+        except Exception:
             elapsed_ms = round((time.perf_counter_ns() - start_time) / 1e6)
             logger.info(f"rpc-run.{method}:error after {elapsed_ms}ms:")
             error_lines = str(traceback.format_exc()).splitlines()

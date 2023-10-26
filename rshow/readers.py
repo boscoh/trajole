@@ -10,10 +10,10 @@ import numpy as np
 import parmed
 from pydash import py_
 from addict import Dict
-from rich.pretty import pretty_repr, pprint
-from rseed.util.fs import tic, toc, load_json, load_yaml
+from rich.pretty import pretty_repr
+from rseed.util.fs import load_yaml
 
-from rseed.formats.easyh5 import EasyFoamTrajH5, EasyTrajH5
+from rseed.formats.easyh5 import EasyFoamTrajH5
 from rseed.formats.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
 from rseed.formats.stream import StreamingTrajectoryManager, TrajectoryManager
 from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
@@ -381,7 +381,7 @@ def convert_rows_to_p_rows(rows):
 
 class ParallelTrajReader(TrajReader):
     def process_config(self):
-        self.config.title = f"Replicas (row)"
+        self.config.title = "Replicas (row)"
         self.config.mode = "matrix"
 
         parent_dir = Path(self.config.re_dir)

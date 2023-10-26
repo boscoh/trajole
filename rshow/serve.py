@@ -4,8 +4,6 @@ import os
 from path import Path
 import sys
 
-from addict import Dict
-from rich.pretty import pprint
 import uvicorn
 from rseed.util.fs import dump_yaml
 from rshow.make_app import make_app

@@ -1,12 +1,10 @@
 #!/usr/bin/env python
-import json
 import logging
 import os
 from path import Path
 
 import click
 from addict import Dict
-from rich.pretty import pprint
 
 from rseed.util.fs import dump_yaml
 
