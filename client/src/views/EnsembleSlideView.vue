@@ -37,7 +37,7 @@
               .py-2
                 template(v-if="view.text")
                   | {{ view.text }}
-                span.text-secondary(v-else)
+                template(v-else)
                   | (No description)
             button.btn.w-100.text-start.btn-sm.btn-outline-secondary(
               @click="selectView(view)"
