@@ -5,7 +5,7 @@ from path import Path
 import sys
 
 import uvicorn
-from rseed.util.fs import dump_yaml
+from easytrajh5.fs import dump_yaml
 from rshow.make_app import make_app
 from rshow.server.lounge import handlers
 from rshow.log import init_logging

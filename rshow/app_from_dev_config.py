@@ -1,6 +1,6 @@
 import os
 from path import Path
-from rseed.util.fs import load_yaml_dict
+from easytrajh5.fs import load_yaml_dict
 from rshow.make_app import make_app
 from rshow.log import init_logging
 

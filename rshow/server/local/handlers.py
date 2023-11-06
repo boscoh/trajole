@@ -4,7 +4,7 @@ from typing import Optional
 
 import psutil
 from path import Path
-from rseed.util.fs import load_yaml_dict, dump_yaml
+from easytrajh5.fs import load_yaml_dict, dump_yaml
 from rseed.analysis.fes import get_i_frame_min
 from rshow import readers
 from rshow.util import get_pair_distances
@@ -32,14 +32,14 @@ def init_traj_reader(in_config):
 
     :return bool: False on failure
     """
-    if not hasattr(readers, in_config.stream_class):
-        raise ValueError(f"Couldn't find stream_class {in_config.stream_class}")
+    if not hasattr(readers, in_config.reader_class):
+        raise ValueError(f"Couldn't find reader_class {in_config.reader_class}")
 
     if "work_dir" in in_config:
         os.chdir(in_config["work_dir"])
 
     global traj_reader
-    TrajReaderClass = getattr(readers, in_config.stream_class)
+    TrajReaderClass = getattr(readers, in_config.reader_class)
     traj_reader = TrajReaderClass(in_config)
 
 

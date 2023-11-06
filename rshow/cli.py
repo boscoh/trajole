@@ -6,7 +6,7 @@ from path import Path
 import click
 from addict import Dict
 
-from rseed.util.fs import dump_yaml
+from easytrajh5.fs import dump_yaml
 
 import rshow.openurl
 from rshow.server.local import handlers
@@ -28,7 +28,7 @@ def find_free_port():
         return s.getsockname()[1]
 
 
-config = Dict(mode="", file_mode="r")
+config = Dict(mode="")
 
 
 def run():
@@ -92,7 +92,7 @@ def traj(h5):
     """
     Open H5
     """
-    config.stream_class = "TrajReader"
+    config.reader_class = "TrajReader"
     config.trajectories = [h5]
     run()
 
@@ -103,7 +103,7 @@ def fes(metad_dir):
     """
     Open H5 with FES matrix
     """
-    config.stream_class = "FesMatrixTrajReader"
+    config.reader_class = "FesMatrixTrajReader"
     config.metad_dir = metad_dir
     run()
 
@@ -114,7 +114,7 @@ def traj_foam(foam_id):
     """
     Open H5 stored on FoamDB
     """
-    config.stream_class = "FoamTrajReader"
+    config.reader_class = "FoamTrajReader"
     config.trajectories = [foam_id]
     run()
 
@@ -126,7 +126,7 @@ def matrix(matrix_yaml, mode):
     """
     Open H5 with matrix
     """
-    config.stream_class = "MatrixTrajReader"
+    config.reader_class = "MatrixTrajReader"
     config.matrix_yaml = matrix_yaml
     config.mode = mode
     run()
@@ -139,7 +139,7 @@ def re(re_dir, key):
     """
     Open multiple H5 in parallel 
     """
-    config.stream_class = "ParallelTrajReader"
+    config.reader_class = "ParallelTrajReader"
     config.re_dir = re_dir
     config.key = key
     run()
@@ -153,7 +153,7 @@ def ligands(pdb, sdf, csv):
     """
     Open PDB with ligands in SDF
     """
-    config.stream_class = "LigandsReceptorReader"
+    config.reader_class = "LigandsReceptorReader"
     config.pdb = pdb
     config.ligands = sdf
     config.csv = csv
@@ -166,7 +166,7 @@ def frame(pdb):
     """
     Open PDB or PARMED
     """
-    config.stream_class = "FrameReader"
+    config.reader_class = "FrameReader"
     config.pdb_or_parmed = pdb
     run()
 

@@ -2,33 +2,32 @@ import csv
 import logging
 import os
 from abc import ABC, abstractmethod
-from path import Path
 from typing import Any
 
 import mdtraj
 import numpy as np
 import parmed
-from pydash import py_
 from addict import Dict
-from rich.pretty import pretty_repr
-
-from rseed.formats.easyh5 import EasyFoamTrajH5
-from rseed.formats.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
-from rseed.formats.stream import StreamingTrajectoryManager, TrajectoryManager
-from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
-from rseed.analysis.fes import get_matrix_json as get_matrix
-from rseed.analysis.fn import sort_temperatures
-from rseed.granary import Granary
-from rshow.alphaspace import AlphaSpace
-from rseed.util.fs import (
+from easytrajh5.fs import (
     dump_yaml,
     get_checked_path,
     get_empty_path_str,
     load_yaml,
 )
+from easytrajh5.manager import TrajectoryManager
+from easytrajh5.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
+from easytrajh5.select import select_mask
+from easytrajh5.struct import get_parmed_from_mdtraj, get_mdtraj_from_parmed
+from path import Path
+from pydash import py_
+from rich.pretty import pretty_repr
+from rseed.analysis.fes import get_matrix_json as get_matrix
+from rseed.analysis.fn import sort_temperatures
+from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
+from rseed.foam import FoamTrajectoryManager
+from rseed.granary import Granary
 from rseed.util.ligand import iter_ff_mol_from_file
-from rseed.util.select import select_mask
-from rseed.util.struct import get_parmed_from_traj_frame, get_traj_frame_from_parmed
+from rshow.alphaspace import AlphaSpace
 
 logger = logging.getLogger(__name__)
 
@@ -56,20 +55,20 @@ class RshowReaderMixin(ABC):
         pass
 
     @abstractmethod
-    def get_frame(self, i_frame_traj: [int, int] = None) -> mdtraj.Trajectory:
+    def read_frame_traj(self, i_frame_traj: [int, int] = None) -> mdtraj.Trajectory:
         pass
 
     def get_pdb_lines(self, i_frame_traj):
         logger.info(f"pdb {i_frame_traj}")
         return filter_for_atom_lines(
-            get_pdb_lines_of_traj_frame(self.get_frame(i_frame_traj))
+            get_pdb_lines_of_traj_frame(self.read_frame_traj(i_frame_traj))
         )
 
     def get_pdb_lines_with_as_communities(self, i_frame_traj: [int, int]):
-        frame = self.get_frame(i_frame_traj)
+        frame = self.read_frame_traj(i_frame_traj)
         pdb_lines = filter_for_atom_lines(get_pdb_lines_of_traj_frame(frame))
 
-        pmd = get_parmed_from_traj_frame(frame)
+        pmd = get_parmed_from_mdtraj(frame)
         i_protein_atoms = select_mask(pmd, "diff {protein} {mdtraj type H}")
 
         alpha_space = AlphaSpace(frame.atom_slice(i_protein_atoms))
@@ -83,10 +82,10 @@ class RshowReaderMixin(ABC):
         return pdb_lines
 
     def get_pdb_lines_with_as_pockets(self, i_frame_traj: [int, int]):
-        frame = self.get_frame(i_frame_traj)
+        frame = self.read_frame_traj(i_frame_traj)
         pdb_lines = filter_for_atom_lines(get_pdb_lines_of_traj_frame(frame))
 
-        pmd = get_parmed_from_traj_frame(frame)
+        pmd = get_parmed_from_mdtraj(frame)
         i_protein_atoms = select_mask(pmd, "diff {protein} {mdtraj type H}")
 
         alpha_space = AlphaSpace(frame.atom_slice(i_protein_atoms))
@@ -148,8 +147,6 @@ class TrajReader(RshowReaderMixin):
             strip=[],  # Dictionary of frame, traj, colours for use in rshow
             title="",  # Title for rshow
             is_solvent=True,
-            atom_mask="",
-            file_mode="a",
         )
         self.config.update(config)
         for l in repr_lines(self.config, f"{self.__class__.__name__}.config = "):
@@ -159,22 +156,14 @@ class TrajReader(RshowReaderMixin):
         self.frame = None
         self.process_config()
 
-    def get_atom_mask(self):
-        atom_mask = ""
-        if not self.config.atom_mask:
-            if not self.config.is_solvent:
-                atom_mask = "not {solvent}"
-        else:
-            atom_mask = self.config.atom_mask
-        return atom_mask
-
     def get_traj_manager(self) -> TrajectoryManager:
-        return TrajectoryManager(
-            self.config.trajectories,
-            atom_mask=self.get_atom_mask(),
-            file_mode=self.config.file_mode,
-            is_dry_cache=True,
-        )
+        paths = self.config.trajectories
+        is_not_writeable = any((not os.access(p, os.R_OK | os.W_OK)) for p in paths)
+        mode = "r" if is_not_writeable else "a"
+        if mode == "r":
+            logger.info("Files are not writeable: read-only mode")
+        is_dry_cache = not self.config.is_solvent
+        return TrajectoryManager(paths, mode=mode, is_dry_cache=is_dry_cache)
 
     def get_tags(self):
         names = [Path(t).name for t in self.config.trajectories]
@@ -204,9 +193,9 @@ class TrajReader(RshowReaderMixin):
     def get_config(self, k):
         return self.config[k]
 
-    def get_frame(self, i_frame_traj=None):
+    def read_frame_traj(self, i_frame_traj=None):
         if i_frame_traj and i_frame_traj != self.i_frame_traj:
-            new_frame = self.traj_manager.get_frame_traj(i_frame_traj)
+            new_frame = self.traj_manager.read_as_frame_traj(i_frame_traj)
             if self.frame is not None:
                 new_frame.xyz = np.copy(new_frame.xyz)
                 new_frame.superpose(self.frame)
@@ -234,6 +223,32 @@ class TrajReader(RshowReaderMixin):
         dump_yaml(views, self.views_yaml)
 
 
+class FrameReader(TrajReader):
+    def process_config(self):
+        self.config.title = self.config.pdb_or_parmed
+        self.config.mode = "frame"
+        fname = Path(self.config.pdb_or_parmed)
+        if fname.ext == ".parmed":
+            self.frame = get_mdtraj_from_parmed(Granary(fname).structure)
+        else:
+            self.frame = mdtraj.load_pdb(self.config.pdb_or_parmed)
+        self.views_yaml = fname.with_suffix(".views.yaml")
+        return True
+
+    def read_frame_traj(self, i_frame_traj=None):
+        return self.frame
+
+    def get_tags(self):
+        fname = self.config.title.lower()
+        if fname.endswith("parmed"):
+            key = "parmed"
+        elif fname.endswith("pdb"):
+            key = "pdb"
+        else:
+            key = "file"
+        return {key: self.config.title}
+
+
 def get_first_value(matrix):
     value = py_.head(
         py_.filter(py_.flatten_deep(matrix), lambda v: py_.has(v, "iFrameTraj"))
@@ -246,32 +261,6 @@ def get_first_value(matrix):
     if value is not None:
         return value
     return None
-
-
-class FrameReader(TrajReader):
-    def process_config(self):
-        self.config.title = self.config.pdb_or_parmed
-        self.config.mode = "frame"
-        fname = Path(self.config.pdb_or_parmed)
-        if fname.ext == ".parmed":
-            self.frame = get_traj_frame_from_parmed(Granary(fname).structure)
-        else:
-            self.frame = mdtraj.load_pdb(self.config.pdb_or_parmed)
-        self.views_yaml = fname.with_suffix(".views.yaml")
-        return True
-
-    def get_frame(self, i_frame_traj=None):
-        return self.frame
-
-    def get_tags(self):
-        fname = self.config.title.lower()
-        if fname.endswith("parmed"):
-            key = "parmed"
-        elif fname.endswith("pdb"):
-            key = "pdb"
-        else:
-            key = "file"
-        return {key: self.config.title}
 
 
 class FesMatrixTrajReader(TrajReader):
@@ -289,9 +278,7 @@ class FesMatrixTrajReader(TrajReader):
             dump_yaml(data, fes_yaml)
         self.config.matrix = data.matrix
         self.config.trajectories = [fes_yaml.parent / t for t in data.trajectories]
-        self.traj_manager = TrajectoryManager(
-            self.config.trajectories, atom_mask=self.get_atom_mask(), is_dry_cache=True
-        )
+        self.traj_manager = self.get_traj_manager()
         self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
 
 
@@ -308,9 +295,7 @@ class MatrixTrajReader(TrajReader):
         if not self.config.mode:
             self.config.mode = "matrix-strip"
         os.chdir(parent_dir)
-        self.traj_manager = TrajectoryManager(
-            self.config.trajectories, atom_mask=self.get_atom_mask(), is_dry_cache=True
-        )
+        self.traj_manager = self.get_traj_manager()
         self.views_yaml = fname.with_suffix(".views.yaml")
 
 
@@ -361,7 +346,7 @@ class LigandsReceptorReader(TrajReader):
         self.views_yaml = Path(pdb).with_suffix(".views.yaml")
 
     def get_ligand_pdb_lines(self, i_ligand):
-        traj = get_traj_frame_from_parmed(self.ligand_parmeds[i_ligand])
+        traj = get_mdtraj_from_parmed(self.ligand_parmeds[i_ligand])
         return get_pdb_lines_of_traj_frame(traj)
 
     def get_pdb_lines(self, i_frame_traj):
@@ -397,11 +382,7 @@ class ParallelTrajReader(TrajReader):
         self.config.trajectories = [
             str(parent_dir / f"trajectory-{i}.h5") for i in range(n_replica)
         ]
-        self.traj_manager = TrajectoryManager(
-            trajectories=self.config.trajectories,
-            atom_mask=self.get_atom_mask(),
-            is_dry_cache=True,
-        )
+        self.traj_manager = self.get_traj_manager()
         self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
 
         self.config.strip = []
@@ -429,22 +410,21 @@ class ParallelTrajReader(TrajReader):
 
 class FoamTrajReader(TrajReader):
     def get_traj_manager(self):
-        mask = self.get_atom_mask()
-        return StreamingTrajectoryManager(
-            self.config.trajectories, atom_mask=mask, is_foamdb=True, is_dry_cache=True
+        return FoamTrajectoryManager(
+            self.config.trajectories, mode="a", is_dry_cache=not self.config.is_solvent,
         )
 
     def get_tags(self):
         return {"foam": self.config.trajectories[0]}
 
     def process_config(self):
-        # As the coordinates are superposed frame by frame, it's important
-        # that the first frame (which is the reference frame) is correctly
-        # loaded. Here, we determine the first frame and load
         super().process_config()
 
-        h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
+        h5 = self.traj_manager.get_traj_file(0)
 
+        # As the coordinates are superposed frame by frame, it's important
+        # that the first frame (which is the reference frame) is correctly
+        # loaded. Here, we determine the first frame
         if h5.has_dataset("rshow_matrix"):
             self.config.mode = "sparse-matrix"
             logger.info("load matrix in init")
@@ -455,17 +435,18 @@ class FoamTrajReader(TrajReader):
         if self.config.mode == "strip":
             self.config.i_frame_first = -1
 
+        # Load the first frame
         logger.info("load first frame in init")
-        self.get_frame([self.config.i_frame_first, 0])
+        self.read_frame_traj([self.config.i_frame_first, 0])
 
     def get_views(self):
-        h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
+        h5 = self.traj_manager.get_traj_file(0)
         if h5.has_dataset("json_views"):
             return h5.get_json_dataset("json_views")
         return []
 
     def save_views(self, views):
-        h5: EasyFoamTrajH5 = self.traj_manager.get_h5(0)
+        h5 = self.traj_manager.get_traj_file(0)
         h5.set_json_dataset("json_views", views)
 
     def update_view(self, view):
@@ -502,7 +483,7 @@ class FoamEnsembleReader(RshowReaderMixin):
     def get_tags(self) -> dict:
         return {"csv": self.config.ensemble_id + ".csv"}
 
-    def get_frame(self, i_frame_traj: [int, int] = None) -> mdtraj.Trajectory:
+    def read_frame_traj(self, i_frame_traj: [int, int] = None) -> mdtraj.Trajectory:
         pass
 
     def process_config(self):

@@ -1,7 +1,7 @@
 import uuid
 from path import Path
 
-from rseed.util.fs import dump_yaml, load_yaml
+from easytrajh5.fs import dump_yaml, load_yaml
 
 
 def get_random_string():

@@ -1,27 +1,22 @@
-import logging
-import time
-from collections import OrderedDict
-import os
-from path import Path
-import pickle
-from _thread import RLock
 import copy
+import logging
+import os
+import pickle
+import time
+from _thread import RLock
+from collections import OrderedDict
 
-import parmed
-from addict import Dict
+import numpy as np
 import pydash as py_
-from rseed.formats.easyh5 import EasyTrajH5
-from rseed.granary import Granary
+from addict import Dict
+from easytrajh5.select import select_mask
+from easytrajh5.struct import get_parmed_from_mdtraj
+from path import Path
 from rseed.analysis.fes import get_i_frame_min
-
+from rseed.granary import Granary
 from rshow.persist import PersistDictList
 from rshow.readers import FoamTrajReader, FoamEnsembleReader
 from rshow.util import get_pair_distances
-
-from rseed.util.select import select_mask
-from rseed.util.struct import get_parmed_from_traj_frame
-
-import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +28,10 @@ traj_reader_by_foam_id = OrderedDict()
 
 
 def get_reader_from_lru_cache(
-    cache_id,
-    init_reader_fn,
-    traj_reader_by_foam_id=traj_reader_by_foam_id,
-    maxsize=1000,
+        cache_id,
+        init_reader_fn,
+        traj_reader_by_foam_id=traj_reader_by_foam_id,
+        maxsize=1000,
 ):
     lock = RLock()
     with lock:
@@ -154,7 +149,7 @@ def delete_view(foam_id, view):
 def get_h5(foam_id):
     traj_reader = get_foam_traj_reader(foam_id)
     traj_manager = traj_reader.traj_manager
-    return traj_manager.get_h5(0)
+    return traj_manager.get_traj_file(0)
 
 
 def get_json_datasets(foam_id):
@@ -167,7 +162,7 @@ def get_json(foam_id, key):
 
 def get_parmed_blob(foam_id, i_frame=None) -> bytes:
     logger.info(f"get_parmed_blob {foam_id} {i_frame}")
-    h5: EasyTrajH5 = get_h5(foam_id)
+    h5 = get_h5(foam_id)
     if i_frame is None:
         blob = h5.get_bytes_dataset("parmed")
     else:
@@ -222,10 +217,10 @@ def superpose(frame1, frame2, atom_mask1, atom_mask2=None):
     if not atom_mask2:
         atom_mask2 = atom_mask1
 
-    pmd1 = get_parmed_from_traj_frame(frame1)
+    pmd1 = get_parmed_from_mdtraj(frame1)
     i_ca_atoms1 = select_mask(pmd1, atom_mask1)
 
-    pmd2 = get_parmed_from_traj_frame(frame2)
+    pmd2 = get_parmed_from_mdtraj(frame2)
     i_ca_atoms2 = select_mask(pmd2, atom_mask2)
 
     frame2.xyz = np.copy(frame2.xyz)
@@ -250,7 +245,7 @@ def init_ensemble_reader(ensemble_id):
     ensemble_reader.last_frame = None
     ensemble_reader.i_frame_traj = None
 
-    def get_frame(i_frame_traj):
+    def read_frame_traj(i_frame_traj):
         i_frame, ensemble_id = i_frame_traj[:2]
 
         traj_reader = get_foam_traj_reader(ensemble_id)
@@ -258,7 +253,7 @@ def init_ensemble_reader(ensemble_id):
 
         logger.info(f"get_frame_of_ensemble {last_i_frame_traj} {i_frame_traj}")
 
-        ref_frame = traj_reader.get_frame([i_frame, 0])
+        ref_frame = traj_reader.read_frame_traj([i_frame, 0])
         frame = copy.deepcopy(ref_frame)
 
         if ensemble_reader.frame is not None:
@@ -277,7 +272,7 @@ def init_ensemble_reader(ensemble_id):
         ensemble_reader.i_frame_traj = i_frame_traj
         return frame
 
-    ensemble_reader.get_frame = get_frame
+    ensemble_reader.read_frame_traj = read_frame_traj
 
     return ensemble_reader
 
@@ -339,9 +334,9 @@ def remove_from_ensemble(ensemble_id, i_row):
     ensemble_reader.save()
 
 
-def get_parmed_from_easytraj(easytraj):
-    top = easytraj.fetch_topology().to_openmm()
-    return parmed.openmm.load_topology(top)
+def get_parmed_from_easytraj(traj_file):
+    from easytrajh5.struct import get_parmed_from_mdtraj
+    return get_parmed_from_mdtraj(traj_file.fetch_topology())
 
 
 def get_parmed_from_foam(foam_id):
