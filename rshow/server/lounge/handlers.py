@@ -242,7 +242,7 @@ def superpose(frame1, frame2, atom_mask1, atom_mask2=None):
 def init_ensemble_reader(ensemble_id):
     csv = str(data_dir / ensemble_id / "ensemble.csv")
     ensemble_reader = FoamEnsembleReader({"ensemble_id": ensemble_id, "csv": csv})
-    ensemble_reader.last_frame = None
+    ensemble_reader.frame = None
     ensemble_reader.i_frame_traj = None
 
     def read_frame_traj(i_frame_traj):
@@ -335,8 +335,9 @@ def remove_from_ensemble(ensemble_id, i_row):
 
 
 def get_parmed_from_easytraj(traj_file):
+    import parmed
     from easytrajh5.struct import get_parmed_from_mdtraj
-    return get_parmed_from_mdtraj(traj_file.fetch_topology())
+    return parmed.openmm.load_topology(traj_file.fetch_topology().to_openmm())
 
 
 def get_parmed_from_foam(foam_id):
@@ -344,7 +345,7 @@ def get_parmed_from_foam(foam_id):
 
 
 def add_aligned_rows(ensemble_id, foam_id1, foam_id2, range_start, range_end):
-    from rshim.blast import align_parmed
+    from rseed.blast import align_parmed
 
     pmd1 = get_parmed_from_foam(foam_id1)
     pmd2 = get_parmed_from_foam(foam_id2)
