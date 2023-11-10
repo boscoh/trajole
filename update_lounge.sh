@@ -1,15 +1,4 @@
-./build_local_client.sh
-
-cd config
-cp lounge.config.json config.json
-cd ..
-
-cd client
-npm run build
-rm -rf ../rshow/server/lounge/client
-cp -r dist ../rshow/server/lounge/client
-git add ../rshow/server/lounge/client
-cd ..
+./build_clients.sh
 
 rsync -avz --progress \
   --exclude '.DS_Store' \

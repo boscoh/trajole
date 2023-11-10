@@ -7,21 +7,24 @@ from _thread import RLock
 from collections import OrderedDict
 
 import numpy as np
+import parmed
 import pydash as py_
 from addict import Dict
 from easytrajh5.select import select_mask
 from easytrajh5.struct import get_parmed_from_mdtraj
 from path import Path
 from rseed.analysis.fes import get_i_frame_min
+from rseed.blast import align_parmed
 from rseed.granary import Granary
+
 from rshow.persist import PersistDictList
 from rshow.readers import FoamTrajReader, FoamEnsembleReader
 from rshow.util import get_pair_distances
 
 logger = logging.getLogger(__name__)
-
 this_dir = Path(__file__).abspath().parent
 data_dir = this_dir / "data"
+
 last_foam_id_views = PersistDictList(this_dir / "last_views.yaml", key="id")
 
 traj_reader_by_foam_id = OrderedDict()
@@ -72,8 +75,6 @@ def get_tags(foam_id):
 
 
 def set_tags(foam_id, tags: dict):
-    import os
-
     from foamdb.client import PostgresClient
     from foamdb.config import Config
     from foamdb.query import Trajectory
@@ -146,52 +147,52 @@ def delete_view(foam_id, view):
     return get_foam_traj_reader(foam_id).delete_view(view)
 
 
-def get_h5(foam_id):
+def get_traj_file(foam_id):
     traj_reader = get_foam_traj_reader(foam_id)
     traj_manager = traj_reader.traj_manager
     return traj_manager.get_traj_file(0)
 
 
 def get_json_datasets(foam_id):
-    return get_h5(foam_id).get_dataset_keys()
+    return get_traj_file(foam_id).get_dataset_keys()
 
 
 def get_json(foam_id, key):
-    return get_h5(foam_id).get_json_dataset(key)
+    return get_traj_file(foam_id).get_json_dataset(key)
 
 
 def get_parmed_blob(foam_id, i_frame=None) -> bytes:
     logger.info(f"get_parmed_blob {foam_id} {i_frame}")
-    h5 = get_h5(foam_id)
+    traj_file = get_traj_file(foam_id)
     if i_frame is None:
-        blob = h5.get_bytes_dataset("parmed")
+        blob = traj_file.get_bytes_dataset("parmed")
     else:
         i_frame = int(i_frame)
-        granary = Granary.from_easy_h5(h5)
+        granary = Granary.from_easytraj_file(traj_file)
         if i_frame < 0:
-            i_frame = h5.get_n_frame() + i_frame
-        granary.set_frame_from_easy_h5(h5, i_frame)
+            i_frame = traj_file.get_n_frame() + i_frame
+        granary.set_frame_from_easytraj_file(traj_file, i_frame)
         blob = pickle.dumps(granary.structure.__getstate__())
     logger.info(f"get_parmed_blob read {len(blob)} bytes")
     return blob
 
 
 def get_min_frame(foam_id):
-    h5 = get_h5(foam_id)
-    if h5.has_dataset("json_min"):
-        data = h5.get_json_dataset("json_min")
+    traj_file = get_traj_file(foam_id)
+    if traj_file.has_dataset("json_min"):
+        data = traj_file.get_json_dataset("json_min")
         result = data.get("iframe_min")
         if result is not None:
             logger.info(f"get_min_frame from dataset:`json_min`: {result}")
             return result
 
-    if not h5.has_dataset("rshow_matrix"):
+    if not traj_file.has_dataset("rshow_matrix"):
         return None
 
     traj_reader = get_foam_traj_reader(foam_id)
     matrix = traj_reader.get_config("matrix")
     result = get_i_frame_min(matrix)
-    h5.set_json_dataset("json_min", {"iframe_min": result})
+    traj_file.set_json_dataset("json_min", {"iframe_min": result})
     logger.info(f"get_min_frame from rshow_matrix: {result}")
 
     return result
@@ -199,12 +200,12 @@ def get_min_frame(foam_id):
 
 def get_distances(foam_id, dpairs):
     traj_reader = get_foam_traj_reader(foam_id)
-    stream_manager = traj_reader.get_traj_manager()
-    h5 = get_h5(foam_id)
-    atom_indices = stream_manager.i_atoms
+    manager = traj_reader.get_traj_manager()
+    traj_file = get_traj_file(foam_id)
+    atom_indices = traj_file.atom_indices
     if atom_indices is None:
-        atom_indices = list(range(h5.topology.n_atoms))
-    return get_pair_distances(dpairs, h5, atom_indices)
+        atom_indices = list(range(traj_file.topology.n_atoms))
+    return get_pair_distances(dpairs, traj_file, atom_indices)
 
 
 def get_ensembles():
@@ -335,18 +336,14 @@ def remove_from_ensemble(ensemble_id, i_row):
 
 
 def get_parmed_from_easytraj(traj_file):
-    import parmed
-    from easytrajh5.struct import get_parmed_from_mdtraj
     return parmed.openmm.load_topology(traj_file.fetch_topology().to_openmm())
 
 
 def get_parmed_from_foam(foam_id):
-    return get_parmed_from_easytraj(get_h5(foam_id))
+    return get_parmed_from_easytraj(get_traj_file(foam_id))
 
 
 def add_aligned_rows(ensemble_id, foam_id1, foam_id2, range_start, range_end):
-    from rseed.blast import align_parmed
-
     pmd1 = get_parmed_from_foam(foam_id1)
     pmd2 = get_parmed_from_foam(foam_id2)
     fasta1 = data_dir / "fasta1.fasta"

@@ -118,11 +118,8 @@ def get_min_frame(foam_id):
 
 
 def get_distances(foam_id, dpairs):
-    stream_manager = traj_reader.traj_manager.streams
-    h5 = stream_manager.get_h5(0)
-    atom_indices = stream_manager.i_atoms
+    traj_file = traj_reader.traj_manager.get_traj_file(0)
+    atom_indices = traj_file.atom_indices
     if atom_indices is None:
-        top = h5.topology
-        atom_indices = list(range(top.n_atoms))
-    dpairs = get_pair_distances(dpairs, h5, atom_indices)
-    return dpairs
+        atom_indices = list(range(traj_file.topology.n_atoms))
+    return get_pair_distances(dpairs, traj_file, atom_indices)
