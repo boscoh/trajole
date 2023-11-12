@@ -722,6 +722,8 @@ export default {
         this.nStructureInFrameList.push(nStructureInThisFrame)
         this.$store.commit('addIFrameTraj', iFrameTraj)
 
+        console.log('added iFrameTrajList', _.cloneDeep(this.iFrameTrajList))
+
         if (saveCurrentView) {
           this.jolecule.soupView.setHardCurrentView(saveCurrentView)
         }
@@ -742,14 +744,7 @@ export default {
       this.isFetching = true
       let iFrameTraj = _.last(this.iFrameTrajList)
 
-      console.log(
-        'reloadLastFrameOfJolecule before grid',
-        _.keys(this.jolecule.soup.grid.isElem).length
-      )
-      console.log(
-        'reloadLastFrameOfJolecule before view.grid',
-        _.keys(this.jolecule.soupView.currentView.grid.isElem).length
-      )
+      console.log('reloadLastFrameOfJolecule iFrameTraj', _.cloneDeep(this.iFrameTrajList))
 
       let pdbLines = await this.getPdbLines(iFrameTraj)
       if (pdbLines) {
@@ -772,16 +767,19 @@ export default {
         )
         soup.structureIds[soup.structureIds.length - 1] = structureId
 
+        // delete the entire frame to clear potential grid atoms
         let nStructure = _.last(this.nStructureInFrameList)
         let i = this.iFrameTrajList.length - 1
         await this.deleteItemFromIFrameTrajList(i)
+        this.nStructureInFrameList.splice(i, 1)
 
         // recount the grids after removing the grids from
         // the deleted frame
         soup.findGridLimits()
 
-        this.nStructureInFrameList.splice(i, 1)
+        // add back iFrameTraj without rebuilding whole thing
         this.nStructureInFrameList.push(nStructure)
+        this.$store.commit('addIFrameTraj', iFrameTraj)
 
         this.jolecule.soupView.setHardCurrentView(saveCurrentView)
         this.jolecule.soupWidget.distanceMeasuresWidget.drawFrame()
