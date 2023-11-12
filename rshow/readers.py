@@ -11,7 +11,6 @@ from addict import Dict
 from easytrajh5.fs import (
     dump_yaml,
     get_checked_path,
-    get_empty_path_str,
     load_yaml,
 )
 from easytrajh5.manager import TrajectoryManager
@@ -74,7 +73,7 @@ class RshowReaderMixin(ABC):
         alpha_space = AlphaSpace(frame.atom_slice(i_protein_atoms))
         alpha_space_pdb_lines = alpha_space.get_community_pdb_lines()
 
-        alpha_pdb = get_empty_path_str("alphaspace.pdb")
+        alpha_pdb = "alphaspace.pdb"
         with open(alpha_pdb, "w") as f:
             f.write("\n".join(alpha_space_pdb_lines))
 
@@ -91,7 +90,7 @@ class RshowReaderMixin(ABC):
         alpha_space = AlphaSpace(frame.atom_slice(i_protein_atoms))
         alpha_space_pdb_lines = alpha_space.get_pocket_pdb_lines()
 
-        alpha_pdb = get_empty_path_str("alphaspace.pdb")
+        alpha_pdb = "alphaspace.pdb"
         with open(alpha_pdb, "w") as f:
             f.write("\n".join(alpha_space_pdb_lines))
 

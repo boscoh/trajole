@@ -13,6 +13,7 @@ setuptools.setup(
     ],
     install_requires=[
         "addict",
+        "alphaspace2",
         "docopt",
         "fastapi",
         "mdtraj",

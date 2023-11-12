@@ -12,6 +12,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import FileResponse, StreamingResponse
 from starlette.staticfiles import StaticFiles
+from easytrajh5.fs import get_time_str
 
 logger = logging.getLogger(__name__)
 
@@ -48,10 +49,12 @@ def make_app(handlers, client_dir, data_dir):
                 result = fn(*params)
             result = {"result": result, "jsonrpc": "2.0", "id": job_id}
             elapsed_ms = round((time.perf_counter_ns() - start_time) / 1e6)
-            logger.info(f"rpc-run.{method}:finished in {elapsed_ms}ms")
+            time_str = get_time_str(elapsed_ms / 1000)
+            logger.info(f"rpc-run.{method}:finished in {time_str}")
         except Exception:
             elapsed_ms = round((time.perf_counter_ns() - start_time) / 1e6)
-            logger.info(f"rpc-run.{method}:error after {elapsed_ms}ms:")
+            time_str = get_time_str(elapsed_ms / 1000)
+            logger.info(f"rpc-run.{method}:error after {time_str}:")
             error_lines = str(traceback.format_exc()).splitlines()
             for line in error_lines:
                 logger.error(line)
