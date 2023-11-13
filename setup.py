@@ -15,6 +15,7 @@ setuptools.setup(
         "addict",
         "alphaspace2",
         "docopt",
+        "easytrajh5>=0.2.0",
         "fastapi",
         "mdtraj",
         "numpy",
