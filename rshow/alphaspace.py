@@ -1,8 +1,10 @@
 import logging
 
-logger = logging.getLogger(__name__)
-import alphaspace2 as as2
 import numpy as np
+
+import alphaspace2 as as2
+
+logger = logging.getLogger(__name__)
 
 
 class AlphaSpace:
@@ -14,7 +16,7 @@ class AlphaSpace:
         self.pocket_calculator.beta_cluster_dist = 1.6
         self.pocket_calculator.contact_cutoff = 1.6
         self.pocket_calculator.pocket_cluster_dist = 4.7
-        self.elements = [f"{i+1}" for i in range(24)]
+        self.elements = [f"{i + 1}" for i in range(24)]
         self.pockets = []
         self.communities = []
 
@@ -100,7 +102,7 @@ class AlphaSpace:
                 for alpha in self.pockets[i_pocket].alphas:
                     line = self.gen_pdb_line(
                         i_atom,
-                        atom_name=f"P{i_community+1}",
+                        atom_name=f"P{i_community + 1}",
                         res_name="XXX",
                         i_res=i_res,
                         chain_name=" ",
@@ -125,7 +127,7 @@ class AlphaSpace:
             for alpha in pocket.alphas:
                 line = self.gen_pdb_line(
                     i_atom,
-                    atom_name=f"P{i_pocket+1}",
+                    atom_name=f"P{i_pocket + 1}",
                     res_name="XXX",
                     i_res=i_res,
                     chain_name=" ",

@@ -7,16 +7,15 @@ from _thread import RLock
 from collections import OrderedDict
 
 import numpy as np
-import parmed
 import pydash as py_
 from addict import Dict
+from path import Path
+
 from easytrajh5.select import select_mask
 from easytrajh5.struct import get_parmed_from_mdtraj
-from path import Path
 from rseed.analysis.fes import get_i_frame_min
 from rseed.blast import align_parmed
 from rseed.granary import Granary
-
 from rshow.persist import PersistDictList
 from rshow.readers import FoamTrajReader, FoamEnsembleReader
 from rshow.util import get_pair_distances
@@ -31,10 +30,10 @@ traj_reader_by_foam_id = OrderedDict()
 
 
 def get_reader_from_lru_cache(
-        cache_id,
-        init_reader_fn,
-        traj_reader_by_foam_id=traj_reader_by_foam_id,
-        maxsize=1000,
+    cache_id,
+    init_reader_fn,
+    traj_reader_by_foam_id=traj_reader_by_foam_id,
+    maxsize=1000,
 ):
     lock = RLock()
     with lock:
@@ -227,13 +226,16 @@ def superpose(frame1, frame2, atom_mask1, atom_mask2=None):
     frame2.xyz = np.copy(frame2.xyz)
 
     if len(i_ca_atoms2) == len(i_ca_atoms1):
-        logger.info(f"superpose atoms {len(i_ca_atoms1)} {len(i_ca_atoms2)}")
+        logger.info("superpose atoms")
         frame2.superpose(
             reference=frame1,
             atom_indices=i_ca_atoms2,
             ref_atom_indices=i_ca_atoms1,
         )
     else:
+        logger.info(
+            f"warning: fail to superpose atoms {len(i_ca_atoms1)} != {len(i_ca_atoms2)}"
+        )
         old_center = frame1.xyz[-1].mean(axis=0)
         new_center = frame2.xyz[-1].mean(axis=0)
         frame2.xyz[-1] -= new_center

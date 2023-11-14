@@ -8,6 +8,10 @@ import mdtraj
 import numpy as np
 import parmed
 from addict import Dict
+from path import Path
+from pydash import py_
+from rich.pretty import pretty_repr
+
 from easytrajh5.fs import (
     dump_yaml,
     get_checked_path,
@@ -17,9 +21,6 @@ from easytrajh5.manager import TrajectoryManager
 from easytrajh5.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
 from easytrajh5.select import select_mask
 from easytrajh5.struct import get_parmed_from_mdtraj, get_mdtraj_from_parmed
-from path import Path
-from pydash import py_
-from rich.pretty import pretty_repr
 from rseed.analysis.fes import get_matrix_json as get_matrix
 from rseed.analysis.fn import sort_temperatures
 from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
@@ -410,7 +411,9 @@ class ParallelTrajReader(TrajReader):
 class FoamTrajReader(TrajReader):
     def get_traj_manager(self):
         return FoamTrajectoryManager(
-            self.config.trajectories, mode="a", is_dry_cache=not self.config.is_solvent,
+            self.config.trajectories,
+            mode="a",
+            is_dry_cache=not self.config.is_solvent,
         )
 
     def get_tags(self):

@@ -5,13 +5,14 @@ import traceback
 from io import BytesIO
 
 import pydash as py_
-from fastapi import FastAPI, File, Request, UploadFile
+from fastapi import FastAPI, File, UploadFile
 from path import Path
 from rich.pretty import pretty_repr
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import FileResponse, StreamingResponse
 from starlette.staticfiles import StaticFiles
+
 from easytrajh5.fs import get_time_str
 
 logger = logging.getLogger(__name__)

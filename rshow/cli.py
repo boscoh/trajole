@@ -1,22 +1,19 @@
 #!/usr/bin/env python
 import logging
 import os
-from path import Path
-
-import click
-from addict import Dict
-
-from easytrajh5.fs import dump_yaml
-
-import rshow.openurl
-from rshow.server.local import handlers
-from rshow.make_app import make_app
-from rshow.log import init_logging
-import uvicorn
-
 import socket
 from contextlib import closing
 
+import click
+import uvicorn
+from addict import Dict
+from path import Path
+
+import rshow.openurl
+from easytrajh5.fs import dump_yaml
+from rshow.log import init_logging
+from rshow.make_app import make_app
+from rshow.server.local import handlers
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +134,7 @@ def matrix(matrix_yaml, mode):
 @click.option("--key", default="u")
 def re(re_dir, key):
     """
-    Open multiple H5 in parallel 
+    Open multiple H5 in parallel
     """
     config.reader_class = "ParallelTrajReader"
     config.re_dir = re_dir
