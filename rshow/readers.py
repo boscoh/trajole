@@ -21,6 +21,7 @@ from easytrajh5.manager import TrajectoryManager
 from easytrajh5.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
 from easytrajh5.select import select_mask
 from easytrajh5.struct import get_parmed_from_mdtraj, get_mdtraj_from_parmed
+from easytrajh5.fs import tic, toc
 from rseed.analysis.fes import get_matrix_json as get_matrix
 from rseed.analysis.fn import sort_temperatures
 from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
@@ -268,6 +269,7 @@ class FesMatrixTrajReader(TrajReader):
         self.config.title = "Free-energy surface of collective variables"
         self.config.mode = "sparse-matrix"
         fes_yaml = Path(self.config.metad_dir) / "fes.rshow.yaml"
+        logger.info(tic("read matrix"))
         if fes_yaml.exists():
             logger.info(f"Loading {fes_yaml}")
             data = load_yaml(fes_yaml, is_addict=True)
@@ -276,6 +278,7 @@ class FesMatrixTrajReader(TrajReader):
             logger.info(f"Current dir {os.getcwd()}")
             data = get_matrix(self.config.metad_dir)
             dump_yaml(data, fes_yaml)
+        logger.info(toc())
         self.config.matrix = data.matrix
         self.config.trajectories = [fes_yaml.parent / t for t in data.trajectories]
         self.traj_manager = self.get_traj_manager()
