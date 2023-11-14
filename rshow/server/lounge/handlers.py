@@ -100,7 +100,7 @@ def get_foam_traj_reader(foam_id) -> FoamTrajReader:
 
 def reset_foam_id(foam_id):
     # force reader to be reinitialized
-    traj_reader = get_foam_traj_reader(foam_id)
+    get_foam_traj_reader(foam_id)
     return {"success": True}
 
 
@@ -198,8 +198,6 @@ def get_min_frame(foam_id):
 
 
 def get_distances(foam_id, dpairs):
-    traj_reader = get_foam_traj_reader(foam_id)
-    manager = traj_reader.get_traj_manager()
     traj_file = get_traj_file(foam_id)
     atom_indices = traj_file.atom_indices
     if atom_indices is None:
@@ -256,8 +254,8 @@ def init_ensemble_reader(ensemble_id):
 
         logger.info(f"get_frame_of_ensemble {last_i_frame_traj} {i_frame_traj}")
 
-        ref_frame = traj_reader.read_frame_traj([i_frame, 0])
-        frame = copy.deepcopy(ref_frame)
+        frame = traj_reader.read_frame_traj([i_frame, 0])
+        frame = copy.deepcopy(frame)
 
         if ensemble_reader.frame is not None:
             last_frame = ensemble_reader.frame
@@ -337,31 +335,17 @@ def remove_from_ensemble(ensemble_id, i_row):
     ensemble_reader.save()
 
 
-def get_parmed_from_easytraj(traj_file):
-    return parmed.openmm.load_topology(traj_file.fetch_topology().to_openmm())
-
-
-def get_parmed_from_foam(foam_id):
-    return get_parmed_from_easytraj(get_traj_file(foam_id))
-
-
 def add_aligned_rows(ensemble_id, foam_id1, foam_id2, range_start, range_end):
-    pmd1 = get_parmed_from_foam(foam_id1)
-    pmd2 = get_parmed_from_foam(foam_id2)
-    fasta1 = data_dir / "fasta1.fasta"
-    fasta2 = data_dir / "fasta2.fasta"
+    results = []
+    ensemble_reader = get_ensemble_reader(ensemble_id)
     matched_segs_list = align_parmed(
-        pmd1,
-        pmd2,
-        fasta1,
-        fasta2,
+        get_traj_file(foam_id1).get_parmed_of_topology(),
+        get_traj_file(foam_id2).get_parmed_of_topology(),
+        data_dir / "fasta1.fasta",
+        data_dir / "fasta2.fasta",
         range_start,
         range_end,
     )
-
-    results = []
-
-    ensemble_reader = get_ensemble_reader(ensemble_id)
     for seg1, seg2 in matched_segs_list:
         ensemble_reader.add_row(foam_id1, 0, seg1)
         results.append([0, foam_id1, seg1])
