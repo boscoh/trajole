@@ -14,7 +14,7 @@ from path import Path
 from easytrajh5.select import select_mask
 from easytrajh5.struct import get_parmed_from_mdtraj
 from rseed.analysis.fes import get_i_frame_min
-from rseed.blast import align_parmed
+from rseed.analysis.blast import align_parmed
 from rseed.granary import Granary
 from rshow.persist import PersistDictList
 from rshow.readers import FoamTrajReader, FoamEnsembleReader
@@ -339,8 +339,8 @@ def add_aligned_rows(ensemble_id, foam_id1, foam_id2, range_start, range_end):
     results = []
     ensemble_reader = get_ensemble_reader(ensemble_id)
     matched_segs_list = align_parmed(
-        get_traj_file(foam_id1).get_parmed_of_topology(),
-        get_traj_file(foam_id2).get_parmed_of_topology(),
+        get_traj_file(foam_id1).get_parmed(),
+        get_traj_file(foam_id2).get_parmed(),
         data_dir / "fasta1.fasta",
         data_dir / "fasta2.fasta",
         range_start,

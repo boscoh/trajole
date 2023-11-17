@@ -1,4 +1,24 @@
 # Release Notes
+- 1.6.4
+  - import cleanup
+  - logging
+  - easytrajh5 0.2.3
+- 1.6.3
+  - import bus
+- 1.6.2
+  - alphaspace toggle bug
+  - easytrajh5 bus
+- 1.6
+  - dep to easytrajh5
+  - file_mode a/r detect
+  - ensemble view
+  - slideshow
+- 1.5.2
+  - distance plots
+- 1.5
+  - ligand focus
+  - LRU fixed
+  - select_min_frame
 - 1.4
   - dry_topology streaming
   - reworked async calls
