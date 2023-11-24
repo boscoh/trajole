@@ -3,7 +3,7 @@ import setuptools
 setuptools.setup(
     name="rshow",
     description="rshow",
-    version="1.3.4",
+    version="1.6.5",
     long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     classifiers=[
@@ -15,8 +15,9 @@ setuptools.setup(
         "addict",
         "alphaspace2",
         "docopt",
-        "easytrajh5>=0.2.3",
+        "easytrajh5>=0.2.5",
         "fastapi",
+        "foamdb>=0.4.0",
         "mdtraj",
         "numpy",
         "parmed",
@@ -25,7 +26,7 @@ setuptools.setup(
         "pydash",
         "python-multipart",
         "rich",
-        "rseed>=2.7.3",
+        "rseed>=2.7.6",
         "starlette",
         "uvicorn",
     ],

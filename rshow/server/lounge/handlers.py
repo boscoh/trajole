@@ -166,12 +166,8 @@ def get_parmed_blob(foam_id, i_frame=None) -> bytes:
     if i_frame is None:
         blob = traj_file.get_bytes_dataset("parmed")
     else:
-        i_frame = int(i_frame)
-        granary = Granary.from_easytraj_file(traj_file)
-        if i_frame < 0:
-            i_frame = traj_file.get_n_frame() + i_frame
-        granary.set_frame_from_easytraj_file(traj_file, i_frame)
-        blob = pickle.dumps(granary.structure.__getstate__())
+        pmd = traj_file.get_parmed_from_dataset(int(i_frame))
+        blob = pickle.dumps(pmd.__getstate__())
     logger.info(f"get_parmed_blob read {len(blob)} bytes")
     return blob
 
@@ -339,8 +335,8 @@ def add_aligned_rows(ensemble_id, foam_id1, foam_id2, range_start, range_end):
     results = []
     ensemble_reader = get_ensemble_reader(ensemble_id)
     matched_segs_list = align_parmed(
-        get_traj_file(foam_id1).get_parmed(),
-        get_traj_file(foam_id2).get_parmed(),
+        get_traj_file(foam_id1).get_topology_parmed(),
+        get_traj_file(foam_id2).get_topology_parmed(),
         data_dir / "fasta1.fasta",
         data_dir / "fasta2.fasta",
         range_start,

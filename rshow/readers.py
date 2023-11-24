@@ -25,7 +25,7 @@ from easytrajh5.fs import tic, toc
 from rseed.analysis.fes import get_matrix_json as get_matrix
 from rseed.analysis.fn import sort_temperatures
 from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
-from rseed.foam import FoamTrajectoryManager
+from foamdb.easyh5 import FoamTrajectoryManager
 from rseed.granary import Granary
 from rseed.util.ligand import iter_ff_mol_from_file
 from rshow.alphaspace import AlphaSpace

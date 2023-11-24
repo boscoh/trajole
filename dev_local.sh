@@ -33,6 +33,6 @@ else
     exit 1
 fi
 
-ttab "cd client; npm run dev "
+ttab "cd client; npm run dev;"
 
 rshow open-url http://localhost:9023 http://localhost:3333/#/foamtraj/0
