@@ -441,7 +441,7 @@ class FoamTrajReader(TrajReader):
                 data = h5.get_json_dataset("json_rshow_matrix")
             elif h5.has_dataset("rshow_matrix"):
                 data = h5.get_json_dataset("rshow_matrix")
-            if py_.has(self.config.matrix, "matrix"):
+            if py_.has(data, "matrix"):
                 # in case the key-value object was loaded
                 self.config.matrix = data["matrix"]
             else:
