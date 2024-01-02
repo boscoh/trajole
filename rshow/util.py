@@ -1,3 +1,4 @@
+from path import Path
 from rich.pretty import pprint
 import numpy
 
@@ -38,3 +39,10 @@ def get_pair_distances(dpairs, h5, atom_indices):
         dpair["values"] = values
 
     return dpairs
+
+
+def get_first_file(fnames):
+    for fname in fnames:
+        if Path(fname).exists():
+            return fname
+    return None

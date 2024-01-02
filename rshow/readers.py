@@ -8,27 +8,28 @@ import mdtraj
 import numpy as np
 import parmed
 from addict import Dict
-from path import Path
-from pydash import py_
-from rich.pretty import pretty_repr
-
 from easytrajh5.fs import (
     dump_yaml,
     get_checked_path,
     load_yaml,
 )
+from easytrajh5.fs import toc
 from easytrajh5.manager import TrajectoryManager
 from easytrajh5.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
 from easytrajh5.select import select_mask
 from easytrajh5.struct import get_parmed_from_mdtraj, get_mdtraj_from_parmed
-from easytrajh5.fs import tic, toc
+from foamdb.easyh5 import FoamTrajectoryManager
+from path import Path
+from pydash import py_
+from rich.pretty import pretty_repr
 from rseed.analysis.fes import get_matrix_json as get_matrix
 from rseed.analysis.fn import sort_temperatures
 from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
-from foamdb.easyh5 import FoamTrajectoryManager
 from rseed.granary import Granary
 from rseed.util.ligand import iter_ff_mol_from_file
+
 from rshow.alphaspace import AlphaSpace
+from rshow.util import get_first_file
 
 logger = logging.getLogger(__name__)
 
@@ -268,9 +269,13 @@ class FesMatrixTrajReader(TrajReader):
     def process_config(self):
         self.config.title = "Free-energy surface of collective variables"
         self.config.mode = "sparse-matrix"
-        fes_yaml = Path(self.config.metad_dir) / "fes.rshow.yaml"
-        logger.info(tic("read matrix"))
-        if fes_yaml.exists():
+        fes_yaml = get_first_file(
+            [
+                Path(self.config.metad_dir) / "rshow.matrix.yaml",
+                Path(self.config.metad_dir) / "fes.rshow.yaml",
+            ]
+        )
+        if fes_yaml is not None:
             logger.info(f"Loading {fes_yaml}")
             data = load_yaml(fes_yaml, is_addict=True)
         else:
@@ -430,10 +435,20 @@ class FoamTrajReader(TrajReader):
         # As the coordinates are superposed frame by frame, it's important
         # that the first frame (which is the reference frame) is correctly
         # loaded. Here, we determine the first frame
-        if h5.has_dataset("rshow_matrix"):
+
+        if h5.has_dataset("json_rshow_matrix") or h5.has_dataset("rshow_matrix"):
+            if h5.has_dataset("json_rshow_matrix"):
+                data = h5.get_json_dataset("json_rshow_matrix")
+            elif h5.has_dataset("rshow_matrix"):
+                data = h5.get_json_dataset("rshow_matrix")
+            if py_.has(self.config.matrix, "matrix"):
+                # in case the key-value object was loaded
+                self.config.matrix = data["matrix"]
+            else:
+                # in case just the matrix was loaded
+                self.config.matrix = data
             self.config.mode = "sparse-matrix"
             logger.info("load matrix in init")
-            self.config.matrix = h5.get_json_dataset("rshow_matrix")
             value = get_first_value(self.config.matrix)
             self.config.i_frame_first = value["iFrameTraj"][0]
 
