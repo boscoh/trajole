@@ -4,6 +4,7 @@ import os
 from abc import ABC, abstractmethod
 from typing import Any
 
+from rich.pretty import pprint
 import mdtraj
 import numpy as np
 import parmed
@@ -41,6 +42,7 @@ class RshowReaderMixin(ABC):
 
     @abstractmethod
     def __init__(self, config={}):
+        # self.config.mode = "strip",  # "strip", "matrix", "sparse-matrix", "matrix-strip", "table"
         self.config = Dict(config)
         self.traj_manager = None
 
@@ -268,7 +270,6 @@ def get_first_value(matrix):
 class FesMatrixTrajReader(TrajReader):
     def process_config(self):
         self.config.title = "Free-energy surface of collective variables"
-        self.config.mode = "sparse-matrix"
         fes_yaml = get_first_file(
             [
                 Path(self.config.metad_dir) / "rshow.matrix.yaml",
@@ -285,6 +286,13 @@ class FesMatrixTrajReader(TrajReader):
             dump_yaml(data, fes_yaml)
         logger.info(toc())
         self.config.matrix = data.matrix
+        self.config.mode = "matrix"
+        for cell in py_.flatten_deep(self.config.matrix):
+            if not cell:
+                continue
+            if py_.has(cell, "p") and not py_.has(cell, 'iFrameTraj'):
+                self.config.mode = "sparse-matrix"
+                break
         self.config.trajectories = [fes_yaml.parent / t for t in data.trajectories]
         self.traj_manager = self.get_traj_manager()
         self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")

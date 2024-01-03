@@ -110,9 +110,14 @@ def get_min_frame(foam_id):
             logger.info(f"read min_frame from {min_yaml}: {min_frame}")
             return min_frame
 
-    min_frame = get_i_frame_min(config.matrix)
-    logger.info(f"min_frame {min_frame}")
-    dump_yaml({"iframe": min_frame}, min_yaml)
+    try:
+        min_frame = get_i_frame_min(config.matrix)
+        logger.info(f"min_frame {min_frame}")
+        dump_yaml({"iframe": min_frame}, min_yaml)
+    except Exception as e:
+        logger.warning(f"couldn't find min_frame")
+        min_frame = None
+
 
     return min_frame
 
