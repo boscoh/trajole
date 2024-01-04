@@ -1,4 +1,11 @@
 # Release Notes
+- 1.6.6
+  - defaults to rshow.matrix.yaml
+  - handles uploads of matrix json or plain matrix double list
+  - popups on left adjusts
+  - autodetects sparse versus full matrix in fes
+- 1.6.5
+  - consolidate with easytraj 0.2.5 and foamdb 0.4.0
 - 1.6.4
   - import cleanup
   - logging
