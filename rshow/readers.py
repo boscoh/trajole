@@ -283,6 +283,7 @@ class FesMatrixTrajReader(TrajReader):
             logger.info(f"Generating fes matrix form {self.config.metad_dir}")
             logger.info(f"Current dir {os.getcwd()}")
             data = get_matrix(self.config.metad_dir)
+            fes_yaml = Path(self.config.metad_dir) / "rshow.matrix.yaml"
             dump_yaml(data, fes_yaml)
         logger.info(toc())
         self.config.matrix = data.matrix
@@ -455,7 +456,13 @@ class FoamTrajReader(TrajReader):
             else:
                 # in case just the matrix was loaded
                 self.config.matrix = data
-            self.config.mode = "sparse-matrix"
+            self.config.mode = "matrix"
+            for cell in py_.flatten_deep(self.config.matrix):
+                if not cell:
+                    continue
+                if py_.has(cell, "p") and not py_.has(cell, 'iFrameTraj'):
+                    self.config.mode = "sparse-matrix"
+                    break
             logger.info("load matrix in init")
             value = get_first_value(self.config.matrix)
             self.config.i_frame_first = value["iFrameTraj"][0]
