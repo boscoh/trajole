@@ -17,8 +17,8 @@ from easytrajh5.fs import (
 from easytrajh5.fs import toc
 from easytrajh5.manager import TrajectoryManager
 from easytrajh5.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
-from easytrajh5.select import select_mask
-from easytrajh5.struct import get_parmed_from_mdtraj, get_mdtraj_from_parmed
+from easytrajh5.select import select_mask, slice_parmed
+from easytrajh5.struct import get_parmed_from_mdtraj, get_mdtraj_from_parmed, get_parmed_from_parmed_or_pdb
 from foamdb.easyh5 import FoamTrajectoryManager
 from path import Path
 from pydash import py_
@@ -232,10 +232,11 @@ class FrameReader(TrajReader):
         self.config.title = self.config.pdb_or_parmed
         self.config.mode = "frame"
         fname = Path(self.config.pdb_or_parmed)
-        if fname.ext == ".parmed":
-            self.frame = get_mdtraj_from_parmed(Granary(fname).structure)
-        else:
-            self.frame = mdtraj.load_pdb(self.config.pdb_or_parmed)
+        pmd = get_parmed_from_parmed_or_pdb(fname)
+        if not self.config.is_solvent:
+            i_atoms = select_mask(pmd, 'not {solvent}')
+            pmd = slice_parmed(pmd, i_atoms)
+        self.frame = get_mdtraj_from_parmed(pmd)
         self.views_yaml = fname.with_suffix(".views.yaml")
         return True
 
