@@ -166,10 +166,12 @@ export default {
       this.$refs.joleculeMatrix.loadFoamId(foamId, frames, viewId);
     },
     downloadPdb() {
+      this.$store.commit("pushLoading");
       this.$refs.joleculeMatrix.downloadPdb();
+      this.$store.commit("popLoading");
     },
-    saveView() {
-      this.$refs.joleculeMatrix.saveView();
+    async saveView() {
+      await this.$refs.joleculeMatrix.saveView();
     },
     async selectFesMinFrame() {
       let minFrame = this.$store.state.minFrame;

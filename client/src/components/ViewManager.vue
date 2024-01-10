@@ -123,6 +123,8 @@ export default {
     },
 
     async addView(newView) {
+      this.$store.commit("pushLoading");
+
       console.log("addView", _.cloneDeep(newView));
       await remote.update_view(this.foamId, newView);
       // NOTE: reverse chronological order insert at top
@@ -130,6 +132,7 @@ export default {
       views.unshift(newView);
       this.$store.commit("setItem", { views });
       this.$store.commit("setItem", { selectView: newView });
+      this.$store.commit("popLoading");
     },
 
     async saveViewText() {
