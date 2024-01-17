@@ -18,8 +18,7 @@ data_dir = Path(__file__).abspath().parent / "data"
 
 
 def select_new_key(foam_id, key):
-    selectable_classes = ["ParallelTrajReader", "ParalleFixedReceptorLigandTrajReader"]
-    if traj_reader and traj_reader.__class__.__name__ in selectable_classes:
+    if "opt_keys" in traj_reader.config:
         config = traj_reader.config
         config.key = key
         init_traj_reader(config)

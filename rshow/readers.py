@@ -3,6 +3,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from typing import Any
+from copy import deepcopy
 
 from rich.pretty import pprint
 import mdtraj
@@ -268,6 +269,35 @@ def get_first_value(matrix):
     return None
 
 
+def load_matrix_data_into_config(payload, config):
+    if py_.has(payload, "matrix"):
+        # in case the key-value object was loaded
+        config.matrix = payload["matrix"]
+    else:
+        # in case just the matrix was loaded
+        config.matrix = payload
+    config.mode = "matrix"
+    for cell in py_.flatten_deep(config.matrix):
+        if not cell:
+            continue
+        if py_.has(cell, "p") and not py_.has(cell, 'iFrameTraj'):
+            config.mode = "sparse-matrix"
+            break
+    value = get_first_value(config.matrix)
+    config.i_frame_first = value["iFrameTraj"][0]
+    if "other" in payload:
+        logger.info(f"Loading alternate matrices")
+        config.matrix_by_key = {}
+        config.matrix_by_key[payload["key"]] = config.matrix
+        for entry in payload["other"]:
+            config.matrix_by_key[entry["key"]] = entry["matrix"]
+        config["opt_keys"] = list(config.matrix_by_key.keys())
+        if not config.key:
+            config.key = payload.key
+        logger.info(f"Set opt_keys {config.opt_keys} - {config.key}")
+        config.matrix = config.matrix_by_key[config.key]
+
+
 class FesMatrixTrajReader(TrajReader):
     def process_config(self):
         self.config.title = "Free-energy surface of collective variables"
@@ -281,24 +311,14 @@ class FesMatrixTrajReader(TrajReader):
             logger.info(f"Loading {fes_yaml}")
             data = load_yaml(fes_yaml, is_addict=True)
         else:
-            logger.info(f"Generating fes matrix form {self.config.metad_dir}")
-            logger.info(f"Current dir {os.getcwd()}")
+            logger.info(f"Generating fes matrix form {self.config.metad_dir} in {os.getcwd()}")
             data = get_matrix(self.config.metad_dir)
-            fes_yaml = Path(self.config.metad_dir) / "rshow.matrix.yaml"
-            dump_yaml(data, fes_yaml)
+            dump_yaml(data, Path(self.config.metad_dir) / "rshow.matrix.yaml")
         logger.info(toc())
-        self.config.matrix = data.matrix
-        self.config.mode = "matrix"
-        for cell in py_.flatten_deep(self.config.matrix):
-            if not cell:
-                continue
-            if py_.has(cell, "p") and not py_.has(cell, 'iFrameTraj'):
-                self.config.mode = "sparse-matrix"
-                break
+        load_matrix_data_into_config(data, self.config)
         self.config.trajectories = [fes_yaml.parent / t for t in data.trajectories]
         self.traj_manager = self.get_traj_manager()
         self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
-
 
 class MatrixTrajReader(TrajReader):
     def process_config(self):
@@ -426,6 +446,7 @@ class ParallelTrajReader(TrajReader):
         self.config.matrix = matrix
 
 
+
 class FoamTrajReader(TrajReader):
     def get_traj_manager(self):
         return FoamTrajectoryManager(
@@ -439,38 +460,19 @@ class FoamTrajReader(TrajReader):
 
     def process_config(self):
         super().process_config()
-
         h5 = self.traj_manager.get_traj_file(0)
-
         # As the coordinates are superposed frame by frame, it's important
         # that the first frame (which is the reference frame) is correctly
         # loaded. Here, we determine the first frame
-
         if h5.has_dataset("json_rshow_matrix") or h5.has_dataset("rshow_matrix"):
             if h5.has_dataset("json_rshow_matrix"):
                 data = h5.get_json_dataset("json_rshow_matrix")
             elif h5.has_dataset("rshow_matrix"):
                 data = h5.get_json_dataset("rshow_matrix")
-            if py_.has(data, "matrix"):
-                # in case the key-value object was loaded
-                self.config.matrix = data["matrix"]
-            else:
-                # in case just the matrix was loaded
-                self.config.matrix = data
-            self.config.mode = "matrix"
-            for cell in py_.flatten_deep(self.config.matrix):
-                if not cell:
-                    continue
-                if py_.has(cell, "p") and not py_.has(cell, 'iFrameTraj'):
-                    self.config.mode = "sparse-matrix"
-                    break
             logger.info("load matrix in init")
-            value = get_first_value(self.config.matrix)
-            self.config.i_frame_first = value["iFrameTraj"][0]
-
+            load_matrix_data_into_config(data, self.config)
         if self.config.mode == "strip":
             self.config.i_frame_first = -1
-
         # Load the first frame
         logger.info("load first frame in init")
         self.read_frame_traj([self.config.i_frame_first, 0])

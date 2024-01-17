@@ -9,8 +9,13 @@
               button.btn-close(data-bs-dismiss="modal")
             .modal-body
               pre {{ errorMsg }}
-
       #matrix-widget.h-100(:style="matrixStyle" :key="forceMatrixKey")
+      .ms-2.mt-n2(:key="forceMatrixKey" style="position: absolute;")
+        .dropdown
+          button.btn.btn-sm.btn-secondary.dropdown-toggle(data-bs-toggle="dropdown" type="button")
+            | {{ key }}
+          ul.dropdown-menu
+              li.dropdown-item(v-for="k of optKeys" @click="selectOptKey(k)") {{ k }}
       #strip-widget.h-100(:style="stripStyle" :key="forceStripKey")
       #table.p-2.me-2.overflow-scroll(:style="tableStyle")
         ensemble-table(ref="table")
@@ -57,7 +62,9 @@ export default {
       joleculeStyle: 'height: 100%',
       tableStyle: 'display: none',
       stripStyle: 'display: none',
-      matrixStyle: 'display: none'
+      matrixStyle: 'display: none',
+      optKeys: [],
+      key: '',
     }
   },
   async mounted () {
@@ -225,6 +232,7 @@ export default {
     },
 
     resetWidgets () {
+      console.log('resetWidgets')
       this.forceMatrixKey = Math.random()
       this.forceStripKey = Math.random()
       this.$forceUpdate()
@@ -468,7 +476,10 @@ export default {
     async loadMetadata () {
       this.pushLoading()
       this.key = await this.getConfig('key')
-      this.opt_keys = await this.getConfig('opt_keys')
+      let result = await this.getConfig('opt_keys')
+      if (result) {
+        this.optKeys = result
+      }
       let datasets = await this.remote.get_json_datasets(this.foamId)
       if (datasets) {
         this.$store.commit('setItem', { datasets })
@@ -930,6 +941,7 @@ export default {
     async selectOptKey (key) {
       let iFrameTraj = _.last(this.iFrameTrajList)
       console.log('selectOptKey', key, iFrameTraj)
+      this.key = key
       await this.remote.select_new_key(this.foamId, key)
       this.resetWidgets()
       iFrameTraj = await this.loadMatrix(iFrameTraj)
