@@ -292,10 +292,11 @@ def load_matrix_data_into_config(payload, config):
         for entry in payload["other"]:
             config.matrix_by_key[entry["key"]] = entry["matrix"]
         config["opt_keys"] = list(config.matrix_by_key.keys())
-        if not config.key:
-            config.key = payload.key
-        logger.info(f"Set opt_keys {config.opt_keys} - {config.key}")
-        config.matrix = config.matrix_by_key[config.key]
+        if py_.has(payload, 'key') and not config.key:
+            config.key = payload["key"]
+        if py_.get(config, "key"):
+            logger.info(f"Set opt_keys {config.opt_keys} - {config.key}")
+            config.matrix = config.matrix_by_key[config.key]
 
 
 class FesMatrixTrajReader(TrajReader):

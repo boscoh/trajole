@@ -10,7 +10,7 @@
             .modal-body
               pre {{ errorMsg }}
       #matrix-widget.h-100(:style="matrixStyle" :key="forceMatrixKey")
-      .ms-2.mt-n2(:key="forceMatrixKey" style="position: absolute;")
+      .ms-2.mt-n2(v-if="optKeys.length" style="position: absolute;")
         .dropdown
           button.btn.btn-sm.btn-secondary.dropdown-toggle(data-bs-toggle="dropdown" type="button")
             | {{ key }}

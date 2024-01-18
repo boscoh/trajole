@@ -40,12 +40,6 @@
               .modal-footer
                 button.btn.btn-secondary(data-bs-dismiss="modal" @click="cancel") Close
 
-      // Dropdown for energy components
-      select.ms-2.mb-1.form-select.form-select-sm(
-        v-if="opt_keys.length" v-model="key" @change="selectKey(key)"
-      )
-        option(v-for="k in opt_keys" :value="k") {{k}}
-
       toggle-text.ms-2.mb-1(:flag="isAsCommunities" @click="toggleAsCommunities()")
         | ASCommunities
 
@@ -118,7 +112,6 @@ export default {
       isAsCommunities: false,
       actionWidth: `200px`,
       key: "",
-      opt_keys: [],
       distances: [],
     };
   },
@@ -156,14 +149,14 @@ export default {
     },
   },
   methods: {
-    handleUrl() {
+    async handleUrl() {
       let frames = this.$route.query.frame;
       if (frames) {
         frames = _.map(frames.split(","), _.parseInt);
       }
       let viewId = this.$route.query.view;
       let foamId = this.$route.params.foamId;
-      this.$refs.joleculeMatrix.loadFoamId(foamId, frames, viewId);
+      await this.$refs.joleculeMatrix.loadFoamId(foamId, frames, viewId);
     },
     downloadPdb() {
       this.$store.commit("pushLoading");
@@ -199,9 +192,6 @@ export default {
       saveBlobFile(blob, fname);
 
       this.$store.commit("popLoading");
-    },
-    selectKey(key) {
-      this.$refs.joleculeMatrix.selectOptKey(key);
     },
     toggleAsCommunities() {
       this.$refs.joleculeMatrix.toggleAsCommunities();

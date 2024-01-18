@@ -50,8 +50,13 @@ def get_reader_from_lru_cache(
 
 
 def select_new_key(foam_id, key):
-    # NOT supported for lounge
-    return
+    traj_reader = get_foam_traj_reader(foam_id)
+    if "opt_keys" in traj_reader.config:
+        config = traj_reader.config
+        config.matrix = config.matrix_by_key[key]
+        config.key = key
+    return {"success": True}
+
 
 
 def get_tags(foam_id):
@@ -181,7 +186,7 @@ def get_min_frame(foam_id):
             logger.info(f"get_min_frame from dataset:`json_min`: {result}")
             return result
 
-    if not traj_file.has_dataset("rshow_matrix"):
+    if not traj_file.has_dataset("json_rshow_matrix"):
         return None
 
     traj_reader = get_foam_traj_reader(foam_id)
