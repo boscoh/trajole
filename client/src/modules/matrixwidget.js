@@ -67,6 +67,10 @@ export class MatrixWidget extends widgets.CanvasWidget {
   }
 
   async loadValues(values) {
+    for (let value of this.values) {
+      await this.deselectGridValue(value);
+    }
+    console.log('loadValues', _.cloneDeep(values), 'over', _.cloneDeep(this.values))
     await this.clickGridValue(values[0], true);
     for (let i = 1; i < values.length; i += 1) {
       await this.clickGridValue(values[i], false);
@@ -190,16 +194,17 @@ export class MatrixWidget extends widgets.CanvasWidget {
   async deselectGridValue(value) {}
 
   async clickGridValue(value, thisFrameOnly) {
-    console.log('clickGridValue input', value)
     if (value && value.iFrameTraj) {
       if (thisFrameOnly) {
+        console.log('clickGridValue thisFrameOnly', _.cloneDeep(value))
         await this.selectGridValue(value, true);
       } else {
-        console.log("clickGridValue", value, _.cloneDeep(this.values))
         let iFrameTrajs = _.map(_.filter(this.values, v => v.iFrameTraj), v => v.iFrameTraj)
         if ((iFrameTrajs.length > 1) && (inFrames(iFrameTrajs, value.iFrameTraj))) {
+          console.log("clickGridValue deselect", _.cloneDeep(value), _.cloneDeep(this.values))
           await this.deselectGridValue(value);
         } else {
+          console.log("clickGridValue select", _.cloneDeep(value), _.cloneDeep(this.values))
           await this.selectGridValue(value, false);
         }
       }
