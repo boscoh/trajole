@@ -847,7 +847,7 @@ export default {
 
     async loadView (view) {
       console.log(`loadView`, _.cloneDeep(view))
-
+      this.pushLoading('Views...')
       // First load all the frames
 
       if (_.has(view, 'matrixWidgetValues')) {
@@ -881,6 +881,8 @@ export default {
       // update store and URL
       this.$store.commit('setItem', { viewId: view.id })
       history.pushState({}, null, '#' + this.$route.path + '?view=' + view.id)
+
+      this.popLoading()
     },
 
     async saveView () {
