@@ -66,14 +66,17 @@ export class MatrixWidget extends widgets.CanvasWidget {
     return this.getIFrameTrajFromValue(value);
   }
 
-  async loadValues(values) {
+  async loadValues(newValues) {
+    let isExistingValue = (testV, values) => _.some(values, v => isSameVec(v.iFrameTraj, testV.iFrameTraj))
     for (let value of this.values) {
-      await this.deselectGridValue(value);
+      if (!isExistingValue(value, newValues)) {
+        await this.deselectGridValue(value);
+      }
     }
-    console.log('loadValues', _.cloneDeep(values), 'over', _.cloneDeep(this.values))
-    await this.clickGridValue(values[0], true);
-    for (let i = 1; i < values.length; i += 1) {
-      await this.clickGridValue(values[i], false);
+    for (let newValue of newValues) {
+      if (!isExistingValue(newValue, this.values)) {
+        await this.clickGridValue(newValue, false);
+      }
     }
   }
 
