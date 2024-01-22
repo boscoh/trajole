@@ -128,7 +128,7 @@ export function delay (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export function makeId() {
+export function makeId () {
   let result = ''
   const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
   for (let i = 0; i < 3; i += 1) {
@@ -141,3 +141,10 @@ export function makeId() {
   return result
 }
 
+export function isSameValue (testV, value) {
+  return isSameVec(value.iFrameTraj, testV.iFrameTraj)
+}
+
+export function inValues (testV, values) {
+  return _.some(values, v => isSameVec(v.iFrameTraj, testV.iFrameTraj))
+}

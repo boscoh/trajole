@@ -72,6 +72,12 @@ export default {
     addDumpIFrameTraj (state, iFrameTraj) {
       if (inFrames(state.iFrameTrajList, iFrameTraj)) {
         state.dumpIFrameTrajList.push(iFrameTraj)
+        console.log(
+          `addDumpIFrameTraj`,
+          _.cloneDeep(iFrameTraj),
+          '->',
+          _.cloneDeep(state.dumpIFrameTrajList)
+        )
       }
     },
 

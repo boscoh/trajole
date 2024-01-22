@@ -36,7 +36,9 @@ import { v3 } from 'jolecule'
 import {
   delay,
   getFirstValue,
+  inValues,
   inFrames,
+  isSameValue,
   isSameVec,
   saveBlobFile,
   saveTextFile,
@@ -64,7 +66,7 @@ export default {
       stripStyle: 'display: none',
       matrixStyle: 'display: none',
       optKeys: [],
-      key: '',
+      key: ''
     }
   },
   async mounted () {
@@ -642,7 +644,7 @@ export default {
       return this.nStructureInFrameList.length
     },
 
-    updateState () {
+    updateWidgetValues () {
       if (!this.ensembleId) {
         let frames = _.map(this.iFrameTrajList, x => x[0])
         history.pushState(
@@ -659,31 +661,6 @@ export default {
           this.matrixWidget.draw()
         }
       }
-      this.checkWatchLists()
-    },
-
-    checkWatchLists () {
-      // Check for store.state.loadIFrameTrajList and reset the list
-      // if they have not been loaded
-      let oldLoadIFrameTrajList = this.loadIFrameTrajList
-      let loadIFrameTrajList = []
-      for (let entry of oldLoadIFrameTrajList) {
-        if (!_.includes(this.iFrameTrajList, entry.iFrameTraj)) {
-          loadIFrameTrajList.push(entry)
-        }
-      }
-      this.$store.commit('setItem', { loadIFrameTrajList })
-
-      // Check for store.state.dumpIFrameTrajList and reset the list
-      // if they have not been deleted
-      let oldDumpIFrameTrajList = this.dumpIFrameTrajList
-      let dumpIFrameTrajList = []
-      for (let iFrameTraj of oldDumpIFrameTrajList) {
-        if (_.includes(this.iFrameTrajList, iFrameTraj)) {
-          dumpIFrameTrajList.push(iFrameTraj)
-        }
-      }
-      this.$store.commit('setItem', { dumpIFrameTrajList })
     },
 
     async loadFrameIntoJolecule (
@@ -745,7 +722,7 @@ export default {
         this.jolecule.soupWidget.buildScene()
       }
       this.isFetching = false
-      this.updateState()
+      this.updateWidgetValues()
     },
 
     async reloadLastFrameOfJolecule () {
@@ -755,7 +732,10 @@ export default {
       this.isFetching = true
       let iFrameTraj = _.last(this.iFrameTrajList)
 
-      console.log('reloadLastFrameOfJolecule iFrameTraj', _.cloneDeep(this.iFrameTrajList))
+      console.log(
+        'reloadLastFrameOfJolecule iFrameTraj',
+        _.cloneDeep(this.iFrameTrajList)
+      )
 
       let pdbLines = await this.getPdbLines(iFrameTraj)
       if (pdbLines) {
@@ -810,7 +790,7 @@ export default {
       if (!_.isNil(i)) {
         await this.deleteItemFromIFrameTrajList(i)
       }
-      this.updateState()
+      this.updateWidgetValues()
     },
 
     async deleteItemFromIFrameTrajList (i) {
