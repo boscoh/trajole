@@ -328,7 +328,7 @@ class MatrixTrajReader(TrajReader):
             fname = fname / "matrix.yaml"
         data = load_yaml(fname, is_addict=True)
         parent_dir = Path(fname).abspath().parent
-        self.config.matrix = data.matrix
+        load_matrix_data_into_config(data, self.config)
         self.config.title = "Matrix"
         self.config.trajectories = data.trajectories
         if not self.config.mode:
