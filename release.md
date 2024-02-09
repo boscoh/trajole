@@ -1,4 +1,14 @@
 # Release Notes
+- 1.6.11
+  - more bug fixes
+- 1.6.10
+  - bug fixes for loading frames
+- 1.6.9
+  - multiple matrix
+- 1.6.8
+  - always strips water by default
+- 1.6.7
+  - autodetect sparse versus dense matrix
 - 1.6.6
   - defaults to rshow.matrix.yaml
   - handles uploads of matrix json or plain matrix double list

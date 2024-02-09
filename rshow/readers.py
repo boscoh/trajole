@@ -27,7 +27,6 @@ from rich.pretty import pretty_repr
 from rseed.analysis.fes import get_matrix_json as get_matrix
 from rseed.analysis.fn import sort_temperatures
 from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
-from rseed.granary import Granary
 from rseed.util.ligand import iter_ff_mol_from_file
 
 from rshow.alphaspace import AlphaSpace

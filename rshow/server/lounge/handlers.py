@@ -15,7 +15,6 @@ from easytrajh5.select import select_mask
 from easytrajh5.struct import get_parmed_from_mdtraj
 from rseed.analysis.fes import get_i_frame_min
 from rseed.analysis.blast import align_parmed
-from rseed.granary import Granary
 from rshow.persist import PersistDictList
 from rshow.readers import FoamTrajReader, FoamEnsembleReader
 from rshow.util import get_pair_distances
