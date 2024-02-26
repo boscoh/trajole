@@ -3,13 +3,15 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from typing import Any
-from copy import deepcopy
 
-from rich.pretty import pprint
 import mdtraj
 import numpy as np
 import parmed
 from addict import Dict
+from path import Path
+from pydash import py_
+from rich.pretty import pretty_repr
+
 from easytrajh5.fs import (
     dump_yaml,
     get_checked_path,
@@ -19,16 +21,16 @@ from easytrajh5.fs import toc
 from easytrajh5.manager import TrajectoryManager
 from easytrajh5.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
 from easytrajh5.select import select_mask, slice_parmed
-from easytrajh5.struct import get_parmed_from_mdtraj, get_mdtraj_from_parmed, get_parmed_from_parmed_or_pdb
+from easytrajh5.struct import (
+    get_parmed_from_mdtraj,
+    get_mdtraj_from_parmed,
+    get_parmed_from_parmed_or_pdb,
+)
 from foamdb.easyh5 import FoamTrajectoryManager
-from path import Path
-from pydash import py_
-from rich.pretty import pretty_repr
 from rseed.analysis.fes import get_matrix_json as get_matrix
 from rseed.analysis.fn import sort_temperatures
 from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
 from rseed.util.ligand import iter_ff_mol_from_file
-
 from rshow.alphaspace import AlphaSpace
 from rshow.util import get_first_file
 
@@ -157,7 +159,7 @@ class TrajReader(RshowReaderMixin):
             logger.info(l)
 
         self.i_frame_traj = None
-        self.atom_indices = None
+        self.atom_indices_by_i_traj = {}
         self.frame = None
         self.process_config()
 
@@ -198,16 +200,26 @@ class TrajReader(RshowReaderMixin):
     def get_config(self, k):
         return self.config[k]
 
-    def read_frame_traj(self, i_frame_traj=None, atom_mask='intersect {protein} {amber @CA}'):
+    def get_atom_indices(self, i_frame_traj, atom_mask):
+        i_traj = i_frame_traj[1]
+        if (i_traj, atom_mask) not in self.atom_indices_by_i_traj:
+            traj_file = self.traj_manager.get_traj_file(i_traj)
+            self.atom_indices_by_i_traj[(i_traj, atom_mask)] = traj_file.select_mask(atom_mask)
+        return self.atom_indices_by_i_traj[(i_traj, atom_mask)]
+
+    def read_frame_traj(
+        self, i_frame_traj=None, atom_mask="intersect {protein} {amber @CA}"
+    ):
         if i_frame_traj and i_frame_traj != self.i_frame_traj:
             new_frame = self.traj_manager.read_as_frame_traj(i_frame_traj)
             if self.frame is not None:
                 new_frame.xyz = np.copy(new_frame.xyz)
                 if atom_mask:
-                    traj_file = self.traj_manager.get_traj_file(i_frame_traj[1])
-                    atom_indices = traj_file.select_mask(atom_mask)
-                    new_frame.superpose(self.frame, atom_indices=atom_indices, ref_atom_indices=self.atom_indices)
-                    self.atom_indices = atom_indices
+                    new_frame.superpose(
+                        self.frame,
+                        atom_indices=self.get_atom_indices(i_frame_traj, atom_mask),
+                        ref_atom_indices=self.get_atom_indices(self.i_frame_traj, atom_mask),
+                    )
                 else:
                     new_frame.superpose(self.frame)
             self.frame = new_frame
@@ -241,7 +253,7 @@ class FrameReader(TrajReader):
         fname = Path(self.config.pdb_or_parmed)
         pmd = get_parmed_from_parmed_or_pdb(fname)
         if not self.config.is_solvent:
-            i_atoms = select_mask(pmd, 'not {solvent}')
+            i_atoms = select_mask(pmd, "not {solvent}")
             pmd = slice_parmed(pmd, i_atoms)
         self.frame = get_mdtraj_from_parmed(pmd)
         self.views_yaml = fname.with_suffix(".views.yaml")
@@ -286,19 +298,19 @@ def load_matrix_data_into_config(payload, config):
     for cell in py_.flatten_deep(config.matrix):
         if not cell:
             continue
-        if py_.has(cell, "p") and not py_.has(cell, 'iFrameTraj'):
+        if py_.has(cell, "p") and not py_.has(cell, "iFrameTraj"):
             config.mode = "sparse-matrix"
             break
     value = get_first_value(config.matrix)
     config.i_frame_first = value["iFrameTraj"][0]
     if "other" in payload:
-        logger.info(f"Loading alternate matrices")
+        logger.info("Loading alternate matrices")
         config.matrix_by_key = {}
         config.matrix_by_key[payload["key"]] = config.matrix
         for entry in payload["other"]:
             config.matrix_by_key[entry["key"]] = entry["matrix"]
         config["opt_keys"] = list(config.matrix_by_key.keys())
-        if py_.has(payload, 'key') and not config.key:
+        if py_.has(payload, "key") and not config.key:
             config.key = payload["key"]
         if py_.get(config, "key"):
             logger.info(f"Set opt_keys {config.opt_keys} - {config.key}")
@@ -318,7 +330,9 @@ class FesMatrixTrajReader(TrajReader):
             logger.info(f"Loading {fes_yaml}")
             data = load_yaml(fes_yaml, is_addict=True)
         else:
-            logger.info(f"Generating fes matrix form {self.config.metad_dir} in {os.getcwd()}")
+            logger.info(
+                f"Generating fes matrix form {self.config.metad_dir} in {os.getcwd()}"
+            )
             data = get_matrix(self.config.metad_dir)
             dump_yaml(data, Path(self.config.metad_dir) / "rshow.matrix.yaml")
         logger.info(toc())
@@ -326,6 +340,7 @@ class FesMatrixTrajReader(TrajReader):
         self.config.trajectories = [fes_yaml.parent / t for t in data.trajectories]
         self.traj_manager = self.get_traj_manager()
         self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
+
 
 class MatrixTrajReader(TrajReader):
     def process_config(self):
@@ -451,7 +466,6 @@ class ParallelTrajReader(TrajReader):
                     "iFrameTraj": [t, k_reverse[k]],
                 }
         self.config.matrix = matrix
-
 
 
 class FoamTrajReader(TrajReader):
