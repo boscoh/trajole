@@ -157,6 +157,7 @@ class TrajReader(RshowReaderMixin):
             logger.info(l)
 
         self.i_frame_traj = None
+        self.atom_indices = None
         self.frame = None
         self.process_config()
 
@@ -197,12 +198,18 @@ class TrajReader(RshowReaderMixin):
     def get_config(self, k):
         return self.config[k]
 
-    def read_frame_traj(self, i_frame_traj=None):
+    def read_frame_traj(self, i_frame_traj=None, atom_mask='intersect {protein} {amber @CA}'):
         if i_frame_traj and i_frame_traj != self.i_frame_traj:
             new_frame = self.traj_manager.read_as_frame_traj(i_frame_traj)
             if self.frame is not None:
                 new_frame.xyz = np.copy(new_frame.xyz)
-                new_frame.superpose(self.frame)
+                if atom_mask:
+                    traj_file = self.traj_manager.get_traj_file(i_frame_traj[1])
+                    atom_indices = traj_file.select_mask(atom_mask)
+                    new_frame.superpose(self.frame, atom_indices=atom_indices, ref_atom_indices=self.atom_indices)
+                    self.atom_indices = atom_indices
+                else:
+                    new_frame.superpose(self.frame)
             self.frame = new_frame
             self.i_frame_traj = i_frame_traj
         return self.frame

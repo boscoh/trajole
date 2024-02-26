@@ -10,37 +10,35 @@ This viewer allows specialized views of MD trajectories:
 - energy decomposition matrices of a run of temperature baths in
   a set of parallel tempering trajectories 
 
-```
+```console
+> rshow
 Usage: rshow [OPTIONS] COMMAND [ARGS]...
 
-  rshow: : integrated analysis/protein viewer
+  rshow: mdtraj h5 viewer
 
   (C) 2021 Redesign Science
 
 Options:
-  --dev              Run server in dev mode (no break/no open browser)
-  --solvent          Keep solvent
-  --hydrogen         Keep hydrogens
-  --background TEXT  Background color to jolecule
-  --port INTEGER     port number
-  --help             Show this message and exit.
+  --dev        Run continuous server
+  --solvent    Keep solvent
+  --port TEXT  port number
+  --help       Show this message and exit.
 
 Commands:
-  fes        Free-Energy Surface of Collective Variables
-  frame      Ligand browser
-  ligands    Ligand browser
-  matrix     Generic 2D surface linked to a set of trajectories
-  re         Replicas in a replica-exchange simulation
-  re-dock    Replicas in a replica-exchange simulation
-  traj       Trajectory of an MD simulation
-  traj-foam  Trajectory of a MD simulation loaded from FoamDB
+  fes        Open H5 with FES matrix
+  frame      Open PDB or PARMED
+  ligands    Open PDB with ligands in SDF
+  matrix     Open H5 with matrix
+  open-url   Open OPEN_URL when TEST_URL works
+  re         Open multiple H5 in parallel
+  traj       Open H5
+  traj-foam  Open H5 stored on FoamDB
 ```
 
 In particular, if you have installed `foamdb` (see installation), you can
 view the trajectories stored in our distributed database:
 
     rshow traj-foam 15
-   
 
 ## Developing rshow
 
