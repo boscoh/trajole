@@ -200,29 +200,31 @@ class TrajReader(RshowReaderMixin):
     def get_config(self, k):
         return self.config[k]
 
-    def get_atom_indices(self, i_frame_traj, atom_mask):
-        i_traj = i_frame_traj[1]
-        if (i_traj, atom_mask) not in self.atom_indices_by_i_traj:
-            traj_file = self.traj_manager.get_traj_file(i_traj)
-            self.atom_indices_by_i_traj[(i_traj, atom_mask)] = traj_file.select_mask(atom_mask)
-        return self.atom_indices_by_i_traj[(i_traj, atom_mask)]
-
     def read_frame_traj(
         self, i_frame_traj=None, atom_mask="intersect {protein} {amber @CA}"
     ):
         if i_frame_traj and i_frame_traj != self.i_frame_traj:
             new_frame = self.traj_manager.read_as_frame_traj(i_frame_traj)
+            atom_indices = None
+            if atom_mask:
+                i_traj = i_frame_traj[1]
+                if (i_traj, atom_mask) not in self.atom_indices_by_i_traj:
+                    atom_indices = select_mask(get_parmed_from_mdtraj(new_frame), atom_mask)
+                    self.atom_indices_by_i_traj[(i_traj, atom_mask)] = atom_indices
+                else:
+                    atom_indices = self.atom_indices_by_i_traj[(i_traj, atom_mask)]
             if self.frame is not None:
                 new_frame.xyz = np.copy(new_frame.xyz)
                 if atom_mask:
                     new_frame.superpose(
                         self.frame,
-                        atom_indices=self.get_atom_indices(i_frame_traj, atom_mask),
-                        ref_atom_indices=self.get_atom_indices(self.i_frame_traj, atom_mask),
+                        atom_indices=atom_indices,
+                        ref_atom_indices=self.atom_indices
                     )
                 else:
                     new_frame.superpose(self.frame)
             self.frame = new_frame
+            self.atom_indices = atom_indices
             self.i_frame_traj = i_frame_traj
         return self.frame
 
