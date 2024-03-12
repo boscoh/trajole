@@ -10,7 +10,7 @@ from path import Path
 from rich.pretty import pretty_repr
 from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
-from starlette.responses import FileResponse, StreamingResponse
+from starlette.responses import FileResponse, Response
 from starlette.staticfiles import StaticFiles
 
 from easytrajh5.fs import get_time_str
@@ -71,13 +71,12 @@ def make_app(handlers, client_dir, data_dir):
         try:
             logger.info(f"get_parmed {foam_id} {i_frame}")
             blob = handlers.get_parmed_blob(foam_id, i_frame)
-            bytes_io = BytesIO(blob)
+            return Response(content=blob, media_type="application/octet-stream")
         except Exception as e:
             error_lines = str(traceback.format_exc()).splitlines()
             for line in error_lines:
                 logger.debug(line)
             raise e
-        return StreamingResponse(bytes_io, media_type="application/octet-stream")
 
     @app.post("/upload/")
     async def upload_file(file: UploadFile = File(...)):
