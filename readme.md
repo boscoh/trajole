@@ -120,7 +120,7 @@ server {
 ```
 
 Restart `sudo systemctl restart nginx`   
-Logs: `/var/log/nginx/lounge/error.log`
+Logs: `tail -f /var/log/nginx/lounge/error.log`
 Status: `systemctl status nginx`
 
 ## 2. LOUNGE SERVER
@@ -185,3 +185,4 @@ stdout_logfile=/var/log/lounge/logs
 
 Restart: `sudo service supervisor start`
 Status: `sudo supervisorctl status`
+Logs: `tail -f /var/log/lounge/errors`
