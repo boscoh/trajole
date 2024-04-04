@@ -17,7 +17,6 @@ setuptools.setup(
         "docopt",
         "easytrajh5>=0.2.5",
         "fastapi",
-        "foamdb>=0.4.0",
         "mdtraj",
         "numpy",
         "parmed",
@@ -26,7 +25,6 @@ setuptools.setup(
         "pydash",
         "python-multipart",
         "rich",
-        "rseed>=2.7.6",
         "starlette",
         "uvicorn",
     ],
@@ -38,9 +36,7 @@ setuptools.setup(
     package_data={
         "rshow": [
             "rshow/server/local/client/**",
-            "rshow/server/lounge/client/**",
             "rshow/server/local/client/assets/**",
-            "rshow/server/lounge/client/assets/**",
         ]
     },
     include_package_data=True,

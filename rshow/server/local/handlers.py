@@ -21,10 +21,10 @@ def select_new_key(foam_id, key):
     if "opt_keys" in traj_reader.config:
         config = traj_reader.config
         config.key = key
-        init_traj_reader(config)
+        init_config(config)
 
 
-def init_traj_reader(in_config):
+def init_config(in_config):
     """
     Entry point of app from server, and will setup depending on the config options
     in the config dictionary.

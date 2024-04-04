@@ -7,15 +7,14 @@ from contextlib import closing
 import click
 import uvicorn
 from addict import Dict
-from path import Path
-
-import rshow.openurl
 from easytrajh5.fs import dump_yaml, tic, toc
-from rshow.log import init_logging
-from rshow.make_app import make_app
+from path import Path
+from rshow.app import make_app, init_logging, open_url_in_background
+
 from rshow.server.local import handlers
 
 logger = logging.getLogger(__name__)
+this_dir = Path(__file__).parent
 
 
 def find_free_port():
@@ -31,44 +30,28 @@ def find_free_port():
 config = Dict(mode="")
 
 
-def run():
-    global config
-
-    this_dir = Path(__file__).abspath().parent
-
-    init_logging()
-
+def run(config):
+    config.client_dir = this_dir / "server/local/client"
+    config.data_dir = this_dir / "server/local/data"
+    config.work_dir = os.getcwd()
     port = config.get("port")
-
+    init_logging()
     if config.is_dev:
-        config.server = "local"
-
-        config.work_dir = os.getcwd()
         if not port:
+            # fix port so that dev client can find it
             port = 9023
-
         logger.info(f"port: {port}")
         os.chdir(this_dir)
-        dump_yaml(config, "dev_config.yaml")
-
-        # Run in uvicorn cli using the reload facility
-        # Requires a module with configs loaded in already
-        # to expose an app objct
-        os.system(f"uvicorn app_from_dev_config:app --reload --port {port}")
+        dump_yaml(config, "app.yaml")
+        # Run uvicorn externally for reloading
+        os.system(f"uvicorn run_app:app --reload --port {port}")
     else:
         if not port:
+            # mix up ports so multiple copies can run
             port = find_free_port()
         logger.info(f"port: {port}")
-
-        rshow.openurl.open_url_in_background(f"http://localhost:{port}/#/foamtraj/0")
-
-        handlers.init_traj_reader(config)
-
-        client_dir = this_dir / "server/local/client"
-        data_dir = this_dir / "server/local/data"
-
-        app = make_app(handlers, client_dir, data_dir)
-
+        open_url_in_background(f"http://localhost:{port}/#/foamtraj/0")
+        app = make_app(handlers, config)
         uvicorn.run(app, port=port, log_level="critical")
 
 
@@ -95,18 +78,7 @@ def traj(h5):
     """
     config.reader_class = "TrajReader"
     config.trajectories = [h5]
-    run()
-
-
-@cli.command()
-@click.argument("metad_dir", default=".", required=False)
-def fes(metad_dir):
-    """
-    Open H5 with FES matrix
-    """
-    config.reader_class = "FesMatrixTrajReader"
-    config.metad_dir = metad_dir
-    run()
+    run(config)
 
 
 @cli.command()
@@ -117,7 +89,7 @@ def traj_foam(foam_id):
     """
     config.reader_class = "FoamTrajReader"
     config.trajectories = [foam_id]
-    run()
+    run(config)
 
 
 @cli.command()
@@ -130,7 +102,7 @@ def matrix(matrix_yaml, mode):
     config.reader_class = "MatrixTrajReader"
     config.matrix_yaml = matrix_yaml
     config.mode = mode
-    run()
+    run(config)
 
 
 @cli.command()
@@ -143,7 +115,7 @@ def re(re_dir, key):
     config.reader_class = "ParallelTrajReader"
     config.re_dir = re_dir
     config.key = key
-    run()
+    run(config)
 
 
 @cli.command()
@@ -158,7 +130,7 @@ def ligands(pdb, sdf, csv):
     config.pdb = pdb
     config.ligands = sdf
     config.csv = csv
-    run()
+    run(config)
 
 
 @cli.command()
@@ -169,7 +141,7 @@ def frame(pdb):
     """
     config.reader_class = "FrameReader"
     config.pdb_or_parmed = pdb
-    run()
+    run(config)
 
 
 @cli.command()
@@ -179,7 +151,6 @@ def open_url(test_url, open_url):
     """
     Open OPEN_URL when TEST_URL works
     """
-    from rshow.openurl import open_url_in_background
 
     logging.basicConfig(level=logging.INFO)
     open_url_in_background(test_url, open_url)

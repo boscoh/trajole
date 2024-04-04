@@ -9,14 +9,18 @@
               button.btn-close(data-bs-dismiss="modal")
             .modal-body
               pre {{ errorMsg }}
+
       #matrix-widget.h-100(:style="matrixStyle" :key="forceMatrixKey")
+
       .ms-2.mt-n2(v-if="optKeys.length" style="position: absolute;")
         .dropdown
           button.btn.btn-sm.btn-secondary.dropdown-toggle(data-bs-toggle="dropdown" type="button")
             | {{ key }}
           ul.dropdown-menu
               li.dropdown-item(v-for="k of optKeys" @click="selectOptKey(k)") {{ k }}
+
       #strip-widget.h-100(:style="stripStyle" :key="forceStripKey")
+
       #table.p-2.me-2.overflow-scroll(:style="tableStyle")
         ensemble-table(ref="table")
 

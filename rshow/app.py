@@ -1,0 +1,147 @@
+import inspect
+import logging
+import threading
+import time
+import traceback
+import webbrowser
+from urllib.request import urlopen
+
+import pydash as py_
+from easytrajh5.fs import get_time_str
+from fastapi import FastAPI, File, UploadFile
+from path import Path
+from rich.pretty import pretty_repr
+from starlette.middleware.cors import CORSMiddleware
+from starlette.requests import Request
+from starlette.responses import FileResponse, Response
+from starlette.staticfiles import StaticFiles
+
+logger = logging.getLogger(__name__)
+
+
+def make_app(handlers, config):
+    client_dir = Path(config.client_dir)
+    data_dir = Path(config.data_dir)
+
+    logger.info(f"client_dir: {client_dir}")
+    logger.info(f"data_dir: {data_dir}")
+
+    logger.info("initialize handlers")
+    handlers.init_config(config)
+
+    app = FastAPI()
+
+    app.add_middleware(
+        CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+    )
+
+    @app.post("/rpc-run")
+    async def rpc_run(data: dict):
+        job_id = data.get("id", None)
+        method = data.get("method")
+        params = data.get("params", [])
+        start_time = time.perf_counter_ns()
+        try:
+            if not hasattr(handlers, method):
+                raise Exception(f"rpc-run {method} is not found")
+            lines = pretty_repr(tuple(params)).split("\n")
+            lines[0] = f"rpc-run.{method}" + lines[0] + ":started..."
+            for l in lines:
+                logger.info(l)
+            fn = getattr(handlers, method)
+            if inspect.iscoroutinefunction(fn):
+                result = await fn(*params)
+            else:
+                result = fn(*params)
+            result = {"result": result, "jsonrpc": "2.0", "id": job_id}
+            elapsed_ms = round((time.perf_counter_ns() - start_time) / 1e6)
+            time_str = get_time_str(elapsed_ms / 1000)
+            logger.info(f"rpc-run.{method}:finished in {time_str}")
+        except Exception:
+            elapsed_ms = round((time.perf_counter_ns() - start_time) / 1e6)
+            time_str = get_time_str(elapsed_ms / 1000)
+            logger.info(f"rpc-run.{method}:error after {time_str}:")
+            error_lines = str(traceback.format_exc()).splitlines()
+            for line in error_lines:
+                logger.error(line)
+            result = {
+                "error": {"code": -1, "message": error_lines},
+                "jsonrpc": "2.0",
+                "id": job_id,
+            }
+        return result
+
+    @app.get("/parmed/{foam_id}")
+    async def get_parmed(foam_id: str, i_frame: int = None):
+        try:
+            logger.info(f"get_parmed {foam_id} {i_frame}")
+            blob = handlers.get_parmed_blob(foam_id, i_frame)
+            return Response(content=blob, media_type="application/octet-stream")
+        except Exception as e:
+            error_lines = str(traceback.format_exc()).splitlines()
+            for line in error_lines:
+                logger.debug(line)
+            raise e
+
+    @app.post("/upload/")
+    async def upload_file(file: UploadFile = File(...)):
+        fname = file.filename.replace(" ", "-")
+        original_ensemble_id = py_.kebab_case(Path(fname).stem)
+        ensemble_id = original_ensemble_id
+        ensemble_dir = data_dir / ensemble_id
+        i = 1
+        while ensemble_dir.exists():
+            ensemble_id = Path(f"{original_ensemble_id}({i})")
+            ensemble_dir = data_dir / ensemble_id
+            i += 1
+        ensemble_dir.makedirs_p()
+        full_fname = ensemble_dir / "ensemble.csv"
+        with open(full_fname, "wb+") as f:
+            f.write(file.file.read())
+        logger.info(f"Saved {full_fname} for {fname}")
+        return {"filename": fname, "ensembleId": ensemble_id}
+
+    @app.get("/")
+    async def serve_index(request: Request):
+        return FileResponse(client_dir / "index.html")
+
+    if client_dir:
+        # All other calls diverted to static files
+        app.mount("/", StaticFiles(directory=client_dir), name="dist")
+
+    return app
+
+
+def init_logging():
+    logging.basicConfig(
+        level=logging.INFO, format="%(levelname)s:%(name)s:%(funcName)s: %(message)s"
+    )
+    logging.getLogger("root").setLevel(logging.WARNING)
+    for name in logging.root.manager.loggerDict:
+        logging.getLogger(name).setLevel(logging.INFO)
+
+
+def open_url_in_background(test_url, open_url=None, sleep_in_s=1):
+    """
+    Polls server in background thread then opens a url in webbrowser
+    """
+    if open_url is None:
+        open_url = test_url
+
+    def inner():
+        elapsed = 0
+        while True:
+            try:
+                response_code = urlopen(test_url).getcode()
+                if response_code < 400:
+                    logger.info(f"open_url_in_background open {open_url}")
+                    webbrowser.open(open_url)
+                    return
+            except:
+                time.sleep(sleep_in_s)
+                elapsed += sleep_in_s
+                logger.info(f"testing {test_url} waiting {elapsed}s")
+
+    # creates a thread to poll server before opening client
+    logger.debug(f"open_url_in_background testing {test_url} to open {open_url}")
+    threading.Thread(target=inner).start()
