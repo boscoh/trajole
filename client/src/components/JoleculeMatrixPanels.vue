@@ -1,32 +1,32 @@
 <template lang="pug">
-  .d-flex.flex-row.h-100
+.d-flex.flex-row.h-100
 
-      #fail-modal.modal.fade
+    #fail-modal.modal.fade
         .modal-dialog
-          .modal-content
-            .modal-header
-              h5.modal-title ERROR: Loading trajectory {{ foamId }}
-              button.btn-close(data-bs-dismiss="modal")
-            .modal-body
-              pre {{ errorMsg }}
+            .modal-content
+                .modal-header
+                    h5.modal-title ERROR: Loading trajectory {{ foamId }}
+                    button.btn-close(data-bs-dismiss="modal")
+                .modal-body
+                    pre {{ errorMsg }}
 
-      #matrix-widget.h-100(:style="matrixStyle" :key="forceMatrixKey")
+    #matrix-widget.h-100(:style="matrixStyle" :key="forceMatrixKey")
 
-      .ms-2.mt-n2(v-if="optKeys.length" style="position: absolute;")
+    .ms-2.mt-n2(v-if="optKeys.length" style="position: absolute;")
         .dropdown
-          button.btn.btn-sm.btn-secondary.dropdown-toggle(data-bs-toggle="dropdown" type="button")
-            | {{ key }}
-          ul.dropdown-menu
-              li.dropdown-item(v-for="k of optKeys" @click="selectOptKey(k)") {{ k }}
+            button.btn.btn-sm.btn-secondary.dropdown-toggle(data-bs-toggle="dropdown" type="button")
+                | {{ key }}
+            ul.dropdown-menu
+                li.dropdown-item(v-for="k of optKeys" @click="selectOptKey(k)") {{ k }}
 
-      #strip-widget.h-100(:style="stripStyle" :key="forceStripKey")
+    #strip-widget.h-100(:style="stripStyle" :key="forceStripKey")
 
-      #table.p-2.me-2.overflow-scroll(:style="tableStyle")
+    #table.p-2.me-2.overflow-scroll(:style="tableStyle")
         ligand-table(ref="table")
 
-      ///////////////////////
-      #jolecule-container.h-100(:style="joleculeStyle")
-      ///////////////////////
+    ///////////////////////
+    #jolecule-container.h-100(:style="joleculeStyle")
+    ///////////////////////
 
 </template>
 
@@ -34,24 +34,18 @@
 import 'bootstrap/dist/css/bootstrap.min.css'
 import * as bootstrap from 'bootstrap'
 import _ from 'lodash'
-import { initEmbedJolecule } from 'jolecule'
+import { initEmbedJolecule, v3 } from 'jolecule'
 import { MatrixWidget } from '../modules/matrixwidget'
-import { v3 } from 'jolecule'
 import {
     delay,
     getFirstValue,
-    inValues,
-    inFrames,
-    isSameValue,
-    isSameVec,
-    saveBlobFile,
-    saveTextFile,
     getPdbText,
+    inFrames,
+    isSameVec,
+    saveTextFile,
 } from '../modules/util'
 import { aysnc_rpc } from '../modules/rpc'
 import LigandTable from './LigandTable.vue'
-import EnsembleTable from './EnsembleTable.vue'
-import * as rpc from '../modules/rpc'
 
 export default {
     components: {
