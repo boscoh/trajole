@@ -19,8 +19,10 @@ elif [ "$1" == "frame" ]; then
     ttab "rshow --dev frame examples/3hhm.pdb" ;
 elif [ "$1" == "ligands" ]; then
     ttab "cd examples/ligands; rshow --dev ligands receptor.pdb fred100.sdf"
-elif [ "$1" == "cam3" ]; then
-    ttab "cd examples/model5; rshow --dev matrix matrix_fes0.yaml"
+elif [ "$1" == "re" ]; then
+    ttab "cd examples/temper; rshow --dev matrix fes.rshow.yaml"
+elif [ "$1" == "cam3t" ]; then
+    ttab "cd examples/run5; rshow --dev matrix fes.rshow.yaml"
 elif [ "$1" == "cam3t" ]; then
     ttab "cd examples/run5; rshow --dev matrix fes.rshow.yaml"
 else

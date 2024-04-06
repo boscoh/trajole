@@ -70,17 +70,6 @@ def traj(h5):
 
 
 @cli.command()
-@click.argument("foam_id")
-def traj_foam(foam_id):
-    """
-    Open H5 stored on FoamDB
-    """
-    config.reader_class = "FoamTrajReader"
-    config.trajectories = [foam_id]
-    run(config)
-
-
-@cli.command()
 @click.argument("matrix_yaml", default="matrix.yaml", required=False)
 @click.option("--mode", default="matrix-strip", required=False)
 def matrix(matrix_yaml, mode):

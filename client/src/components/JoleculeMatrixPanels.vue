@@ -543,6 +543,7 @@ export default {
         },
 
         async selectMatrixGridValue (value, thisFrameOnly = false) {
+            console.log('selectMatrixGridValue', value)
             if (this.stripWidget && _.has(value, 'iFrameTrajs')) {
                 let label = value.label
                 let iFrameTrajs = value.iFrameTrajs
@@ -565,6 +566,7 @@ export default {
 
         async deselectMatrixGridValue (value) {
             let iFrameTraj
+            console.log('deselectMatrixGridValue', value)
             if (_.has(value, 'iFrameTraj')) {
                 iFrameTraj = value.iFrameTraj
             } else if (_.has(value, 'iFrameTrajs')) {
@@ -974,6 +976,7 @@ export default {
             this.resetWidgets()
             iFrameTraj = await this.loadMatrix(iFrameTraj)
             this.clickFrame(iFrameTraj)
+            this.$store.commit('addLoad', { iFrameTraj, thisFrameOnly: true })
         },
 
         async close () {

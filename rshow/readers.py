@@ -170,7 +170,10 @@ class TrajReader(RshowReaderMixin):
         if len(names) == 1:
             return {"h5": names[0]}
         elif len(names) >= 1:
-            return {"h5": " ".join(names)}
+            name = ";".join(names)
+            if len(name) > 20:
+                name = name[:40] + "..."
+            return {"h5": name}
         else:
             raise ValueError("No trajectories found.")
 
@@ -303,7 +306,7 @@ def load_matrix_data_into_config(payload, config):
     if "other" in payload:
         logger.info("Loading alternate matrices")
         config.matrix_by_key = {}
-        config.matrix_by_key[payload["key"]] = config.matrix
+        config.matrix_by_key[payload.get("key")] = config.matrix
         for entry in payload["other"]:
             config.matrix_by_key[entry["key"]] = entry["matrix"]
         config["opt_keys"] = list(config.matrix_by_key.keys())

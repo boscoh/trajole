@@ -7,13 +7,10 @@ import psutil
 from easytrajh5.fs import load_yaml_dict, dump_yaml
 from path import Path
 from rich.pretty import pprint
-
 from rshow import readers
 
-traj_reader: Optional[readers.RshowReaderMixin] = None
-
 logger = logging.getLogger(__name__)
-
+traj_reader: Optional[readers.RshowReaderMixin] = None
 data_dir = Path(__file__).abspath().parent / "data"
 
 
@@ -21,7 +18,7 @@ def select_new_key(foam_id, key):
     if "opt_keys" in traj_reader.config:
         config = traj_reader.config
         config.key = key
-        init_config(config)
+        config.matrix = config.matrix_by_key[config.key]
 
 
 def init_config(in_config):
@@ -186,5 +183,3 @@ def get_distances(foam_id, dpairs):
     return dpairs
 
 
-def load_ensemble_id(ensemble_id):
-    return None
