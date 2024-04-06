@@ -1,0 +1,193 @@
+- foamId: '0'
+  id: 35n9q8
+  imgs: ''
+  stripWidgetValues:
+  - iFrameTraj:
+    - 0
+    - 0
+    p: 0
+  text: ''
+  timestamp: 1692671513
+  viewDict:
+    camera:
+      in:
+      - 15.214809070773887
+      - -9.963077734402365
+      - 23.320106942233707
+      pos:
+      - 15.75
+      - -10.770000457763672
+      - 23.56999969482422
+      slab:
+        z_back: 22.979999542236328
+        z_front: -22.979999542236328
+        zoom: 37.23860629569815
+      up:
+      - 16.585890976531406
+      - -10.30679927409727
+      - 23.275498525380993
+    creator: public
+    distances:
+    - i_atom1: 2585
+      i_atom2: 688
+    - i_atom1: 628
+      i_atom2: 688
+    grid:
+      bCutoff: -1
+      isChanged: false
+      isElem: {}
+    i_atom: 688
+    labels: []
+    lock: false
+    order: 0
+    pdb_id: frame-0-0[1]
+    selected:
+    - 42
+    selected_traces:
+    - 0
+    show:
+      all_atom: false
+      hydrogen: false
+      ligands: true
+      peptide: true
+      ribbon: true
+      sidechain: false
+      sphere: false
+      trace: true
+      transparent: false
+      water: false
+    sidechains:
+    - 35
+    - 38
+    - 39
+    - 42
+    - 82
+    - 91
+    - 92
+    - 209
+    text: Click edit to change this text.
+    user_id: ''
+    version: 2
+    view_id: view:35n9q8
+- foamId: '23'
+  id: 5fuao2
+  imgs: ''
+  stripWidgetValues:
+  - iFrameTraj:
+    - 147
+    - 0
+    p: 0.735
+  - iFrameTraj:
+    - 33
+    - 0
+    p: 0.165
+  - iFrameTraj:
+    - 44
+    - 0
+    p: 0.22
+  text: ''
+  timestamp: 1682997904
+  viewDict:
+    camera:
+      in:
+      - 12.24729563247329
+      - 1.400495303928582
+      - 18.075216297415025
+      pos:
+      - 13.203576562703368
+      - 1.3988815737981795
+      - 18.367661468948697
+      slab:
+        z_back: 22.49500012397766
+        z_front: -22.49500012397766
+        zoom: 78.73250043392181
+      up:
+      - 13.379689362494826
+      - 0.6037251698895658
+      - 17.787393793584357
+    creator: public
+    distances: []
+    grid:
+      bCutoff: -1
+      isChanged: false
+      isElem: {}
+    i_atom: -1
+    labels: []
+    lock: false
+    order: 0
+    pdb_id: frame-147-0
+    selected: []
+    selected_traces: []
+    show:
+      all_atom: false
+      hydrogen: false
+      ligands: true
+      peptide: true
+      ribbon: true
+      sidechain: false
+      sphere: false
+      trace: true
+      transparent: false
+      water: false
+    sidechains: []
+    text: Click edit to change this text.
+    user_id: ''
+    version: 2
+    view_id: view:5fuao2
+- foamId: '17'
+  id: 23f35o
+  imgs: ''
+  stripWidgetValues:
+  - iFrameTraj:
+    - 131
+    - 0
+    p: 0.655
+  text: ''
+  timestamp: 1682993438
+  viewDict:
+    camera:
+      in:
+      - 12.835375614900746
+      - 0.8061301568168247
+      - 19.08401144586106
+      pos:
+      - 13.203672247858602
+      - 1.3988456972986103
+      - 18.3677392362764
+      slab:
+        z_back: 22.494999170303345
+        z_front: -22.494999170303345
+        zoom: 78.7324970960617
+      up:
+      - 12.615617949659542
+      - 2.1440926478661924
+      - 18.682062517372994
+    creator: public
+    distances: []
+    grid:
+      bCutoff: -1
+      isChanged: false
+      isElem: {}
+    i_atom: -1
+    labels: []
+    lock: false
+    order: 0
+    pdb_id: frame-131-0
+    selected: []
+    selected_traces: []
+    show:
+      all_atom: false
+      hydrogen: false
+      ligands: true
+      peptide: true
+      ribbon: true
+      sidechain: false
+      sphere: false
+      trace: true
+      transparent: false
+      water: false
+    sidechains: []
+    text: Click edit to change this text.
+    user_id: ''
+    version: 2
+    view_id: view:23f35o

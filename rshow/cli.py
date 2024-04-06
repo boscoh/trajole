@@ -115,7 +115,6 @@ def open_url(test_url, open_url):
     """
     Open OPEN_URL when TEST_URL works
     """
-
     logging.basicConfig(level=logging.INFO)
     open_url_in_background(test_url, open_url)
 
