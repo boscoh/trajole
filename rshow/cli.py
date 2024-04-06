@@ -1,38 +1,23 @@
 #!/usr/bin/env python
 import logging
 import os
-import socket
-from contextlib import closing
 
 import click
 import uvicorn
 from addict import Dict
-from easytrajh5.fs import dump_yaml, tic, toc
+from easytrajh5.fs import dump_yaml
 from path import Path
-from rshow.app import make_app, init_logging, open_url_in_background
 
-from rshow.server.local import handlers
+from rshow import handlers
+from rshow.app import make_app, init_logging, open_url_in_background, find_free_port
 
 logger = logging.getLogger(__name__)
 this_dir = Path(__file__).parent
 
 
-def find_free_port():
-    logger.info(tic("find port"))
-    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
-        s.bind(("", 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        port = s.getsockname()[1]
-    logger.info(toc() + f": {port}")
-    return port
-
-
-config = Dict(mode="")
-
-
 def run(config):
-    config.client_dir = this_dir / "server/local/client"
-    config.data_dir = this_dir / "server/local/data"
+    config.client_dir = this_dir / "client"
+    config.data_dir = this_dir / "data"
     config.work_dir = os.getcwd()
     port = config.get("port")
     init_logging()
@@ -53,6 +38,9 @@ def run(config):
         open_url_in_background(f"http://localhost:{port}/#/foamtraj/0")
         app = make_app(handlers, config)
         uvicorn.run(app, port=port, log_level="critical")
+
+
+config = Dict(mode="")
 
 
 @click.group()
@@ -102,19 +90,6 @@ def matrix(matrix_yaml, mode):
     config.reader_class = "MatrixTrajReader"
     config.matrix_yaml = matrix_yaml
     config.mode = mode
-    run(config)
-
-
-@cli.command()
-@click.argument("re_dir", default=".", required=False)
-@click.option("--key", default="u")
-def re(re_dir, key):
-    """
-    Open multiple H5 in parallel
-    """
-    config.reader_class = "ParallelTrajReader"
-    config.re_dir = re_dir
-    config.key = key
     run(config)
 
 

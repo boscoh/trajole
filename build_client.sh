@@ -3,8 +3,8 @@ cd config
 cp local.prod.json config.json
 cd ../client
 npm run build
-rm -rf ../rshow/server/local/client
-cp -r dist ../rshow/server/local/client
-git add ../rshow/server/local/client
+rm -rf ../rshow/client
+cp -r dist ../rshow/client
+git add ../rshow/client
 cd ..
-
+git add rshow/client

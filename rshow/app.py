@@ -1,13 +1,15 @@
 import inspect
 import logging
+import socket
 import threading
 import time
 import traceback
 import webbrowser
+from contextlib import closing
 from urllib.request import urlopen
 
 import pydash as py_
-from easytrajh5.fs import get_time_str
+from easytrajh5.fs import get_time_str, tic, toc
 from fastapi import FastAPI, File, UploadFile
 from path import Path
 from rich.pretty import pretty_repr
@@ -15,6 +17,7 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.requests import Request
 from starlette.responses import FileResponse, Response
 from starlette.staticfiles import StaticFiles
+
 
 logger = logging.getLogger(__name__)
 
@@ -145,3 +148,13 @@ def open_url_in_background(test_url, open_url=None, sleep_in_s=1):
     # creates a thread to poll server before opening client
     logger.debug(f"open_url_in_background testing {test_url} to open {open_url}")
     threading.Thread(target=inner).start()
+
+
+def find_free_port():
+    logger.info(tic("find port"))
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("", 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        port = s.getsockname()[1]
+    logger.info(toc() + f": {port}")
+    return port

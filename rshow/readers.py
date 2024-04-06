@@ -8,16 +8,11 @@ import mdtraj
 import numpy as np
 import parmed
 from addict import Dict
-from path import Path
-from pydash import py_
-from rich.pretty import pretty_repr
-
 from easytrajh5.fs import (
     dump_yaml,
     get_checked_path,
     load_yaml,
 )
-from easytrajh5.fs import toc
 from easytrajh5.manager import TrajectoryManager
 from easytrajh5.pdb import filter_for_atom_lines, get_pdb_lines_of_traj_frame
 from easytrajh5.select import select_mask, slice_parmed
@@ -26,8 +21,11 @@ from easytrajh5.struct import (
     get_mdtraj_from_parmed,
     get_parmed_from_parmed_or_pdb,
 )
+from path import Path
+from pydash import py_
+from rich.pretty import pretty_repr
+
 from rshow.alphaspace import AlphaSpace
-from rshow.util import get_first_file
 
 logger = logging.getLogger(__name__)
 
@@ -204,7 +202,9 @@ class TrajReader(RshowReaderMixin):
             if atom_mask:
                 i_traj = i_frame_traj[1]
                 if (i_traj, atom_mask) not in self.atom_indices_by_i_traj:
-                    atom_indices = select_mask(get_parmed_from_mdtraj(new_frame), atom_mask)
+                    atom_indices = select_mask(
+                        get_parmed_from_mdtraj(new_frame), atom_mask
+                    )
                     self.atom_indices_by_i_traj[(i_traj, atom_mask)] = atom_indices
                 else:
                     atom_indices = self.atom_indices_by_i_traj[(i_traj, atom_mask)]
@@ -214,7 +214,7 @@ class TrajReader(RshowReaderMixin):
                     new_frame.superpose(
                         self.frame,
                         atom_indices=atom_indices,
-                        ref_atom_indices=self.atom_indices
+                        ref_atom_indices=self.atom_indices,
                     )
                 else:
                     new_frame.superpose(self.frame)
@@ -314,7 +314,6 @@ def load_matrix_data_into_config(payload, config):
             config.matrix = config.matrix_by_key[config.key]
 
 
-
 class MatrixTrajReader(TrajReader):
     def process_config(self):
         fname = Path(self.config.matrix_yaml)
@@ -333,6 +332,24 @@ class MatrixTrajReader(TrajReader):
 
 
 
+def load_openff_molecules(sdf_path_str, indices_to_load=[]) :
+    """
+    :param indices_to_load: [int] If empty, load all molecules.
+    :return: [openff.toolikit.Molecules]
+    """
+    from openff import toolkit
+    molecule_list = []
+    mol_obj = toolkit.Molecule.from_file(sdf_path_str)
+    if isinstance(mol_obj, list):
+        for i, mol in enumerate(mol_obj):
+            if len(indices_to_load) and i not in indices_to_load:
+                continue
+            molecule_list.append(mol)
+    else:
+        molecule_list.append(mol_obj)
+    return molecule_list
+
+
 class LigandsReceptorReader(TrajReader):
     def process_config(self):
         from rseed.util.ligand import iter_ff_mol_from_file
@@ -346,9 +363,11 @@ class LigandsReceptorReader(TrajReader):
 
         labels = []
         self.ligand_parmeds = []
-        ligand_file = get_checked_path(self.config.ligands)
-        for i_mol, openff_mol in enumerate(iter_ff_mol_from_file(str(ligand_file))):
+        sdf = get_checked_path(self.config.ligands)
+        for i_mol, openff_mol in enumerate(load_openff_molecules(sdf)):
             label = openff_mol.name
+            if not label:
+                label = f"molecule {i_mol}"
             labels.append(label)
             j = i_mol + 1
             if j == 1:
@@ -403,45 +422,3 @@ def convert_rows_to_p_rows(rows):
     ]
 
 
-class ParallelTrajReader(TrajReader):
-    def process_config(self):
-        from rseed.analysis.replica import ReplicaEnergySampler as FreeEnergySampler
-        from rseed.analysis.fn import sort_temperatures
-
-        self.config.title = "Replicas (row)"
-        self.config.mode = "matrix"
-
-        parent_dir = Path(self.config.re_dir)
-        sampler = FreeEnergySampler.from_h5(get_checked_path(parent_dir / "energy.h5"))
-        i_sorted = sort_temperatures(sampler.temperatures)
-        k_reverse = [i_sort for k, i_sort in enumerate(i_sorted)]
-        n_replica = len(sampler.temperatures)
-        self.config.opt_keys = list(sampler.var_kt.keys())
-
-        self.config.trajectories = [
-            str(parent_dir / f"trajectory-{i}.h5") for i in range(n_replica)
-        ]
-        self.traj_manager = self.get_traj_manager()
-        self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
-
-        self.config.strip = []
-        for i_traj in range(self.traj_manager.get_n_trajectories()):
-            n_frame = self.traj_manager.get_n_frame(i_traj)
-            self.config.strip.append(
-                [dict(iFrameTraj=[i, i_traj], p=i / n_frame) for i in range(n_frame)]
-            )
-
-        rows = [sampler.var_kt[self.config.key][i] for i in i_sorted]
-        p_rows = convert_rows_to_p_rows(rows)
-        n_sample_max = py_.max([len(row) for row in rows])
-        matrix = [[0 for k in range(n_replica)] for t in range(n_sample_max)]
-        for k, row in enumerate(rows):
-            offset = n_sample_max - len(row)
-            for t, value in enumerate(row):
-                matrix[t + offset][k] = {
-                    "value": value,
-                    "p": p_rows[k][t],
-                    "label": f"u={value:.3f}",
-                    "iFrameTraj": [t, k_reverse[k]],
-                }
-        self.config.matrix = matrix
