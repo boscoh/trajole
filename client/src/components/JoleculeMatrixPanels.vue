@@ -331,45 +331,6 @@ export default {
             this.popLoading()
         },
 
-        async loadEnsemble (
-            ensembleId,
-            viewId = null,
-            ensembleMode = 'display'
-        ) {
-            console.log(`loadEnsemble(ensembleId=${ensembleId})`)
-            this.pushLoading()
-            this.clearPage()
-
-            if (ensembleMode === 'slide') {
-                this.displayMode = 'slide'
-            } else {
-                this.displayMode = 'table'
-            }
-            this.resetStyles()
-
-            document.title = '#' + ensembleId
-            this.$store.commit('setItem', { ensembleId })
-            this.$store.commit('setItem', { foamId: ensembleId })
-
-            await this.table.loadTable(ensembleMode)
-
-            let result = await this.remote.get_views(ensembleId)
-            if (result) {
-                this.views = result
-                this.$store.commit('setItem', { views: this.views })
-                if (viewId && this.views) {
-                    let view = _.find(this.views, v => v.id === viewId)
-                    if (view) {
-                        await this.loadView(view)
-                    }
-                }
-            }
-
-            await delay(500)
-            this.resize()
-            this.popLoading()
-        },
-
         clearPage () {
             this.$store.commit('setItem', { foamId: '' })
             this.$store.commit('setItem', { ensembleId: '' })

@@ -1,0 +1,33 @@
+[tool.poetry]
+name = "rshow"
+version = "1.6.11"
+description = "MD trajectory viewer"
+authors = ["Bosco Ho <apposite@gmail.com>"]
+readme = "README.md"
+packages = [{include = "rshow"}]
+
+[tool.poetry.scripts]
+rshow = 'rshow.cli:cli'
+
+[tool.poetry.dependencies]
+addict = "*"
+alphaspace2 = "*"
+easytrajh5 = "^0.2.5"
+fastapi = "*"
+mdtraj = "*"
+numpy = "*"
+parmed = "*"
+path = "*"
+psutil = "*"
+pydash = "*"
+python-multipart = "*"
+rdkit = "*"
+rich = "*"
+starlette = "*"
+uvicorn = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+

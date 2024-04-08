@@ -8,10 +8,10 @@ from easytrajh5.fs import load_yaml_dict, dump_yaml
 from path import Path
 from rich.pretty import pprint
 from rshow import readers
+from rshow.readers import get_traj_reader
 
 logger = logging.getLogger(__name__)
 traj_reader: Optional[readers.RshowReaderMixin] = None
-data_dir = Path(__file__).abspath().parent / "data"
 
 
 def select_new_key(foam_id, key):
@@ -21,22 +21,9 @@ def select_new_key(foam_id, key):
         config.matrix = config.matrix_by_key[config.key]
 
 
-def init_config(in_config):
-    """
-    Entry point of app from server, and will setup depending on the config options
-    in the config dictionary.
-
-    :return bool: False on failure
-    """
-    if not hasattr(readers, in_config.reader_class):
-        raise ValueError(f"Couldn't find reader_class {in_config.reader_class}")
-
-    if "work_dir" in in_config:
-        os.chdir(in_config["work_dir"])
-
+def init(config):
     global traj_reader
-    TrajReaderClass = getattr(readers, in_config.reader_class)
-    traj_reader = TrajReaderClass(in_config)
+    traj_reader = get_traj_reader(config)
 
 
 def reset_foam_id(foam_id):
@@ -142,6 +129,7 @@ def get_min_frame(foam_id):
 
 def get_distances(foam_id, dpairs):
     traj_file = traj_reader.traj_manager.get_traj_file(0)
+
     atom_indices = traj_file.atom_indices
     if atom_indices is None:
         atom_indices = list(range(traj_file.topology.n_atoms))
@@ -181,5 +169,3 @@ def get_distances(foam_id, dpairs):
         dpair["values"] = values
 
     return dpairs
-
-

@@ -6,7 +6,6 @@ from typing import Any
 
 import mdtraj
 import numpy as np
-import parmed
 from addict import Dict
 from easytrajh5.fs import (
     dump_yaml,
@@ -23,6 +22,8 @@ from easytrajh5.struct import (
 )
 from path import Path
 from pydash import py_
+from rdkit import Chem
+from rdkit.Chem.rdmolfiles import MolToPDBBlock
 from rich.pretty import pretty_repr
 
 from rshow.alphaspace import AlphaSpace
@@ -32,14 +33,28 @@ logger = logging.getLogger(__name__)
 
 class RshowReaderMixin(ABC):
     """
-    Interface to the webclient in Rshow
+    Interface to the handlers
     """
 
-    @abstractmethod
     def __init__(self, config={}):
-        # self.config.mode = "strip",  # "strip", "matrix", "sparse-matrix", "matrix-strip", "table"
-        self.config = Dict(config)
+        self.config = Dict(
+            mode="strip",  # "strip", "matrix", "sparse-matrix", "matrix-strip", "table"
+            strip=[],  # Dictionary of frame, traj, colours for use in rshow
+            title="",  # Title for rshow
+            is_solvent=True,
+        )
+        self.config.update(config)
+        for l in repr_lines(self.config, f"{self.__class__.__name__}.config = "):
+            logger.info(l)
+
         self.traj_manager = None
+        self.i_frame_traj = None
+        self.atom_indices_by_i_traj = {}
+        self.frame = None
+
+        if "work_dir" in config:
+            os.chdir(config["work_dir"])
+        self.process_config()
 
     @abstractmethod
     def process_config(self):
@@ -110,6 +125,13 @@ class RshowReaderMixin(ABC):
         pass
 
 
+def get_traj_reader(config) -> RshowReaderMixin:
+    if config.reader_class not in globals():
+        raise ValueError(f"Couldn't find reader_class {config.reader_class}")
+    TrajReaderClass = globals()[config.reader_class]
+    return TrajReaderClass(config)
+
+
 def get_i_view(views, test_view):
     for i, view in enumerate(views):
         if view["id"] == test_view["id"]:
@@ -140,21 +162,18 @@ def repr_lines(o, prefix=""):
 
 
 class TrajReader(RshowReaderMixin):
-    def __init__(self, config={}):
-        self.config = Dict(
-            mode="strip",  # "strip", "matrix", "sparse-matrix", "matrix-strip", "table"
-            strip=[],  # Dictionary of frame, traj, colours for use in rshow
-            title="",  # Title for rshow
-            is_solvent=True,
-        )
-        self.config.update(config)
-        for l in repr_lines(self.config, f"{self.__class__.__name__}.config = "):
-            logger.info(l)
+    """
+    FrameReader(config)
 
-        self.i_frame_traj = None
-        self.atom_indices_by_i_traj = {}
-        self.frame = None
-        self.process_config()
+    :param config: dict:
+         trajectories: [str]
+         strip: Optional[dict]
+             -   iFrameTraj: [int, int]
+                 p: float - [0,1]
+         is_solvent: bool
+
+    saves views to <trajectories[0]:stem>.views.yaml
+    """
 
     def get_traj_manager(self) -> TrajectoryManager:
         paths = self.config.trajectories
@@ -247,6 +266,16 @@ class TrajReader(RshowReaderMixin):
 
 
 class FrameReader(TrajReader):
+    """
+    FrameReader(config)
+
+    :param config: dict:
+        pdb_or_parmed: str
+        is_solvent: bool
+
+    saves views to <config.pdb_or_parmed:stem>.views.yaml
+    """
+
     def process_config(self):
         self.config.title = self.config.pdb_or_parmed
         self.config.mode = "frame"
@@ -287,76 +316,96 @@ def get_first_value(matrix):
     return None
 
 
-def load_matrix_data_into_config(payload, config):
-    if py_.has(payload, "matrix"):
-        # in case the key-value object was loaded
-        config.matrix = payload["matrix"]
-    else:
-        # in case just the matrix was loaded
-        config.matrix = payload
-    config.mode = "matrix"
-    for cell in py_.flatten_deep(config.matrix):
-        if not cell:
-            continue
-        if py_.has(cell, "p") and not py_.has(cell, "iFrameTraj"):
-            config.mode = "sparse-matrix"
-            break
-    value = get_first_value(config.matrix)
-    config.i_frame_first = value["iFrameTraj"][0]
-    if "other" in payload:
-        logger.info("Loading alternate matrices")
-        config.matrix_by_key = {}
-        config.matrix_by_key[payload.get("key")] = config.matrix
-        for entry in payload["other"]:
-            config.matrix_by_key[entry["key"]] = entry["matrix"]
-        config["opt_keys"] = list(config.matrix_by_key.keys())
-        if py_.has(payload, "key") and not config.key:
-            config.key = payload["key"]
-        if py_.get(config, "key"):
-            logger.info(f"Set opt_keys {config.opt_keys} - {config.key}")
-            config.matrix = config.matrix_by_key[config.key]
-
-
 class MatrixTrajReader(TrajReader):
+    """
+    FrameReader(config)
+
+    :param config:
+        matrix_yaml: str
+        is_solvent: bool # handled by
+
+    matrix_yaml has structure: dict:
+        trajectories: [str]
+        key: optional[str]
+        matrix:
+        -
+            - Optional[dict]
+                p: float # 0 to 1
+                iFrameTraj: [int, int]
+        other:
+             - key: str
+                 matrix:
+                     -
+                         - Optional[dict]
+                             p: float # 0 to 1
+                             iFrameTraj: [int, int]
+
+    saves views to <config.matrix_yaml:stem>.views.yaml
+    """
+
     def process_config(self):
-        fname = Path(self.config.matrix_yaml)
-        if fname.isdir():
-            fname = fname / "matrix.yaml"
-        data = load_yaml(fname, is_addict=True)
-        parent_dir = Path(fname).abspath().parent
-        load_matrix_data_into_config(data, self.config)
-        self.config.title = "Matrix"
-        self.config.trajectories = data.trajectories
-        if not self.config.mode:
-            self.config.mode = "matrix-strip"
-        os.chdir(parent_dir)
-        self.traj_manager = self.get_traj_manager()
-        self.views_yaml = fname.with_suffix(".views.yaml")
+        matrix_yaml = Path(self.config.matrix_yaml)
+        if matrix_yaml.isdir():
+            matrix_yaml = matrix_yaml / "matrix.yaml"
 
+        logger.info(f"reading {matrix_yaml}...")
+        payload = load_yaml(matrix_yaml, is_addict=True)
+        if py_.has(payload, "matrix"):
+            self.config.matrix = payload["matrix"]
+        else:
+            self.config.matrix = payload
 
+        self.config.matrix_by_key = {}
+        if "other" in payload:
+            logger.info("Loading alternate matrices")
+            self.config.matrix_by_key[payload.get("key")] = self.config.matrix
+            for entry in payload["other"]:
+                self.config.matrix_by_key[entry["key"]] = entry["matrix"]
+            self.config["opt_keys"] = list(self.config.matrix_by_key.keys())
+            if py_.has(payload, "key") and not self.config.key:
+                self.config.key = payload["key"]
+            if py_.get(self.config, "key"):
+                logger.info(f"Set opt_keys {self.config.opt_keys} - {self.config.key}")
+                self.config.matrix = self.config.matrix_by_key[self.config.key]
 
-def load_openff_molecules(sdf_path_str, indices_to_load=[]) :
-    """
-    :param indices_to_load: [int] If empty, load all molecules.
-    :return: [openff.toolikit.Molecules]
-    """
-    from openff import toolkit
-    molecule_list = []
-    mol_obj = toolkit.Molecule.from_file(sdf_path_str)
-    if isinstance(mol_obj, list):
-        for i, mol in enumerate(mol_obj):
-            if len(indices_to_load) and i not in indices_to_load:
+        logger.info("matrix loaded")
+
+        # figure out if matrix has dense iFrameTraj
+        self.config.mode = "matrix"
+        for cell in py_.flatten_deep(self.config.matrix):
+            if not cell:
                 continue
-            molecule_list.append(mol)
-    else:
-        molecule_list.append(mol_obj)
-    return molecule_list
+            if py_.has(cell, "p") and not py_.has(cell, "iFrameTraj"):
+                self.config.mode = "sparse-matrix"
+                break
+
+        # set i_frame_first
+        value = get_first_value(self.config.matrix)
+        self.config.i_frame_first = value["iFrameTraj"][0]
+
+        matrix_yaml.abspath().parent.chdir()
+        self.config.trajectories = payload.trajectories
+        self.traj_manager = self.get_traj_manager()
+
+        self.views_yaml = matrix_yaml.with_suffix(".views.yaml")
+
+        self.config.title = "Matrix"
 
 
 class LigandsReceptorReader(TrajReader):
-    def process_config(self):
-        from rseed.util.ligand import iter_ff_mol_from_file
+    """
+    FrameReader(config)
 
+    :param config:
+        pdb: str
+        ligands: str
+        csv: str
+        is_solvent: bool
+
+    saves views to <trajectories[0]:stem>.views.yaml
+    """
+
+    def process_config(self):
         self.config.title = f"{Path(self.config.pdb).name}"
         self.config.mode = "table"
 
@@ -364,33 +413,23 @@ class LigandsReceptorReader(TrajReader):
         self.frame = mdtraj.load_pdb(str(pdb))
         self.receptor_lines = get_pdb_lines_of_traj_frame(self.frame)
 
-        labels = []
-        self.ligand_parmeds = []
         sdf = get_checked_path(self.config.ligands)
-        for i_mol, openff_mol in enumerate(load_openff_molecules(sdf)):
-            label = openff_mol.name
-            if not label:
-                label = f"molecule {i_mol}"
-            labels.append(label)
-            j = i_mol + 1
-            if j == 1:
-                openff_mol.name = "LIG"
-            else:
-                openff_mol.name = f"Ll{j}" if i_mol < 10 else f"L{j}"
-            top = openff_mol.to_topology().to_openmm()
-            ligand_parmed = parmed.openmm.load_topology(
-                top, xyz=openff_mol.conformers[0]
-            )
-            logger.info(
-                f"ligand n_atom={len(ligand_parmed.atoms)} iFrameTraj=[{i_mol},0] title={label}"
-            )
-            self.ligand_parmeds.append(ligand_parmed)
+        self.mols = list(Chem.SDMolSupplier(sdf))
+        n = len(self.mols)
 
-        n = len(self.ligand_parmeds)
+        labels = []
+        for i_mol, mol in enumerate(self.mols):
+            label = mol.GetProp("_Name")
+            if not label:
+                label = f"Molecule {i_mol}"
+            labels.append(label)
+
         self.config.table_headers = ["title", "i"]
         self.config.table = [
             dict(iFrameTraj=[i, 0], p=i / n, vals=[labels[i], i]) for i in range(n)
         ]
+
+        # additional columns
         if self.config.csv:
             with open(get_checked_path(self.config.csv)) as f:
                 for i, row in enumerate(csv.reader(f)):
@@ -404,8 +443,7 @@ class LigandsReceptorReader(TrajReader):
         self.views_yaml = Path(pdb).with_suffix(".views.yaml")
 
     def get_ligand_pdb_lines(self, i_ligand):
-        traj = get_mdtraj_from_parmed(self.ligand_parmeds[i_ligand])
-        return get_pdb_lines_of_traj_frame(traj)
+        return MolToPDBBlock(self.mols[i_ligand]).splitlines()
 
     def get_pdb_lines(self, i_frame_traj):
         i_frame = i_frame_traj[0]
@@ -413,15 +451,3 @@ class LigandsReceptorReader(TrajReader):
 
     def get_tags(self):
         return {"fname": self.config.title}
-
-
-def convert_rows_to_p_rows(rows):
-    values = py_.flatten_deep(rows)
-    max_val = py_.max(values)
-    min_val = py_.min(values)
-    delta_val = max_val - min_val
-    return [
-        [(v - min_val) / delta_val if delta_val else 0 for v in row] for row in rows
-    ]
-
-

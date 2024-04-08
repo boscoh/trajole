@@ -30,7 +30,7 @@ def make_app(handlers, config):
     logger.info(f"data_dir: {data_dir}")
 
     logger.info("initialize handlers")
-    handlers.init_config(config)
+    handlers.init(config)
 
     app = FastAPI()
 
@@ -88,21 +88,26 @@ def make_app(handlers, config):
 
     @app.post("/upload/")
     async def upload_file(file: UploadFile = File(...)):
-        fname = file.filename.replace(" ", "-")
-        original_ensemble_id = py_.kebab_case(Path(fname).stem)
-        ensemble_id = original_ensemble_id
-        ensemble_dir = data_dir / ensemble_id
-        i = 1
-        while ensemble_dir.exists():
-            ensemble_id = Path(f"{original_ensemble_id}({i})")
-            ensemble_dir = data_dir / ensemble_id
-            i += 1
-        ensemble_dir.makedirs_p()
-        full_fname = ensemble_dir / "ensemble.csv"
-        with open(full_fname, "wb+") as f:
-            f.write(file.file.read())
-        logger.info(f"Saved {full_fname} for {fname}")
-        return {"filename": fname, "ensembleId": ensemble_id}
+        try:
+            fname = py_.kebab_case(file.filename)
+            full_fname = data_dir / "files" / fname
+            parent = full_fname.parent
+            stem = full_fname.stem
+            suffix = full_fname.ext
+            i = 1
+            while full_fname.exists():
+                full_fname = parent / f"{stem}_{i}.{suffix}"
+                i += 1
+            full_fname.parent.makedirs_p()
+            with open(full_fname, "wb+") as f:
+                f.write(file.file.read())
+            logger.info(f"Saved {full_fname} for {fname}")
+            return {"filename": fname}
+        except Exception as e:
+            error_lines = str(traceback.format_exc()).splitlines()
+            for line in error_lines:
+                logger.debug(line)
+            raise e
 
     @app.get("/")
     async def serve_index(request: Request):

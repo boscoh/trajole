@@ -6,7 +6,10 @@ This viewer allows specialized views of MD trajectories:
 - directly use .h5 to optimize scrolling through trajectory
 - an integrated 2d matrix view with trajectory
 - integrated table of multiple ligands sampled against a single pdb file
-- cli options
+- interactive contact map
+- interactive inter-atomic distance plots
+- multiple instances
+- port mapping for remote vm's
 
 TODO:
 - example with multiple matrix
@@ -20,7 +23,7 @@ Usage: rshow [OPTIONS] COMMAND [ARGS]...
 
   (C) 2021 Redesign Science
 
-Options:
+Options:t
   --dev        Run continuous server
   --solvent    Keep solvent
   --port TEXT  port number
@@ -34,10 +37,6 @@ Commands:
   traj       Open H5
 ```
 
-In particular, if you have installed `foamdb` (see installation), you can
-view the trajectories stored in our distributed database:
-
-    rshow traj-foam 15
 
 ## Developing rshow
 
