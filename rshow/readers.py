@@ -126,6 +126,11 @@ class RshowReaderMixin(ABC):
 
 
 def get_traj_reader(config) -> RshowReaderMixin:
+    """
+    :param config: dict
+        reader_class: str - name of RshowReaderMixin
+    :return: RshowReaderMixin
+    """
     if config.reader_class not in globals():
         raise ValueError(f"Couldn't find reader_class {config.reader_class}")
     TrajReaderClass = globals()[config.reader_class]

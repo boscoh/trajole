@@ -6,4 +6,3 @@ dist
 *egg-info
 config/config.json
 build/
-rshow/server/lounge/last_views.yaml

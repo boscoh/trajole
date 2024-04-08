@@ -7,8 +7,17 @@ else
     echo "Pleas choose one of traj|foam|matrix|fes|scan1|temper|frame|ligands|re|cam3t"
     exit 1
 fi
-./dev_clear.sh
-ttab "./dev_server.sh $1"
+
+if command -v psword &> /dev/null
+then
+  psword -k MacOS/Python
+  psword -k mambaforge
+  psword -k rshow
+  psword -k node
+fi
+
+ttab "cd examples; ./dev_server.sh $1"
 ttab "cd client; npm run dev;"
+
 source ./.venv/bin/activate
 rshow open-url http://localhost:9023 http://localhost:3333/#/foamtraj/0
