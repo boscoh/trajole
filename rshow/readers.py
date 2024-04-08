@@ -440,6 +440,7 @@ class LigandsReceptorReader(TrajReader):
                     else:
                         row = [round(float(x), 3) for x in row]
                         self.config.table[i - 1]["vals"].extend(row)
+
         self.views_yaml = Path(pdb).with_suffix(".views.yaml")
 
     def get_ligand_pdb_lines(self, i_ligand):

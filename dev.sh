@@ -1,35 +1,14 @@
 # install ttab using `npm i -g ttab`
 # on mac, need to change
 #   System Prefs -> Security -> Privacy -> Accessibility: add Terminal
-
-psword -k node
-psword -k mambaforge
-psword -k rshow
-
-echo "$1"
-if [ "$1" == "traj" ]; then
-    ttab "rshow --dev traj examples/trajectory.h5" ;
-elif [ "$1" == "matrix" ]; then
-    ttab "cd examples; rshow --dev matrix matrix" ;
-elif [ "$1" == "fes" ]; then
-    ttab "rshow --dev matrix examples/fes/fes.rshow.yaml" ;
-elif [ "$1" == "scan1" ]; then
-    ttab "cd examples/scan1; rshow --dev matrix scan1/fes.rshow.yaml " ;
-elif [ "$1" == "frame" ]; then
-    ttab "rshow --dev frame examples/3hhm.pdb" ;
-elif [ "$1" == "ligands" ]; then
-    ttab "cd examples/ligands; rshow --dev ligands receptor.pdb fred100.sdf"
-elif [ "$1" == "re" ]; then
-    ttab "cd examples/temper; rshow --dev matrix fes.rshow.yaml"
-elif [ "$1" == "cam3t" ]; then
-    ttab "cd examples/run5; rshow --dev matrix fes.rshow.yaml"
-elif [ "$1" == "cam3t" ]; then
-    ttab "cd examples/run5; rshow --dev matrix fes.rshow.yaml"
+if [[ "$1" =~ ^(traj|foam|matrix|fes|scan1|temper|frame|ligands|re|cam3t)$ ]]; then
+    echo "opening $1 example"
 else
-    echo "Didn't recognize $1: traj foam matrix fes scan1 temper frame ligands"
+    echo "Pleas choose one of traj|foam|matrix|fes|scan1|temper|frame|ligands|re|cam3t"
     exit 1
 fi
-
+./dev_clear.sh
+ttab "./dev_server.sh $1"
 ttab "cd client; npm run dev;"
-
+source ./.venv/bin/activate
 rshow open-url http://localhost:9023 http://localhost:3333/#/foamtraj/0
