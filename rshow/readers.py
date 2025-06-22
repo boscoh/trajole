@@ -1,8 +1,9 @@
 import csv
 import logging
-import os
+from path import Path
 from abc import ABC, abstractmethod
 from typing import Any
+import os
 
 import mdtraj
 import numpy as np
@@ -182,7 +183,7 @@ class TrajReader(RshowReaderMixin):
 
     def get_traj_manager(self) -> TrajectoryManager:
         paths = self.config.trajectories
-        is_not_writeable = any((not os.access(p, os.R_OK | os.W_OK)) for p in paths)
+        is_not_writeable = any((not Path(p).access(os.R_OK | os.W_OK)) for p in paths)
         mode = "r" if is_not_writeable else "a"
         if mode == "r":
             logger.info("Files are not writeable: read-only mode")
@@ -338,7 +339,7 @@ class MatrixTrajReader(TrajReader):
                 p: float # 0 to 1
                 iFrameTraj: [int, int]
         other:
-             - key: str
+             -   key: str
                  matrix:
                      -
                          - Optional[dict]
@@ -350,7 +351,7 @@ class MatrixTrajReader(TrajReader):
 
     def process_config(self):
         matrix_yaml = Path(self.config.matrix_yaml)
-        if matrix_yaml.isdir():
+        if matrix_yaml.is_dir():
             matrix_yaml = matrix_yaml / "matrix.yaml"
 
         logger.info(f"reading {matrix_yaml}...")
@@ -388,7 +389,7 @@ class MatrixTrajReader(TrajReader):
         value = get_first_value(self.config.matrix)
         self.config.i_frame_first = value["iFrameTraj"][0]
 
-        matrix_yaml.abspath().parent.chdir()
+        matrix_yaml.absolute().parent.chdir()
         self.config.trajectories = payload.trajectories
         self.traj_manager = self.get_traj_manager()
 
@@ -447,6 +448,7 @@ class LigandsReceptorReader(TrajReader):
                         self.config.table[i - 1]["vals"].extend(row)
 
         self.views_yaml = Path(pdb).with_suffix(".views.yaml")
+        self.views_yaml.touch(exist_ok=True)
 
     def get_ligand_pdb_lines(self, i_ligand):
         return MolToPDBBlock(self.mols[i_ligand]).splitlines()

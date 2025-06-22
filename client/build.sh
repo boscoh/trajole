@@ -11,4 +11,8 @@ rm -rf ../rshow/client
 cp -r dist ../rshow/client
 
 # make sure changes are added to repo
-git add ../rshow/client
+cd ..
+if [ -d ".git" ]; then
+  echo "update git repo"
+  git add ./rshow/client
+fi

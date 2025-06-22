@@ -1,5 +1,6 @@
 import inspect
 import logging
+import os
 import socket
 import threading
 import time
@@ -9,7 +10,8 @@ from contextlib import closing
 from urllib.request import urlopen
 
 import pydash as py_
-from easytrajh5.fs import get_time_str, tic, toc
+import uvicorn
+from easytrajh5.fs import get_time_str, tic, toc, dump_yaml
 from fastapi import FastAPI, File, UploadFile
 from path import Path
 from rich.pretty import pretty_repr
@@ -18,22 +20,23 @@ from starlette.requests import Request
 from starlette.responses import FileResponse, Response
 from starlette.staticfiles import StaticFiles
 
+this_dir = Path(__file__).parent
 
 logger = logging.getLogger(__name__)
 
 
-def make_app(handlers, config):
-    client_dir = Path(config.client_dir)
-    data_dir = Path(config.data_dir)
-
-    logger.info(f"client_dir: {client_dir}")
-    logger.info(f"data_dir: {data_dir}")
+def make_app(config):
+    from rshow import handlers
 
     logger.info("initialize handlers")
     handlers.init(config)
 
-    app = FastAPI()
+    client_dir = this_dir / "client"
+    data_dir = this_dir / "data"
+    logger.info(f"client_dir: {client_dir}")
+    logger.info(f"data_dir: {data_dir}")
 
+    app = FastAPI()
     app.add_middleware(
         CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
     )
@@ -90,13 +93,13 @@ def make_app(handlers, config):
     async def upload_file(file: UploadFile = File(...)):
         try:
             fname = py_.kebab_case(file.filename)
-            full_fname = data_dir / "files" / fname
+            full_fname = data_dir / Path("files") / Path(fname)
             parent = full_fname.parent
             stem = full_fname.stem
-            suffix = full_fname.ext
+            suffix = full_fname.suffix
             i = 1
             while full_fname.exists():
-                full_fname = parent / f"{stem}_{i}.{suffix}"
+                full_fname = parent / Path(f"{stem}_{i}.{suffix}")
                 i += 1
             full_fname.parent.makedirs_p()
             with open(full_fname, "wb+") as f:
@@ -163,3 +166,26 @@ def find_free_port():
         port = s.getsockname()[1]
     logger.info(toc() + f": {port}")
     return port
+
+
+def run_server(config):
+    if config.is_dev:
+        # dev client will start on 3333
+        # this server will run on 9023 unless overridden
+        port = 9023
+        logger.info(f"port: {port}")
+        open_url_in_background(
+            f"http://localhost:{port}",
+            "http://localhost:3333/#/foamtraj/0",
+        )
+        # Run uvicorn externally for reloading
+        dump_yaml(config, Path("app.yaml"))
+        os.system(f"uvicorn run_app:app --reload --port {port}")
+    else:
+        port = config.get("port")
+        if not port:
+            # mix up ports so multiple copies can run
+            port = find_free_port()
+        logger.info(f"port: {port}")
+        open_url_in_background(f"http://localhost:{port}/#/foamtraj/0")
+        uvicorn.run(make_app(config), port=port, log_level="critical")

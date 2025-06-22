@@ -25,6 +25,3 @@ ttab "cd examples; ./dev_server.sh $1"
 # run client server on port 3333
 ttab "cd client; npm run dev;"
 
-# open client on browser when server is ready
-source ./.venv/bin/activate
-rshow open-url http://localhost:9023 http://localhost:3333/#/foamtraj/0

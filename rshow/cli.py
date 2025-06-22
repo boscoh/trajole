@@ -1,46 +1,14 @@
 #!/usr/bin/env python
 import logging
-import os
-
 import click
-import uvicorn
 from addict import Dict
-from easytrajh5.fs import dump_yaml
 from path import Path
 
-from rshow import handlers
-from rshow.app import make_app, init_logging, open_url_in_background, find_free_port
+from .app import open_url_in_background, run_server, init_logging
 
 logger = logging.getLogger(__name__)
-this_dir = Path(__file__).parent
-
-
-def run(config):
-    config.client_dir = this_dir / "client"
-    config.data_dir = this_dir / "data"
-    config.work_dir = os.getcwd()
-    port = config.get("port")
-    init_logging()
-    if config.is_dev:
-        if not port:
-            # fix port so that dev client can find it
-            port = 9023
-        logger.info(f"port: {port}")
-        os.chdir(this_dir)
-        dump_yaml(config, "app.yaml")
-        # Run uvicorn externally for reloading
-        os.system(f"uvicorn run_app:app --reload --port {port}")
-    else:
-        if not port:
-            # mix up ports so multiple copies can run
-            port = find_free_port()
-        logger.info(f"port: {port}")
-        open_url_in_background(f"http://localhost:{port}/#/foamtraj/0")
-        app = make_app(handlers, config)
-        uvicorn.run(app, port=port, log_level="critical")
-
-
-config = Dict(mode="")
+config = Dict(mode="", work_dir=str(Path.cwd()))
+init_logging()
 
 
 @click.group()
@@ -66,7 +34,7 @@ def traj(h5):
     """
     config.reader_class = "TrajReader"
     config.trajectories = [h5]
-    run(config)
+    run_server(config)
 
 
 @cli.command()
@@ -79,7 +47,7 @@ def matrix(matrix_yaml, mode):
     config.reader_class = "MatrixTrajReader"
     config.matrix_yaml = matrix_yaml
     config.mode = mode
-    run(config)
+    run_server(config)
 
 
 @cli.command()
@@ -94,7 +62,7 @@ def ligands(pdb, sdf, csv):
     config.pdb = pdb
     config.ligands = sdf
     config.csv = csv
-    run(config)
+    run_server(config)
 
 
 @cli.command()
@@ -105,7 +73,7 @@ def frame(pdb):
     """
     config.reader_class = "FrameReader"
     config.pdb_or_parmed = pdb
-    run(config)
+    run_server(config)
 
 
 @cli.command()
@@ -115,7 +83,6 @@ def open_url(test_url, open_url):
     """
     Open OPEN_URL when TEST_URL works
     """
-    logging.basicConfig(level=logging.INFO)
     open_url_in_background(test_url, open_url)
 
 
