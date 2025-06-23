@@ -2,7 +2,7 @@ import logging
 
 import numpy as np
 
-import alphaspace2 as as2
+from . import alphaspace2 as as2
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class AlphaSpace:
             contact_by_i_pocket[i] = list(pocket.lining_atoms_idx)
             centroids_by_i_pocket[i] = pocket.centroid
 
-        from alphaspace2.Community import genCommunityPocket
+        from .alphaspace2.Community import genCommunityPocket
 
         communities = genCommunityPocket(
             self.mdtraj.xyz[0] * 10,  ### change nm to Angstrom
