@@ -1,5 +1,5 @@
 
-# trajole: integrated ligand/energy-surface trajectory viewer
+# trajole: protein trajectory viewer
 
 This viewer allows easy exploration of MD trajectories:
 
@@ -12,9 +12,10 @@ This viewer allows easy exploration of MD trajectories:
 - port mapping for remote vm's
 
 It also prioritises fast loading, mainly by skipping solvent
-atoms as a default.
+atoms as a default. Other viewers will be better for publication quality images.
 
-Other viewers will be better for publication quality images.
+It uses the jolecule javascript protein/DNA
+viewer. 
 
 ## Installation
 
@@ -22,19 +23,19 @@ uv is the best tool to install python tooling.
 
 Note: on Mac, there may be a slow initial startup time as Rosetta transpiles some x86 libraries to ARM
 
-1. installing with uv in global tool mode:
+1. installing with uv to make `trajole` globally available:
 
        >> uv tool install trajole
 
-2. or if you want to isolate it:
+2. using uv to run `trajole` in an isolated environment (not in the global path):
 
        >> uvx trajole
 
-3. if you want to stay in the pip ecososystem, you can use pipx:
+3. if you want to stay in the pip ecososystem, you can install `trajole` using pipx:
 
        >> pipx install trajole
 
-4. or if you want to install it in your current environment:
+4. or if you want to install `trajole` in your current environment:
 
        >> pip install trajole
 
