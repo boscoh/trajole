@@ -1,73 +1,86 @@
 
-## rshow: integrated ligand/energy-surface trajectory viewer
+# trajole: integrated ligand/energy-surface trajectory viewer
 
-This viewer allows specialized views of MD trajectories:
+This viewer allows easy exploration of MD trajectories:
 
-- directly use .h5 to optimize scrolling through trajectory
-- an integrated 2d matrix view with trajectory
-- integrated pocket discovery tool
-- integrated table of multiple ligands sampled against a single pdb file
-- interactive contact map
-- interactive inter-atomic distance plots
-- multiple instances
+- hop through frames or 2d matrix view 
+- easy bookmarking of specific views, frames and details
+- pocket discovery tool
+- ligand table against a conformation
+- contact map
+- inter-atomic distance plots
 - port mapping for remote vm's
 
-TODO:
-- example with multiple matrix
-- remove openeye ligand reading
+It also prioritises fast loading, mainly by skipping solvent
+atoms as a default.
 
-```console
-> rshow
-Usage: rshow [OPTIONS] COMMAND [ARGS]...
+Other viewers will be better for publication quality images.
 
-  rshow: mdtraj h5 viewer
+## Installation
 
-  (C) 2021 Redesign Science
+uv is the best tool to install python tooling.
 
-Options:t
-  --dev        Run continuous server
-  --solvent    Keep solvent
-  --port TEXT  port number
-  --help       Show this message and exit.
+Note: on Mac, there may be a slow initial startup time as Rosetta transpiles some x86 libraries to ARM
 
-Commands:
-  frame      Open PDB or PARMED
-  ligands    Open PDB with ligands in SDF
-  matrix     Open H5 with matrix
-  open-url   Open OPEN_URL when TEST_URL works
-  traj       Open H5
-```
+1. installing with uv in global tool mode:
 
+      `uv tool install trajole`
 
-## Developing rshow
+2. or if you want to isolate it:
 
-rshow has two components
+      `uvx trajole`
+
+3. if you want to stay in the pip ecososystem, you can use pipx:
+
+      `pipx install trajole`
+
+4. or if you want to install it in your current environment:
+
+      `pip install trajole`
+
+Once installed, check out the command-line options by running the command:
+
+      `trajole`
+
+Examples: I suggest downloading the examples to play with all the different
+modes: https://github.com/boscoh/trajole/tree/main/examples
+
+## Developing trajole
+
+trajole has two components
 
 - back-end server which is a Python fastapi backend server 
   that reads trajectories and serves it over a local port
 - front-end client that runs in the browser and displays
   free-energy surfaces and proteins
 
-## Building the rshow client in development mode
+## Building the trajole client in development mode
+
+### Installing javascript deps
 
 First you must install the dependencies in rseed/rseed/jolecule/vue:
 
     npm install
 
-Then you must install jolecule somewhere in your system (not in the
+Then you must install the jolecule js repo somewhere in your system (not in the
 rseed directory).
 
 In /path/to/jolecule:
 
     npm link
 
-Then in rshow/client:
+Then in trajole/client:
 
     npm link jolecule
 
 Once linked, we can build the client:
 
     npm run build
+
+Then you need to run the build script, that will copy the client into
+`sever/client`:
+
+    ./build.sh
 
 
 # Release Notes
@@ -132,6 +145,6 @@ Once linked, we can build the client:
 - 1.1
   - alphaspace frame bug fix
 - 1.0
-  - firs release
+  - first release
 
 

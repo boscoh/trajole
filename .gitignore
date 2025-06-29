@@ -6,3 +6,7 @@ dist
 *egg-info
 config/config.json
 build/
+uv.lock
+server/app.yaml
+server/alphaspace.pdb
+temp*

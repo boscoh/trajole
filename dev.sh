@@ -10,15 +10,6 @@ else
     exit 1
 fi
 
-# clear older running jobs that got orphaned
-if command -v psword &> /dev/null
-then
-  psword -k MacOS/Python
-  psword -k mambaforge
-  psword -k rshow
-  psword -k node
-fi
-
 # run server in dev mode with reload on port 9023 with chosen example
 ttab "cd examples; ./dev_server.sh $1"
 

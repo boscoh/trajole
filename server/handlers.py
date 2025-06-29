@@ -7,8 +7,8 @@ import psutil
 from easytrajh5.fs import load_yaml_dict, dump_yaml
 from path import Path
 from rich.pretty import pprint
-from rshow import readers
-from rshow.readers import get_traj_reader
+from server import readers
+from server.readers import get_traj_reader
 
 logger = logging.getLogger(__name__)
 traj_reader: Optional[readers.RshowReaderMixin] = None

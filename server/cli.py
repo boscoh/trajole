@@ -17,16 +17,17 @@ init_logging()
 @click.option("--port", default=None, help="port number")
 def cli(dev, solvent, port):
     """
-    rshow: mdtraj h5 viewer
+    Protein and ligand trajectory viewer with optimized for
+    interactive exploration and bookmarking
 
-    (C) 2021 Redesign Science
+    (C) 2025 Bosco Ho
     """
     config.is_dev = dev
     config.is_solvent = solvent
     config.port = port
 
 
-@cli.command()
+@cli.command(no_args_is_help=True)
 @click.argument("h5")
 def traj(h5):
     """
@@ -37,7 +38,7 @@ def traj(h5):
     run_server(config)
 
 
-@cli.command()
+@cli.command(no_args_is_help=True)
 @click.argument("matrix_yaml", default="matrix.yaml", required=False)
 @click.option("--mode", default="matrix-strip", required=False)
 def matrix(matrix_yaml, mode):
@@ -50,7 +51,7 @@ def matrix(matrix_yaml, mode):
     run_server(config)
 
 
-@cli.command()
+@cli.command(no_args_is_help=True)
 @click.argument("pdb")
 @click.argument("sdf")
 @click.argument("csv", required=False)
@@ -65,7 +66,7 @@ def ligands(pdb, sdf, csv):
     run_server(config)
 
 
-@cli.command()
+@cli.command(no_args_is_help=True)
 @click.argument("pdb")
 def frame(pdb):
     """
@@ -76,7 +77,7 @@ def frame(pdb):
     run_server(config)
 
 
-@cli.command()
+@cli.command(no_args_is_help=True)
 @click.argument("test_url")
 @click.argument("open_url", required=False)
 def open_url(test_url, open_url):

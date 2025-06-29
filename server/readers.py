@@ -4,6 +4,7 @@ from path import Path
 from abc import ABC, abstractmethod
 from typing import Any
 import os
+import sys
 
 import mdtraj
 import numpy as np
@@ -21,15 +22,21 @@ from easytrajh5.struct import (
     get_mdtraj_from_parmed,
     get_parmed_from_parmed_or_pdb,
 )
-from path import Path
 from pydash import py_
 from rdkit import Chem
 from rdkit.Chem.rdmolfiles import MolToPDBBlock
 from rich.pretty import pretty_repr
 
-from rshow.alphaspace import AlphaSpace
+from server.alphaspace import AlphaSpace
 
 logger = logging.getLogger(__name__)
+
+
+def check_files(*args):
+    for a in args:
+        if not Path(a).exists():
+            print(f"File not found: {a}")
+            sys.exit(1)
 
 
 class RshowReaderMixin(ABC):
@@ -40,8 +47,8 @@ class RshowReaderMixin(ABC):
     def __init__(self, config={}):
         self.config = Dict(
             mode="strip",  # "strip", "matrix", "sparse-matrix", "matrix-strip", "table"
-            strip=[],  # Dictionary of frame, traj, colours for use in rshow
-            title="",  # Title for rshow
+            strip=[],  # Dictionary of frame, traj, colours for use in trajole
+            title="",  # Title for trajole
             is_solvent=True,
         )
         self.config.update(config)
@@ -286,6 +293,7 @@ class FrameReader(TrajReader):
         self.config.title = self.config.pdb_or_parmed
         self.config.mode = "frame"
         fname = Path(self.config.pdb_or_parmed)
+        check_files(fname)
         pmd = get_parmed_from_parmed_or_pdb(fname)
         if not self.config.is_solvent:
             i_atoms = select_mask(pmd, "not {solvent}")
@@ -294,7 +302,7 @@ class FrameReader(TrajReader):
         self.views_yaml = fname.with_suffix(".views.yaml")
         return True
 
-    def read_frame_traj(self, i_frame_traj=None):
+    def read_frame_traj(self, i_frame_traj=None, atom_mask=None):
         return self.frame
 
     def get_tags(self):
@@ -353,6 +361,7 @@ class MatrixTrajReader(TrajReader):
         matrix_yaml = Path(self.config.matrix_yaml)
         if matrix_yaml.is_dir():
             matrix_yaml = matrix_yaml / "matrix.yaml"
+        check_files(matrix_yaml)
 
         logger.info(f"reading {matrix_yaml}...")
         payload = load_yaml(matrix_yaml, is_addict=True)
@@ -416,6 +425,7 @@ class LigandsReceptorReader(TrajReader):
         self.config.mode = "table"
 
         pdb = get_checked_path(self.config.pdb)
+        check_files(pdb)
         self.frame = mdtraj.load_pdb(str(pdb))
         self.receptor_lines = get_pdb_lines_of_traj_frame(self.frame)
 
@@ -448,7 +458,7 @@ class LigandsReceptorReader(TrajReader):
                         self.config.table[i - 1]["vals"].extend(row)
 
         self.views_yaml = Path(pdb).with_suffix(".views.yaml")
-        self.views_yaml.touch(exist_ok=True)
+        self.views_yaml.touch()
 
     def get_ligand_pdb_lines(self, i_ligand):
         return MolToPDBBlock(self.mols[i_ligand]).splitlines()

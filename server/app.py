@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def make_app(config):
-    from rshow import handlers
+    from server import handlers
 
     logger.info("initialize handlers")
     handlers.init(config)
@@ -179,8 +179,8 @@ def run_server(config):
             "http://localhost:3333/#/foamtraj/0",
         )
         # Run uvicorn externally for reloading
-        dump_yaml(config, Path("app.yaml"))
-        os.system(f"uvicorn run_app:app --reload --port {port}")
+        dump_yaml(config, Path(this_dir) / "app.yaml")
+        os.system(f"cd {this_dir}; uvicorn run_app:app --reload --port {port}")
     else:
         port = config.get("port")
         if not port:

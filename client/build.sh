@@ -7,12 +7,12 @@ cd ../client
 npm run build
 
 # copy over to server directory
-rm -rf ../rshow/client
-cp -r dist ../rshow/client
+rm -rf ../server/client
+cp -r dist ../server/client
 
 # make sure changes are added to repo
 cd ..
 if [ -d ".git" ]; then
   echo "update git repo"
-  git add ./rshow/client
+  git add ./server/client
 fi
