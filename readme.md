@@ -24,25 +24,28 @@ Note: on Mac, there may be a slow initial startup time as Rosetta transpiles som
 
 1. installing with uv in global tool mode:
 
-      `uv tool install trajole`
+       >> uv tool install trajole
 
 2. or if you want to isolate it:
 
-      `uvx trajole`
+       >> uvx trajole
 
 3. if you want to stay in the pip ecososystem, you can use pipx:
 
-      `pipx install trajole`
+       >> pipx install trajole
 
 4. or if you want to install it in your current environment:
 
-      `pip install trajole`
+       >> pip install trajole
+
+
+## Examples
 
 Once installed, check out the command-line options by running the command:
 
-      `trajole`
+       >> trajole
 
-Examples: I suggest downloading the examples to play with all the different
+I suggest downloading the examples to play with all the different
 modes: https://github.com/boscoh/trajole/tree/main/examples
 
 ## Developing trajole
