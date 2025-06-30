@@ -25,26 +25,26 @@ Note: on Mac, there may be a slow initial startup time as Rosetta transpiles som
 
 1. installing with uv to make `trajolecule` globally available:
 
-       >> uv tool install trajole
+       >> uv tool install trajolecule
 
 2. using uv to run `trajolecule` in an isolated environment (not in the global path):
 
-       >> uvx trajole
+       >> uvx trajolecule
 
 3. if you want to stay in the pip ecososystem, you can install `trajolecule` using pipx:
 
-       >> pipx install trajole
+       >> pipx install trajolecule
 
 4. or if you want to install `trajolecule` in your current environment:
 
-       >> pip install trajole
+       >> pip install trajolecule
 
 
 ## Examples
 
 Once installed, check out the command-line options by running the command:
 
-       >> trajole
+       >> trajolecule
 
 I suggest downloading the examples to play with all the different
 modes: https://github.com/boscoh/trajolecule/tree/main/examples
