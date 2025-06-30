@@ -1,0 +1,104 @@
+- foamId: '0'
+  id: ozcan2
+  imgs: ''
+  text: ''
+  timestamp: 1751199365
+  viewDict:
+    camera:
+      in:
+      - 43.609961901443114
+      - 34.388267281720445
+      - 15.578551256919546
+      pos:
+      - 43.33520004272461
+      - 34.19240005493164
+      - 14.637200126647949
+      slab:
+        z_back: 29.674999237060547
+        z_front: -29.674999237060547
+        zoom: 49.99999999999998
+      up:
+      - 44.28207719731484
+      - 34.30744746878433
+      - 14.33688737853207
+    creator: public
+    distances: []
+    grid:
+      bCutoff: -1
+      isChanged: false
+      isElem: {}
+    i_atom: -1
+    labels: []
+    lock: false
+    order: 0
+    pdb_id: frame-7-0
+    selected: []
+    selected_traces: []
+    show:
+      all_atom: false
+      hydrogen: false
+      ligands: true
+      peptide: true
+      ribbon: true
+      sidechain: false
+      sphere: false
+      trace: true
+      transparent: false
+      water: false
+    sidechains: []
+    text: Click edit to change this text.
+    user_id: ''
+    version: 2
+    view_id: view:ozcan2
+- foamId: '0'
+  id: bkrkzo
+  imgs: ''
+  text: ''
+  timestamp: 1751199354
+  viewDict:
+    camera:
+      in:
+      - 43.609961901443114
+      - 34.388267281720445
+      - 15.578551256919546
+      pos:
+      - 43.33520004272461
+      - 34.19240005493164
+      - 14.637200126647949
+      slab:
+        z_back: 29.674999237060547
+        z_front: -29.674999237060547
+        zoom: 50.00000000000001
+      up:
+      - 44.28207719731484
+      - 34.30744746878433
+      - 14.33688737853207
+    creator: public
+    distances: []
+    grid:
+      bCutoff: -1
+      isChanged: false
+      isElem: {}
+    i_atom: -1
+    labels: []
+    lock: false
+    order: 0
+    pdb_id: frame-12-0
+    selected: []
+    selected_traces: []
+    show:
+      all_atom: false
+      hydrogen: false
+      ligands: true
+      peptide: true
+      ribbon: true
+      sidechain: false
+      sphere: false
+      trace: true
+      transparent: false
+      water: false
+    sidechains: []
+    text: Click edit to change this text.
+    user_id: ''
+    version: 2
+    view_id: view:bkrkzo

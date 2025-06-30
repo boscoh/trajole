@@ -1,5 +1,5 @@
 [project]
-name = "trajole"
+name = "trajolecule"
 version = "1.6.11"
 description = "MD trajectory viewer"
 authors = [{name = "Bosco Ho", email = "apposite@gmail.com"}]
@@ -21,8 +21,12 @@ dependencies = [
     "uvicorn",
 ]
 
+[project.urls]
+Homepage = "https://github.com/boscoh/trejolecule"
+
 [project.scripts]
-trajole = 'server.cli:cli'
+trajolecule = 'server.cli:cli'
+tjol = 'server.cli:cli'
 
 [build-system]
 requires = ["hatchling"]

@@ -1,5 +1,5 @@
 
-# trajole: protein trajectory viewer
+# trajolecule: protein trajectory viewer
 
 This viewer allows easy exploration of MD trajectories:
 
@@ -23,19 +23,19 @@ uv is the best tool to install python tooling.
 
 Note: on Mac, there may be a slow initial startup time as Rosetta transpiles some x86 libraries to ARM
 
-1. installing with uv to make `trajole` globally available:
+1. installing with uv to make `trajolecule` globally available:
 
        >> uv tool install trajole
 
-2. using uv to run `trajole` in an isolated environment (not in the global path):
+2. using uv to run `trajolecule` in an isolated environment (not in the global path):
 
        >> uvx trajole
 
-3. if you want to stay in the pip ecososystem, you can install `trajole` using pipx:
+3. if you want to stay in the pip ecososystem, you can install `trajolecule` using pipx:
 
        >> pipx install trajole
 
-4. or if you want to install `trajole` in your current environment:
+4. or if you want to install `trajolecule` in your current environment:
 
        >> pip install trajole
 
@@ -47,18 +47,18 @@ Once installed, check out the command-line options by running the command:
        >> trajole
 
 I suggest downloading the examples to play with all the different
-modes: https://github.com/boscoh/trajole/tree/main/examples
+modes: https://github.com/boscoh/trajolecule/tree/main/examples
 
-## Developing trajole
+## Developing trajolecule
 
-trajole has two components
+trajolecule has two components
 
 - back-end server which is a Python fastapi backend server 
   that reads trajectories and serves it over a local port
 - front-end client that runs in the browser and displays
   free-energy surfaces and proteins
 
-## Building the trajole client in development mode
+## Building the trajolecule client in development mode
 
 ### Installing javascript deps
 
@@ -73,7 +73,7 @@ In /path/to/jolecule:
 
     npm link
 
-Then in trajole/client:
+Then in trajolecule/client:
 
     npm link jolecule
 

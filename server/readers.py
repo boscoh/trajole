@@ -47,8 +47,8 @@ class RshowReaderMixin(ABC):
     def __init__(self, config={}):
         self.config = Dict(
             mode="strip",  # "strip", "matrix", "sparse-matrix", "matrix-strip", "table"
-            strip=[],  # Dictionary of frame, traj, colours for use in trajole
-            title="",  # Title for trajole
+            strip=[],  # Dictionary of frame, traj, colours for use in trajolecule
+            title="",  # Title for trajolecule
             is_solvent=True,
         )
         self.config.update(config)
