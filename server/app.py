@@ -52,8 +52,8 @@ def make_app(config):
                 raise Exception(f"rpc-run {method} is not found")
             lines = pretty_repr(tuple(params)).split("\n")
             lines[0] = f"rpc-run.{method}" + lines[0] + ":started..."
-            for l in lines:
-                logger.info(l)
+            # for l in lines:
+            #     logger.info(l)
             fn = getattr(handlers, method)
             if inspect.iscoroutinefunction(fn):
                 result = await fn(*params)

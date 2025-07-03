@@ -1,4 +1,58 @@
 - foamId: '0'
+  id: 76rsqy
+  imgs: ''
+  text: ''
+  timestamp: 1751542301
+  viewDict:
+    camera:
+      in:
+      - 78.94131065902697
+      - 83.09395850043738
+      - 80.62546864812577
+      pos:
+      - 79.61000061035156
+      - 83.4800033569336
+      - 79.98999786376953
+      slab:
+        z_back: 69.55000305175781
+        z_front: -69.55000305175781
+        zoom: 56.506356092944614
+      up:
+      - 80.34402035864542
+      - 83.27360393331584
+      - 80.63700194957184
+    creator: public
+    distances: []
+    grid:
+      bCutoff: -1
+      isChanged: false
+      isElem: {}
+    i_atom: 1293
+    labels: []
+    lock: false
+    order: 0
+    pdb_id: frame-0-0
+    selected:
+    - 155
+    selected_traces:
+    - 1
+    show:
+      all_atom: false
+      hydrogen: false
+      ligands: true
+      peptide: true
+      ribbon: true
+      sidechain: false
+      sphere: false
+      trace: true
+      transparent: false
+      water: false
+    sidechains: []
+    text: Click edit to change this text.
+    user_id: ''
+    version: 2
+    view_id: view:76rsqy
+- foamId: '0'
   id: a31un1
   imgs: ''
   text: ''

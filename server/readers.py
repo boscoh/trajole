@@ -212,7 +212,8 @@ class TrajReader(RshowReaderMixin):
     def process_config(self):
         self.config.title = self.get_tags()
         self.traj_manager = self.get_traj_manager()
-        self.views_yaml = Path(self.config.trajectories[0]).with_suffix(".views.yaml")
+        f = Path(self.config.trajectories[0])
+        self.views_yaml = f.with_suffix(".views.yaml")
         self.config.mode = "strip"
         self.config.strip = []
         for i_traj in range(self.traj_manager.get_n_trajectories()):
@@ -299,7 +300,7 @@ class FrameReader(TrajReader):
             i_atoms = select_mask(pmd, "not {solvent}")
             pmd = slice_parmed(pmd, i_atoms)
         self.frame = get_mdtraj_from_parmed(pmd)
-        self.views_yaml = fname.with_suffix(".views.yaml")
+        self.views_yaml = fname.absolute().with_suffix(".views.yaml")
         return True
 
     def read_frame_traj(self, i_frame_traj=None, atom_mask=None):
@@ -398,11 +399,12 @@ class MatrixTrajReader(TrajReader):
         value = get_first_value(self.config.matrix)
         self.config.i_frame_first = value["iFrameTraj"][0]
 
+        self.views_yaml = matrix_yaml.absolute().with_suffix(".views.yaml")
+        logger.info(f"views_yaml: {self.views_yaml}")
+
         matrix_yaml.absolute().parent.chdir()
         self.config.trajectories = payload.trajectories
         self.traj_manager = self.get_traj_manager()
-
-        self.views_yaml = matrix_yaml.with_suffix(".views.yaml")
 
         self.config.title = "Matrix"
 
@@ -457,7 +459,7 @@ class LigandsReceptorReader(TrajReader):
                         row = [round(float(x), 3) for x in row]
                         self.config.table[i - 1]["vals"].extend(row)
 
-        self.views_yaml = Path(pdb).with_suffix(".views.yaml")
+        self.views_yaml = Path(pdb).absolute().with_suffix(".views.yaml")
         self.views_yaml.touch()
 
     def get_ligand_pdb_lines(self, i_ligand):

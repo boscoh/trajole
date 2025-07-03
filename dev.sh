@@ -3,10 +3,10 @@
 #   System Prefs -> Security -> Privacy -> Accessibility: add Terminal
 
 # check options for input example file
-if [[ "$1" =~ ^(traj|matrix|fes|scan1|temper|frame|ligands|re|cam3t)$ ]]; then
+if [[ "$1" =~ ^(traj|matrix|fes|scan1|frame|ligands|re|cam3t)$ ]]; then
     echo "opening $1 example"
 else
-    echo "Pleas choose one of traj|matrix|fes|scan1|temper|frame|ligands|re|cam3t"
+    echo "Pleas choose one of traj|matrix|fes|frame|ligands|re|cam3t"
     exit 1
 fi
 
