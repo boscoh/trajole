@@ -17,6 +17,6 @@ elif [ "$1" == "re" ]; then
 elif [ "$1" == "cam3t" ]; then
     trajolecule --dev matrix ./run5/matrix.yaml
 else
-    echo "Didn't recognize $1: traj foam matrix fes scan1 temper frame ligands re cam3t"
+    echo "Didn't recognize $1: traj matrix fes scan1 temper frame ligands re cam3t"
     exit 1
 fi
