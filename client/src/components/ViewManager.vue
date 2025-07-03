@@ -2,57 +2,57 @@
 <template lang="pug">
 .flex-grow-1.overflow-scroll.mt-1
 
-    #edit-view-text-modal.modal.fade
-      .modal-dialog
-        .modal-content
-          .modal-header
-            h5.modal-title Edit Text Description
-          .modal-body
-            .mb-3(style="font-size: 0.75em") URL: {{currentUrl}}?query={{ editViewId }}
-            textarea.form-control(v-model="editViewText" rows=4)
-          .modal-footer
-            //button.btn.btn-secondary(data-bs-dismiss="modal" @click="clearKeyboardLock") Cancel
-            button.btn.btn-primary(data-bs-dismiss="modal" @click="saveViewText") Save
+  #edit-view-text-modal.modal.fade
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h5.modal-title Edit Text Description
+        .modal-body
+          .mb-3(style="font-size: 0.75em") URL: {{currentUrl}}?query={{ editViewId }}
+          textarea.form-control(v-model="editViewText" rows=4)
+        .modal-footer
+          //button.btn.btn-secondary(data-bs-dismiss="modal" @click="clearKeyboardLock") Cancel
+          button.btn.btn-primary(data-bs-dismiss="modal" @click="saveViewText") Save
 
-    .w-100.mb-1.p-2.rounded(
-      style="background-color: #BBB"
-      v-for="view in views"
-      :key="view.id"
-    )
-      .d-flex.flex-row.w-100.mb-1.pt-2.pb-0.text-start(style="font-size:0.9em")
-        button.btn.w-100.text-start.btn-sm.btn-secondary(
-          v-if="view.id === viewId"
-          @click="selectView(view)"
-          :key="view.id"
-        )
-          .py-2(v-if="view.text")
+  .w-100.mb-1.p-2.rounded(
+    style="background-color: #BBB"
+    v-for="view in views"
+    :key="view.id"
+  )
+    .d-flex.flex-row.w-100.mb-1.pt-2.pb-0.text-start(style="font-size:0.9em")
+      button.btn.w-100.text-start.btn-sm.btn-secondary(
+        v-if="view.id === viewId"
+        @click="selectView(view)"
+        :key="view.id"
+      )
+        .py-2(v-if="view.text")
+          | {{ view.text }}
+        .py-2(v-if="!view.text")
+          | Click
+          i.mx-2.far.fa-comment
+          | to add text
+      button.btn.w-100.text-start.btn-sm.btn-outline-secondary(
+        @click="selectView(view)"
+        v-else
+      )
+        .py-2
+          template(v-if="view.text")
             | {{ view.text }}
-          .py-2(v-if="!view.text")
+          span.text-secondary(v-else)
             | Click
             i.mx-2.far.fa-comment
             | to add text
-        button.btn.w-100.text-start.btn-sm.btn-outline-secondary(
-          @click="selectView(view)"
-          v-else
+    .d-flex.flex-row.justify-content-between
+      .flex-start.flex-row
+        button.btn.btn-sm.btn-outline-secondary.border-0(
+          @click="openEditViewModal(view)"
         )
-          .py-2
-            template(v-if="view.text")
-              | {{ view.text }}
-            span.text-secondary(v-else)
-              | Click
-              i.mx-2.far.fa-comment
-              | to add text
-      .d-flex.flex-row.justify-content-between
-        .flex-start.flex-row
-          button.btn.btn-sm.btn-outline-secondary.border-0(
-            @click="openEditViewModal(view)"
-          )
-            i.far.fa-comment
-        .flex-end
-          button.btn.btn-sm.btn-outline-secondary.border-0(
-            @click="deleteView(view)"
-          )
-            i.fas.fa-trash
+          i.far.fa-comment
+      .flex-end
+        button.btn.btn-sm.btn-outline-secondary.border-0(
+          @click="deleteView(view)"
+        )
+          i.fas.fa-trash
 
 </template>
 
@@ -60,6 +60,7 @@
 import { remote } from "../modules/rpc";
 import _ from "lodash";
 import * as bootstrap from "bootstrap";
+import { nextTick } from "vue";
 
 export default {
   data() {
@@ -93,12 +94,14 @@ export default {
   mounted() {
     this.currentUrl = window.location.href.split("?")[0];
     this.modal = new bootstrap.Modal(
-      document.getElementById("edit-view-text-modal")
+      document.getElementById("edit-view-text-modal"),
     );
   },
   methods: {
     async selectView(view) {
       this.$store.commit("setItem", { viewId: view.id });
+      this.$store.commit("setItem", { selectView: null });
+      await nextTick();
       this.$store.commit("setItem", { selectView: view });
     },
 
