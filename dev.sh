@@ -10,9 +10,10 @@ else
     exit 1
 fi
 
+# run client server on port 3333
+ttab "cd client; npm run dev;"
+
 # run server in dev mode with reload on port 9023 with chosen example
 ttab "cd examples; ./dev_server.sh $1"
 
-# run client server on port 3333
-ttab "cd client; npm run dev;"
 

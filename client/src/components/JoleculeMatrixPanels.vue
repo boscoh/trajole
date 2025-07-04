@@ -75,7 +75,7 @@ export default {
         })
 
         this.table = this.$refs.table
-
+        console.log('table', this.table)
         this.jolecule = initEmbedJolecule({
             divTag: '#jolecule-container',
             backgroundColor: '#CCC',
@@ -854,6 +854,13 @@ export default {
                     }
                     this.table.iFrameTrajList = _.cloneDeep(this.iFrameTrajList)
                 }
+            } else if (this.displayMode === 'table') {
+              let values = _.get(view, 'iFrameTrajList', [])
+              for (let i = 0; i < values.length; i += 1) {
+                  let iFrameTraj = values[i]
+                  await this.loadFrameIntoJolecule(iFrameTraj, i === 0)
+              }
+              this.$store.commit('setItem', {'iFrameTrajList': _.cloneDeep(values)})
             }
 
             // Then set the view
@@ -896,6 +903,8 @@ export default {
                 view.ensembleTableValues = _.cloneDeep(
                     this.table.iFrameTrajList
                 )
+            } else if (this.displayMode === 'table') {
+              view.iFrameTrajList = _.cloneDeep(this.table.iFrameTrajList)
             }
             this.$store.commit('setItem', { newView: view })
         },

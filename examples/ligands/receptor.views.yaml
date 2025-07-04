@@ -1,14 +1,19 @@
 - foamId: '0'
-  id: ozcan2
+  iFrameTrajList:
+  - - 0
+    - 0
+  - - 1
+    - 0
+  id: 7y9re0
   imgs: ''
   text: ''
-  timestamp: 1751199365
+  timestamp: 1751632294
   viewDict:
     camera:
       in:
-      - 43.609961901443114
-      - 34.388267281720445
-      - 15.578551256919546
+      - 43.14828945830562
+      - 33.922191126568784
+      - 15.58168494307707
       pos:
       - 43.33520004272461
       - 34.19240005493164
@@ -16,11 +21,11 @@
       slab:
         z_back: 29.674999237060547
         z_front: -29.674999237060547
-        zoom: 49.99999999999998
+        zoom: 15.459211139039938
       up:
-      - 44.28207719731484
-      - 34.30744746878433
-      - 14.33688737853207
+      - 44.04001037124439
+      - 33.48577865335807
+      - 14.57452161637492
     creator: public
     distances: []
     grid:
@@ -31,7 +36,7 @@
     labels: []
     lock: false
     order: 0
-    pdb_id: frame-7-0
+    pdb_id: frame-0-0
     selected: []
     selected_traces: []
     show:
@@ -49,18 +54,23 @@
     text: Click edit to change this text.
     user_id: ''
     version: 2
-    view_id: view:ozcan2
+    view_id: view:7y9re0
 - foamId: '0'
-  id: bkrkzo
+  iFrameTrajList:
+  - - 8
+    - 0
+  - - 9
+    - 0
+  id: ogr1dm
   imgs: ''
   text: ''
-  timestamp: 1751199354
+  timestamp: 1751631977
   viewDict:
     camera:
       in:
-      - 43.609961901443114
-      - 34.388267281720445
-      - 15.578551256919546
+      - 43.92474376700366
+      - 33.41000332536252
+      - 14.837932671898399
       pos:
       - 43.33520004272461
       - 34.19240005493164
@@ -68,11 +78,11 @@
       slab:
         z_back: 29.674999237060547
         z_front: -29.674999237060547
-        zoom: 50.00000000000001
+        zoom: 15.459211139039937
       up:
-      - 44.28207719731484
-      - 34.30744746878433
-      - 14.33688737853207
+      - 43.75679405055055
+      - 34.27848029921631
+      - 13.734510432395737
     creator: public
     distances: []
     grid:
@@ -83,7 +93,7 @@
     labels: []
     lock: false
     order: 0
-    pdb_id: frame-12-0
+    pdb_id: frame-8-0
     selected: []
     selected_traces: []
     show:
@@ -101,4 +111,4 @@
     text: Click edit to change this text.
     user_id: ''
     version: 2
-    view_id: view:bkrkzo
+    view_id: view:ogr1dm
