@@ -2,6 +2,7 @@
 import logging
 import click
 from addict import Dict
+import importlib.metadata
 from path import Path
 
 from .app import open_url_in_background, run_server, init_logging
@@ -10,8 +11,11 @@ logger = logging.getLogger(__name__)
 config = Dict(mode="", work_dir=str(Path.cwd()))
 init_logging()
 
+version = importlib.metadata.version("trajolecule")
+
 
 @click.group()
+@click.version_option(version=version)
 @click.option("--dev", is_flag=True, help="Run continuous server")
 @click.option("--solvent", is_flag=True, help="Keep solvent")
 @click.option("--port", default=None, help="port number")
