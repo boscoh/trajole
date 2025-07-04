@@ -88,6 +88,11 @@ Then you need to run the build script, that will copy the client into
 
 
 # Release Notes
+- 1.7.0rc1
+  - renamed to trajolecule
+  - uv pyproject
+  - file save fixes
+  - ligands mode works well
 - 1.6.11
   - more bug fixes
 - 1.6.10
@@ -151,4 +156,6 @@ Then you need to run the build script, that will copy the client into
 - 1.0
   - first release
 
-
+# TODO
+- remove ensemble
+- fix home page

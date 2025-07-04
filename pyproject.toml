@@ -1,6 +1,6 @@
 [project]
 name = "trajolecule"
-version = "1.6.11"
+version = "1.7.0rc1"
 description = "MD trajectory viewer"
 authors = [{name = "Bosco Ho", email = "apposite@gmail.com"}]
 readme = "README.md"
