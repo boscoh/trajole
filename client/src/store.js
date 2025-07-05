@@ -5,7 +5,6 @@ export default {
     state () {
         return {
             foamId: '',
-            ensembleId: '',
             tags: {},
             nLoaders: 0,
             loadingMsg: 'Connecting...',
@@ -27,17 +26,10 @@ export default {
         },
         frameStr (state) {
             let s
-            if (state.ensembleId) {
-                s = `Ensemble: ${state.ensembleId}`
-                for (let i of state.iFrameTrajList) {
-                    s += ` ${i[1]}:${i[0]}`
-                }
-            } else {
-                s = `Traj: ${state.foamId}`
-                let values = _.map(state.iFrameTrajList, x => x[0])
-                if (values.length) {
-                    s += ` Frame: ${values.join(' ')}`
-                }
+            s = `Traj: ${state.foamId}`
+            let values = _.map(state.iFrameTrajList, x => x[0])
+            if (values.length) {
+                s += ` Frame: ${values.join(' ')}`
             }
             return s
         },

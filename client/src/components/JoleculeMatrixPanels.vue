@@ -113,9 +113,6 @@ export default {
         foamId () {
             return this.$store.state.foamId
         },
-        ensembleId () {
-            return this.$store.state.ensembleId
-        },
         selectView () {
             return this.$store.state.selectView
         },
@@ -333,7 +330,6 @@ export default {
 
         clearPage () {
             this.$store.commit('setItem', { foamId: '' })
-            this.$store.commit('setItem', { ensembleId: '' })
             this.$store.commit('setItem', { viewId: '' })
             this.$store.commit('setItem', { minFrame: null })
             this.$store.commit('setItem', { setDatasets: [] })
@@ -640,21 +636,19 @@ export default {
         },
 
         updateWidgetValues () {
-            if (!this.ensembleId) {
-                let frames = _.map(this.iFrameTrajList, x => x[0])
-                history.pushState(
-                    {},
-                    null,
-                    '#' + this.$route.path + '?frame=' + frames.join(',')
-                )
-                if (this.stripWidget) {
-                    this.stripWidget.resetValuesFromFrames(this.iFrameTrajList)
-                    this.stripWidget.draw()
-                }
-                if (this.matrixWidget) {
-                    this.matrixWidget.resetValuesFromFrames(this.iFrameTrajList)
-                    this.matrixWidget.draw()
-                }
+            let frames = _.map(this.iFrameTrajList, x => x[0])
+            history.pushState(
+                {},
+                null,
+                '#' + this.$route.path + '?frame=' + frames.join(',')
+            )
+            if (this.stripWidget) {
+                this.stripWidget.resetValuesFromFrames(this.iFrameTrajList)
+                this.stripWidget.draw()
+            }
+            if (this.matrixWidget) {
+                this.matrixWidget.resetValuesFromFrames(this.iFrameTrajList)
+                this.matrixWidget.draw()
             }
         },
 
@@ -841,20 +835,7 @@ export default {
                 await this.stripWidget.loadValues(view.stripWidgetValues)
             }
 
-            if (this.ensembleId) {
-                if (_.has(view, 'ensembleTableValues')) {
-                    await this.remote.clear_ensemble_cache(this.ensembleId)
-                    for (let iFrameTraj of _.cloneDeep(this.iFrameTrajList)) {
-                        await this.deleteFrame(iFrameTraj)
-                    }
-                    let values = view.ensembleTableValues
-                    for (let i = 0; i < values.length; i += 1) {
-                        let iFrameTraj = values[i]
-                        await this.loadFrameIntoJolecule(iFrameTraj, i === 0)
-                    }
-                    this.table.iFrameTrajList = _.cloneDeep(this.iFrameTrajList)
-                }
-            } else if (this.displayMode === 'table') {
+            if (this.displayMode === 'table') {
               let values = _.get(view, 'iFrameTrajList', [])
               for (let i = 0; i < values.length; i += 1) {
                   let iFrameTraj = values[i]
@@ -888,9 +869,7 @@ export default {
                 text: '',
                 imgs: '',
             }
-            if (this.ensembleId) {
-                view.ensembleId = this.ensembleId
-            } else if (this.foamId) {
+            if (this.foamId) {
                 view.foamId = this.foamId
             }
             if (this.matrixWidget) {
@@ -899,11 +878,7 @@ export default {
             if (this.stripWidget) {
                 view.stripWidgetValues = _.cloneDeep(this.stripWidget.values)
             }
-            if (this.ensembleId && this.table) {
-                view.ensembleTableValues = _.cloneDeep(
-                    this.table.iFrameTrajList
-                )
-            } else if (this.displayMode === 'table') {
+            if (this.displayMode === 'table') {
               view.iFrameTrajList = _.cloneDeep(this.table.iFrameTrajList)
             }
             this.$store.commit('setItem', { newView: view })

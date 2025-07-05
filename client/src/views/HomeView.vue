@@ -96,13 +96,8 @@ export default {
       if (response.result) {
         this.lastFoamIdViews = response.result.reverse();
         for (let view of this.lastFoamIdViews) {
-          if (view.ensembleId) {
-            view.name = `Ensemble:${view.ensembleId}:${view.id}`
-            view.href = `/#/ensemble/${view.ensembleId}?view=${view.id}`
-          } else {
-            view.name = `Foam:${view.foamId}:${view.id}`
-            view.href = `/#/foamtraj/${view.foamId}?view=${view.id}`
-          }
+          view.name = `Foam:${view.foamId}:${view.id}`
+          view.href = `/#/foamtraj/${view.foamId}?view=${view.id}`
         }
       }
       console.log("restart", _.cloneDeep(this.lastFoamIdViews));

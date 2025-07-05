@@ -82,9 +82,6 @@ export default {
       }
     },
     async openFramesModal () {
-      if (this.$store.state.ensembleId) {
-        return
-      }
       this.buildEditFrames()
       this.$store.commit('setItem', { keyboardLock: true })
       this.editFramesModal.show()
