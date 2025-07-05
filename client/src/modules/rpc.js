@@ -77,7 +77,7 @@ async function aysnc_rpc(method, ...params) {
       } else {
         console.log(
           `rpc.${method}.error[${elapsed}ms]:`,
-          _.cloneDeep(response.error)
+          _.cloneDeep(response.error),
         );
         for (let line of response.error.message) {
           console.log(`!! ${line}`);

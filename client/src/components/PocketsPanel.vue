@@ -42,7 +42,7 @@ export default {
   },
   mounted() {
     this.pocketsModal = new bootstrap.Modal(
-      document.getElementById("pockets-modal")
+      document.getElementById("pockets-modal"),
     );
     this.jolecule = null;
   },

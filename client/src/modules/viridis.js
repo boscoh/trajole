@@ -1,4 +1,4 @@
-import _ from 'lodash'
+import _ from "lodash";
 
 export const viridis = [
   [0.267004, 0.004874, 0.329415],
@@ -256,15 +256,15 @@ export const viridis = [
   [0.964894, 0.902323, 0.123941],
   [0.974417, 0.90359, 0.130215],
   [0.983868, 0.904867, 0.136897],
-  [0.993248, 0.906157, 0.143936]
-]
+  [0.993248, 0.906157, 0.143936],
+];
 
-export function getColor (p) {
+export function getColor(p) {
   if (_.isNil(p)) {
-    return '#ccc'
+    return "#ccc";
   }
-  let nViridis = viridis.length
-  let iColor = _.parseInt(p * (nViridis - 1))
-  let c = viridis[iColor]
-  return `rgb(${c[0] * 255}, ${c[1] * 255}, ${c[2] * 255})`
+  let nViridis = viridis.length;
+  let iColor = _.parseInt(p * (nViridis - 1));
+  let c = viridis[iColor];
+  return `rgb(${c[0] * 255}, ${c[1] * 255}, ${c[2] * 255})`;
 }

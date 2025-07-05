@@ -74,7 +74,7 @@ export default {
       this.$store.commit("setItem", { keyboardLock: true });
 
       this.editTagsModal = new bootstrap.Modal(
-        document.getElementById("edit-tags-modal")
+        document.getElementById("edit-tags-modal"),
       );
       this.editTagsModal.show();
     },

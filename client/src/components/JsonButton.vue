@@ -43,7 +43,7 @@ export default {
     keys() {
       return _.filter(
         this.$store.state.datasets,
-        (k) => k.includes("json") || k.includes("trajolecule")
+        (k) => k.includes("json") || k.includes("trajolecule"),
       );
     },
   },
